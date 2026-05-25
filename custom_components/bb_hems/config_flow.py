@@ -98,9 +98,6 @@ class BbHemsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=self._schema({}),
             errors=errors,
-            description_placeholders={
-                "hint": "Mehrere Entitäten bitte durch Komma trennen."
-            },
         )
 
     @staticmethod

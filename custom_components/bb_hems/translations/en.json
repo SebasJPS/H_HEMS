@@ -1,0 +1,4 @@
+{
+  "title": "BB HEMS",
+  "config": {"step": {"user": {"title": "Set up BB HEMS", "description": "Select sensors and switchable devices."}}}
+}

@@ -1,55 +1,30 @@
-# JPS HEMS
+# BB HEMS
 
 Modular Home Energy Management System for Home Assistant.
 
-JPS HEMS turns existing Home Assistant sensors and switches into one central energy decision layer. It is designed for homes with balcony power plants, PV inverters, batteries, wallboxes, heat pumps and flexible consumers such as dehumidifiers, boilers or appliances.
+BB HEMS turns existing Home Assistant sensors and switches into one central energy decision layer. It is designed for homes with balcony power plants, PV inverters, batteries, wallboxes, heat pumps and flexible consumers such as dehumidifiers, boilers or appliances.
 
 ![Dashboard mockup](docs/mockups/dashboard-overview.svg)
 
 ## Goals
 
-- Use the sensors you already have in Home Assistant.
+- Use existing Home Assistant sensors.
 - Aggregate multiple PV or balcony power plant sources.
-- Support several batteries and use the lowest SoC for conservative protection.
-- Provide one central HEMS state instead of repeating the same YAML logic per device.
-- Expose settings directly as Home Assistant entities.
-- Add a sidebar dashboard that explains what the HEMS is doing and why.
-- Prepare the model for many controllable consumers with priorities and categories.
-
-## Current Status
-
-This repository contains an initial custom integration scaffold:
-
-- Config flow for selecting Home Assistant entities.
-- Sensors for grid power, PV total, battery minimum SoC, battery discharge, grid tolerance and energy mode.
-- Binary sensors for surplus availability, battery protection, weather approval and flexible-load approval.
-- Number entities for editable thresholds.
-- Select entity for HEMS operating mode.
-- Switch entity for enabling or disabling automatic HEMS decisions.
-- Sidebar dashboard served by the integration.
-
-The first version calculates central decisions. It does not yet directly schedule every individual device by priority; that is the next layer.
+- Support several batteries and protect the lowest SoC.
+- Keep HEMS decisions central instead of repeating YAML per device.
+- Expose thresholds and operating mode as Home Assistant entities.
+- Add a sidebar dashboard explaining the current decision.
+- Prepare for flexible loads, wallboxes, heat pumps and future device categories.
 
 ## System Model
 
 ![System model mockup](docs/mockups/system-model.svg)
 
-JPS HEMS is split into three layers:
-
-1. **Sources**  
-   Grid meter, PV power, balcony power plants, battery SoC, battery discharge, weather and device states.
-
-2. **Controller**  
-   Central HEMS logic calculates energy mode, surplus availability, grid tolerance, weather approval and battery protection.
-
-3. **Consumers**  
-   Flexible loads, wallboxes, heat pumps and future device categories consume the central HEMS decisions.
+BB HEMS has three layers: sources, controller and consumers. Sources provide grid, PV, battery, weather and device state data. The controller calculates energy mode, surplus, battery protection and flexible-load approval. Consumers use those central decisions.
 
 ## Configuration Mockup
 
 ![Configuration flow mockup](docs/mockups/config-flow.svg)
-
-The integration setup asks for entity IDs. Multiple entities can be entered comma-separated where useful.
 
 Suggested mapping from the original automation:
 
@@ -66,69 +41,34 @@ Suggested mapping from the original automation:
 | Sunshine duration | `sensor.berlin_tempelhof_sonnenscheindauer` |
 | Flexible loads | `switch.a8m` |
 
-## Entities
+## Main Entities
 
-### Sensors
+- `sensor.bb_hems_energy_mode`
+- `sensor.bb_hems_grid_power`
+- `sensor.bb_hems_grid_average`
+- `sensor.bb_hems_pv_power_total`
+- `sensor.bb_hems_pv_average`
+- `sensor.bb_hems_battery_soc_min`
+- `sensor.bb_hems_battery_discharge_total`
+- `binary_sensor.bb_hems_surplus_available`
+- `binary_sensor.bb_hems_battery_protect`
+- `binary_sensor.bb_hems_good_weather`
+- `binary_sensor.bb_hems_flexible_loads_allowed`
+- `select.bb_hems_mode`
+- `switch.bb_hems_auto_enabled`
 
-- `sensor.jps_hems_energy_mode`
-- `sensor.jps_hems_grid_power`
-- `sensor.jps_hems_grid_average`
-- `sensor.jps_hems_pv_power_total`
-- `sensor.jps_hems_pv_average`
-- `sensor.jps_hems_battery_soc_min`
-- `sensor.jps_hems_battery_discharge_total`
-- `sensor.jps_hems_grid_tolerance`
-- `sensor.jps_hems_cloud_coverage`
-- `sensor.jps_hems_sunshine_minutes`
-- `sensor.jps_hems_active_flexible_loads`
-- `sensor.jps_hems_configured_assets`
+## Installation
 
-### Binary Sensors
+Copy this folder into Home Assistant:
 
-- `binary_sensor.jps_hems_surplus_available`
-- `binary_sensor.jps_hems_battery_protect`
-- `binary_sensor.jps_hems_good_weather`
-- `binary_sensor.jps_hems_flexible_loads_allowed`
+```text
+custom_components/bb_hems
+```
 
-### Settings
+Restart Home Assistant, then add the integration:
 
-- `select.jps_hems_mode`
-- `switch.jps_hems_auto_enabled`
-- `number.jps_hems_min_battery_soc`
-- `number.jps_hems_protect_battery_soc`
-- `number.jps_hems_pv_threshold`
-- `number.jps_hems_pv_avg_threshold`
-- `number.jps_hems_grid_import_limit`
-- `number.jps_hems_grid_hard_import_limit`
-- `number.jps_hems_battery_discharge_limit`
-
-## Operating Modes
-
-| Mode | Behavior |
-|---|---|
-| `auto` | Balanced default mode. Uses PV, grid, battery and weather logic. |
-| `eco` | More conservative. Avoids tolerated grid import where possible. |
-| `comfort` | Allows more grid tolerance when the house should favor comfort. |
-| `force_surplus` | Treats surplus as available unless battery protection blocks it. |
-| `off` | Disables HEMS decisions. |
-
-## Decision Logic
-
-The first controller version evaluates:
-
-- Current grid import/export.
-- Optional 15-minute grid average.
-- Total PV power from all configured PV sources.
-- Optional 15-minute PV average.
-- Minimum battery SoC across all configured batteries.
-- Total battery discharge.
-- Weather state, cloud coverage and sunshine.
-- Configured thresholds and operating mode.
-
-The main output for simple automations is:
-
-```yaml
-binary_sensor.jps_hems_flexible_loads_allowed
+```text
+Settings -> Devices & services -> Add integration -> BB HEMS
 ```
 
 ## Example Automation
@@ -137,12 +77,12 @@ binary_sensor.jps_hems_flexible_loads_allowed
 alias: HEMS Luftentfeuchter
 triggers:
   - trigger: state
-    entity_id: binary_sensor.jps_hems_flexible_loads_allowed
+    entity_id: binary_sensor.bb_hems_flexible_loads_allowed
     to: "on"
     for:
       minutes: 10
   - trigger: state
-    entity_id: binary_sensor.jps_hems_flexible_loads_allowed
+    entity_id: binary_sensor.bb_hems_flexible_loads_allowed
     to: "off"
     for:
       minutes: 5
@@ -150,7 +90,7 @@ actions:
   - choose:
       - conditions:
           - condition: state
-            entity_id: binary_sensor.jps_hems_flexible_loads_allowed
+            entity_id: binary_sensor.bb_hems_flexible_loads_allowed
             state: "on"
         sequence:
           - action: switch.turn_on
@@ -158,7 +98,7 @@ actions:
               entity_id: switch.a8m
       - conditions:
           - condition: state
-            entity_id: binary_sensor.jps_hems_flexible_loads_allowed
+            entity_id: binary_sensor.bb_hems_flexible_loads_allowed
             state: "off"
         sequence:
           - action: switch.turn_off
@@ -167,40 +107,11 @@ actions:
 mode: single
 ```
 
-## Installation
-
-Copy this folder into Home Assistant:
-
-```text
-custom_components/jps_hems
-```
-
-Restart Home Assistant, then add the integration:
-
-```text
-Settings -> Devices & services -> Add integration -> JPS HEMS
-```
-
-After setup, a `JPS HEMS` entry appears in the Home Assistant sidebar.
-
 ## Roadmap
 
-- Per-device registry with name, category, switch entity, power estimate, priority, minimum runtime and cooldown.
+- Per-device registry with priority, category, runtime and cooldown.
 - Priority scheduler for many flexible loads.
-- Dedicated wallbox strategy with charge-current control.
+- Wallbox strategy with charge-current control.
 - Heat-pump strategy with comfort bands and thermal buffer support.
-- Device-level history: why a device was allowed, blocked, started or stopped.
+- Device-level history explaining why a device was allowed, blocked, started or stopped.
 - Forecast-aware planning for PV windows.
-- Import/export cost awareness.
-- Native Lovelace cards or a richer frontend panel.
-
-## Development
-
-Basic local checks:
-
-```bash
-PYTHONPYCACHEPREFIX=/tmp/jps_hems_pycache python3 -m py_compile custom_components/jps_hems/*.py
-python3 -m json.tool custom_components/jps_hems/manifest.json >/dev/null
-python3 -m json.tool custom_components/jps_hems/translations/de.json >/dev/null
-python3 -m json.tool custom_components/jps_hems/translations/en.json >/dev/null
-```

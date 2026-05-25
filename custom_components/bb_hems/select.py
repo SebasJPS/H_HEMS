@@ -1,4 +1,4 @@
-"""Select settings for JPS HEMS."""
+"""Select settings for BB HEMS."""
 
 from __future__ import annotations
 
@@ -12,19 +12,12 @@ from .coordinator import HemsCoordinator
 from .entity import HemsEntity
 
 
-async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback,
-) -> None:
-    """Set up HEMS select settings."""
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
     coordinator: HemsCoordinator = entry.runtime_data
     async_add_entities([HemsModeSelect(coordinator)])
 
 
 class HemsModeSelect(HemsEntity, SelectEntity):
-    """HEMS operating mode."""
-
     _attr_translation_key = "mode"
     _attr_icon = "mdi:tune-variant"
     _attr_options = MODES
@@ -34,11 +27,8 @@ class HemsModeSelect(HemsEntity, SelectEntity):
 
     @property
     def current_option(self) -> str:
-        """Return selected mode."""
         return str(self.coordinator.opts[OPT_MODE])
 
     async def async_select_option(self, option: str) -> None:
-        """Change mode."""
-        if option not in MODES:
-            return
-        await self.coordinator.async_set_option(OPT_MODE, option)
+        if option in MODES:
+            await self.coordinator.async_set_option(OPT_MODE, option)

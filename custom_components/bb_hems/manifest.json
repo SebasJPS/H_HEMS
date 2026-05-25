@@ -1,0 +1,10 @@
+{
+  "domain": "bb_hems",
+  "name": "BB HEMS",
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": ["frontend", "http"],
+  "iot_class": "local_polling",
+  "requirements": [],
+  "version": "0.1.0"
+}

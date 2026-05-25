@@ -1,0 +1,10 @@
+{
+  "title": "BB HEMS",
+  "config": {"step": {"user": {"title": "BB HEMS einrichten", "description": "Wähle die Sensoren und schaltbaren Geräte aus."}}},
+  "entity": {
+    "sensor": {"energy_mode": {"name": "Energiemodus"}, "grid_power": {"name": "Netzleistung aktuell"}, "grid_average": {"name": "Netzleistung 15 min"}, "pv_power_total": {"name": "PV-Leistung gesamt"}, "pv_average": {"name": "PV-Leistung 15 min"}, "battery_soc_min": {"name": "Batterie-SoC Minimum"}},
+    "binary_sensor": {"surplus_available": {"name": "Überschuss verfügbar"}, "battery_protect": {"name": "Batterieschutz"}, "good_weather": {"name": "Wetterfreigabe"}, "flexible_loads_allowed": {"name": "Flexible Verbraucher erlaubt"}},
+    "select": {"mode": {"name": "Betriebsart"}},
+    "switch": {"auto_enabled": {"name": "Automatik aktiv"}}
+  }
+}

@@ -1,4 +1,4 @@
-"""Shared entity helpers for JPS HEMS."""
+"""Shared entity helpers for BB HEMS."""
 
 from __future__ import annotations
 
@@ -20,6 +20,6 @@ class HemsEntity(CoordinatorEntity[HemsCoordinator]):
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, coordinator.config_entry.entry_id)},
             name=NAME,
-            manufacturer="JPS",
+            manufacturer="BB",
             model="Home Energy Management System",
         )

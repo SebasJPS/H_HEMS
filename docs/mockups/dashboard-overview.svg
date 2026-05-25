@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-labelledby="title desc">
+  <title id="title">JPS HEMS dashboard overview mockup</title>
+  <desc id="desc">Mockup of the JPS HEMS sidebar dashboard with energy mode, metrics, decision explanation, settings and configured assets.</desc>
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#17324d" flood-opacity=".12"/>
+    </filter>
+  </defs>
+  <rect width="1280" height="760" fill="#f4f7fa"/>
+  <rect x="0" y="0" width="86" height="760" fill="#1d2935"/>
+  <circle cx="43" cy="44" r="17" fill="#63c486"/>
+  <rect x="23" y="92" width="40" height="40" rx="8" fill="#2f3d4a"/>
+  <rect x="23" y="148" width="40" height="40" rx="8" fill="#2f3d4a"/>
+  <rect x="23" y="204" width="40" height="40" rx="8" fill="#1769aa"/>
+  <path d="M36 219h14l-5 10h8l-15 18 4-13h-8z" fill="#fff"/>
+  <rect x="116" y="42" width="1080" height="54" rx="0" fill="none"/>
+  <text x="116" y="65" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="700" fill="#16232f">JPS HEMS</text>
+  <text x="116" y="89" font-family="Inter, Arial, sans-serif" font-size="15" fill="#637486">Energiestatus, Einstellungen und Entscheidungslogik</text>
+  <rect x="1000" y="48" width="196" height="38" rx="19" fill="#fff" stroke="#d9e2ea"/>
+  <circle cx="1023" cy="67" r="7" fill="#0b7a53"/>
+  <text x="1040" y="72" font-family="Inter, Arial, sans-serif" font-size="14" fill="#25313b">surplus_medium</text>
+
+  <g filter="url(#shadow)">
+    <rect x="116" y="124" width="130" height="96" rx="8" fill="#fff" stroke="#d9e2ea"/>
+    <rect x="260" y="124" width="130" height="96" rx="8" fill="#fff" stroke="#d9e2ea"/>
+    <rect x="404" y="124" width="130" height="96" rx="8" fill="#fff" stroke="#d9e2ea"/>
+    <rect x="548" y="124" width="130" height="96" rx="8" fill="#fff" stroke="#d9e2ea"/>
+    <rect x="692" y="124" width="130" height="96" rx="8" fill="#fff" stroke="#d9e2ea"/>
+    <rect x="836" y="124" width="130" height="96" rx="8" fill="#fff" stroke="#d9e2ea"/>
+    <rect x="980" y="124" width="216" height="96" rx="8" fill="#fff" stroke="#d9e2ea"/>
+  </g>
+  <g font-family="Inter, Arial, sans-serif">
+    <text x="134" y="153" font-size="13" fill="#637486">Modus</text>
+    <text x="134" y="187" font-size="22" fill="#16232f">surplus</text>
+    <text x="278" y="153" font-size="13" fill="#637486">Netz aktuell</text>
+    <text x="278" y="187" font-size="24" fill="#16232f">42 W</text>
+    <text x="422" y="153" font-size="13" fill="#637486">Netz 15 min</text>
+    <text x="422" y="187" font-size="24" fill="#16232f">-18 W</text>
+    <text x="566" y="153" font-size="13" fill="#637486">PV gesamt</text>
+    <text x="566" y="187" font-size="24" fill="#16232f">684 W</text>
+    <text x="710" y="153" font-size="13" fill="#637486">PV 15 min</text>
+    <text x="710" y="187" font-size="24" fill="#16232f">521 W</text>
+    <text x="854" y="153" font-size="13" fill="#637486">Batterie min.</text>
+    <text x="854" y="187" font-size="24" fill="#16232f">82 %</text>
+    <text x="998" y="153" font-size="13" fill="#637486">Aktive Verbraucher</text>
+    <text x="998" y="187" font-size="24" fill="#16232f">2 von 8</text>
+  </g>
+
+  <rect x="116" y="246" width="690" height="278" rx="8" fill="#fff" stroke="#d9e2ea"/>
+  <text x="140" y="282" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#16232f">Warum entscheidet das HEMS so?</text>
+  <g font-family="Inter, Arial, sans-serif">
+    <rect x="140" y="306" width="642" height="42" rx="8" fill="#f7fafc" stroke="#d9e2ea"/>
+    <circle cx="162" cy="327" r="6" fill="#0b7a53"/>
+    <text x="180" y="323" font-size="14" font-weight="700" fill="#16232f">Überschuss</text>
+    <text x="180" y="340" font-size="13" fill="#637486">PV 684 W, PV-Mittel 521 W, Netz 42 W, Toleranz 175 W.</text>
+    <rect x="140" y="360" width="642" height="42" rx="8" fill="#f7fafc" stroke="#d9e2ea"/>
+    <circle cx="162" cy="381" r="6" fill="#0b7a53"/>
+    <text x="180" y="377" font-size="14" font-weight="700" fill="#16232f">Batterieschutz</text>
+    <text x="180" y="394" font-size="13" fill="#637486">Kein Batterieschutz aktiv.</text>
+    <rect x="140" y="414" width="642" height="42" rx="8" fill="#f7fafc" stroke="#d9e2ea"/>
+    <circle cx="162" cy="435" r="6" fill="#0b7a53"/>
+    <text x="180" y="431" font-size="14" font-weight="700" fill="#16232f">Wetterbewertung</text>
+    <text x="180" y="448" font-size="13" fill="#637486">Wetterbedingungen geben flexible Verbraucher frei.</text>
+    <rect x="140" y="468" width="642" height="42" rx="8" fill="#f7fafc" stroke="#d9e2ea"/>
+    <circle cx="162" cy="489" r="6" fill="#0b7a53"/>
+    <text x="180" y="485" font-size="14" font-weight="700" fill="#16232f">Flexible Verbraucher</text>
+    <text x="180" y="502" font-size="13" fill="#637486">Luftentfeuchter, Wallbox und Wärmepumpe dürfen nach Priorität laufen.</text>
+  </g>
+
+  <rect x="830" y="246" width="366" height="278" rx="8" fill="#fff" stroke="#d9e2ea"/>
+  <text x="854" y="282" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#16232f">Einstellungen</text>
+  <g font-family="Inter, Arial, sans-serif" font-size="14">
+    <line x1="854" y1="310" x2="1172" y2="310" stroke="#d9e2ea"/>
+    <text x="854" y="337" fill="#637486">Betriebsart</text><text x="1084" y="337" fill="#16232f">auto</text>
+    <line x1="854" y1="354" x2="1172" y2="354" stroke="#d9e2ea"/>
+    <text x="854" y="381" fill="#637486">Automatik aktiv</text><text x="1084" y="381" fill="#16232f">on</text>
+    <line x1="854" y1="398" x2="1172" y2="398" stroke="#d9e2ea"/>
+    <text x="854" y="425" fill="#637486">Mindest-SoC</text><text x="1084" y="425" fill="#16232f">50 %</text>
+    <line x1="854" y1="442" x2="1172" y2="442" stroke="#d9e2ea"/>
+    <text x="854" y="469" fill="#637486">PV-Schwellwert</text><text x="1084" y="469" fill="#16232f">180 W</text>
+    <line x1="854" y1="486" x2="1172" y2="486" stroke="#d9e2ea"/>
+    <text x="854" y="513" fill="#637486">Netztoleranz</text><text x="1084" y="513" fill="#16232f">100 W</text>
+  </g>
+
+  <rect x="116" y="548" width="1080" height="150" rx="8" fill="#fff" stroke="#d9e2ea"/>
+  <text x="140" y="584" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#16232f">Konfiguration</text>
+  <g font-family="Inter, Arial, sans-serif">
+    <text x="140" y="622" font-size="14" fill="#637486">PV-Quellen</text><text x="300" y="622" font-size="14" fill="#16232f">3 · Balkon Süd, Balkon West, Dachgarage</text>
+    <text x="140" y="652" font-size="14" fill="#637486">Batterien</text><text x="300" y="652" font-size="14" fill="#16232f">2 · Speicher EG, Speicher Keller</text>
+    <text x="650" y="622" font-size="14" fill="#637486">Flexible Verbraucher</text><text x="830" y="622" font-size="14" fill="#16232f">8 · Luftentfeuchter, Boiler, Spülmaschine ...</text>
+    <text x="650" y="652" font-size="14" fill="#637486">Wallboxen / Wärmepumpen</text><text x="830" y="652" font-size="14" fill="#16232f">2 / 1</text>
+  </g>
+</svg>

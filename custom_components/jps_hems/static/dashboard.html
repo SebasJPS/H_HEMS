@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>JPS HEMS</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f6f7f9;
+        --panel: #ffffff;
+        --text: #182026;
+        --muted: #62717d;
+        --line: #d9e0e6;
+        --good: #0b7a53;
+        --warn: #a86400;
+        --bad: #a52222;
+        --accent: #1769aa;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #111417;
+          --panel: #191f24;
+          --text: #edf2f5;
+          --muted: #a9b4bd;
+          --line: #303941;
+          --good: #40c48a;
+          --warn: #f0ad4e;
+          --bad: #ff6b6b;
+          --accent: #69aee9;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      main {
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+
+      h1 {
+        margin: 0 0 6px;
+        font-size: 28px;
+        line-height: 1.15;
+        letter-spacing: 0;
+      }
+
+      h2 {
+        margin: 0 0 14px;
+        font-size: 17px;
+        letter-spacing: 0;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .grid {
+        display: grid;
+        gap: 14px;
+      }
+
+      .grid.metrics {
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      }
+
+      .grid.columns {
+        grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+        align-items: start;
+      }
+
+      .panel,
+      .metric {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+
+      .panel {
+        padding: 18px;
+      }
+
+      .metric {
+        padding: 14px;
+        min-height: 96px;
+      }
+
+      .metric .label {
+        color: var(--muted);
+        font-size: 13px;
+        margin-bottom: 8px;
+      }
+
+      .metric .value {
+        font-size: 25px;
+        line-height: 1.1;
+        overflow-wrap: anywhere;
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 34px;
+        padding: 6px 10px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--panel);
+        font-size: 14px;
+      }
+
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--muted);
+      }
+
+      .dot.good {
+        background: var(--good);
+      }
+
+      .dot.warn {
+        background: var(--warn);
+      }
+
+      .dot.bad {
+        background: var(--bad);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+
+      th,
+      td {
+        padding: 10px 8px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        color: var(--muted);
+        font-weight: 600;
+      }
+
+      .explain {
+        display: grid;
+        gap: 10px;
+      }
+
+      .rule {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+
+      .rule strong {
+        display: block;
+        margin-bottom: 2px;
+      }
+
+      .empty {
+        padding: 20px;
+        border: 1px dashed var(--line);
+        border-radius: 8px;
+        color: var(--muted);
+      }
+
+      @media (max-width: 800px) {
+        main {
+          padding: 14px;
+        }
+
+        header,
+        .grid.columns {
+          grid-template-columns: 1fr;
+          display: grid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <h1>JPS HEMS</h1>
+          <div class="muted">Energiestatus, Einstellungen und Entscheidungslogik</div>
+        </div>
+        <div class="status"><span id="statusDot" class="dot"></span><span id="statusText">Lade Daten</span></div>
+      </header>
+
+      <section class="grid metrics" id="metrics"></section>
+
+      <section class="grid columns" style="margin-top: 14px">
+        <div class="grid">
+          <section class="panel">
+            <h2>Warum entscheidet das HEMS so?</h2>
+            <div class="explain" id="explain"></div>
+          </section>
+
+          <section class="panel">
+            <h2>Letzte Änderungen</h2>
+            <div id="recent"></div>
+          </section>
+        </div>
+
+        <div class="grid">
+          <section class="panel">
+            <h2>Einstellungen</h2>
+            <div id="settings"></div>
+          </section>
+
+          <section class="panel">
+            <h2>Konfiguration</h2>
+            <div id="config"></div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const HEMS_KEYS = [
+        "energy_mode",
+        "grid_power",
+        "grid_average",
+        "pv_power_total",
+        "pv_average",
+        "battery_soc_min",
+        "battery_discharge_total",
+        "grid_tolerance",
+        "cloud_coverage",
+        "sunshine_minutes",
+        "active_flexible_loads",
+        "configured_assets",
+        "surplus_available",
+        "battery_protect",
+        "good_weather",
+        "flexible_loads_allowed",
+        "mode",
+        "auto_enabled",
+        "min_battery_soc",
+        "protect_battery_soc",
+        "pv_threshold",
+        "pv_avg_threshold",
+        "grid_import_limit",
+        "grid_hard_import_limit",
+        "battery_discharge_limit",
+      ];
+
+      const METRICS = [
+        ["energy_mode", "Modus"],
+        ["grid_power", "Netz aktuell"],
+        ["grid_average", "Netz 15 min"],
+        ["pv_power_total", "PV gesamt"],
+        ["pv_average", "PV 15 min"],
+        ["battery_soc_min", "Batterie min."],
+        ["battery_discharge_total", "Batterie Entladung"],
+        ["active_flexible_loads", "Aktive Verbraucher"],
+      ];
+
+      function isHemsEntity(entity) {
+        const friendly = entity.attributes.friendly_name || "";
+        return entity.entity_id.includes("jps_hems") || friendly.includes("JPS HEMS");
+      }
+
+      function findByKey(states, key) {
+        return states.find((entity) => isHemsEntity(entity) && entity.entity_id.endsWith(`_${key}`));
+      }
+
+      function formatEntity(entity) {
+        if (!entity) return "nicht vorhanden";
+        const unit = entity.attributes.unit_of_measurement || "";
+        return `${entity.state}${unit ? ` ${unit}` : ""}`;
+      }
+
+      function nameOf(entity) {
+        return entity?.attributes?.friendly_name || entity?.entity_id || "";
+      }
+
+      function renderMetrics(states) {
+        const target = document.getElementById("metrics");
+        target.innerHTML = METRICS.map(([key, label]) => {
+          const entity = findByKey(states, key);
+          return `<article class="metric"><div class="label">${label}</div><div class="value">${formatEntity(entity)}</div></article>`;
+        }).join("");
+      }
+
+      function renderStatus(states) {
+        const mode = findByKey(states, "energy_mode");
+        const protect = findByKey(states, "battery_protect")?.state === "on";
+        const allowed = findByKey(states, "flexible_loads_allowed")?.state === "on";
+        const dot = document.getElementById("statusDot");
+        const text = document.getElementById("statusText");
+        dot.className = `dot ${protect ? "bad" : allowed ? "good" : "warn"}`;
+        text.textContent = mode ? `Aktuell: ${mode.state}` : "HEMS-Entitäten nicht gefunden";
+      }
+
+      function rule(title, text, state) {
+        return `<div class="rule"><span class="dot ${state}"></span><div><strong>${title}</strong><span class="muted">${text}</span></div></div>`;
+      }
+
+      function renderExplain(states) {
+        const surplus = findByKey(states, "surplus_available")?.state === "on";
+        const weather = findByKey(states, "good_weather")?.state === "on";
+        const protect = findByKey(states, "battery_protect")?.state === "on";
+        const allowed = findByKey(states, "flexible_loads_allowed")?.state === "on";
+        const grid = formatEntity(findByKey(states, "grid_power"));
+        const gridAverage = formatEntity(findByKey(states, "grid_average"));
+        const pv = formatEntity(findByKey(states, "pv_power_total"));
+        const pvAverage = formatEntity(findByKey(states, "pv_average"));
+        const tolerance = formatEntity(findByKey(states, "grid_tolerance"));
+        document.getElementById("explain").innerHTML = [
+          rule("Überschuss", `PV ${pv}, PV-Mittel ${pvAverage}, Netz ${grid}, Netz-Mittel ${gridAverage}, Toleranz ${tolerance}.`, surplus ? "good" : "warn"),
+          rule("Batterieschutz", protect ? "Schutz aktiv: SoC, Entladung oder schlechtes Wetter begrenzen Verbraucher." : "Kein Batterieschutz aktiv.", protect ? "bad" : "good"),
+          rule("Wetterbewertung", weather ? "Wetterbedingungen sind für flexible Verbraucher freigegeben." : "Wetterbedingungen halten flexible Verbraucher zurück.", weather ? "good" : "warn"),
+          rule("Flexible Verbraucher", allowed ? "Flexible Verbraucher dürfen laufen." : "Flexible Verbraucher bleiben gesperrt.", allowed ? "good" : "warn"),
+        ].join("");
+      }
+
+      function renderSettings(states) {
+        const settings = states
+          .filter((entity) => isHemsEntity(entity))
+          .filter((entity) => ["number", "select", "switch"].includes(entity.entity_id.split(".")[0]))
+          .sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
+        document.getElementById("settings").innerHTML = settings.length
+          ? `<table><tbody>${settings.map((entity) => `<tr><td>${nameOf(entity)}</td><td>${formatEntity(entity)}</td></tr>`).join("")}</tbody></table>`
+          : `<div class="empty">Noch keine HEMS-Einstellungen gefunden.</div>`;
+      }
+
+      function renderConfig(states) {
+        const mode = findByKey(states, "energy_mode");
+        const attrs = mode?.attributes || {};
+        const list = (value) => Array.isArray(value) ? value.join(", ") : value || "n/a";
+        const rows = [
+          ["Netz aktuell", attrs.grid_power_sensor],
+          ["Netz 15 min", attrs.grid_average_sensor],
+          ["PV-Quellen", `${attrs.configured_pv_sources ?? "n/a"} · ${list(attrs.pv_power_sensors)}`],
+          ["PV 15 min", attrs.pv_average_sensor],
+          ["Batterie-SoC", `${attrs.configured_batteries ?? "n/a"} · ${list(attrs.battery_soc_sensors)}`],
+          ["Batterie-Entladung", list(attrs.battery_discharge_sensors)],
+          ["Wetter", attrs.weather_state_sensor],
+          ["Flexible Verbraucher", `${attrs.configured_flexible_loads ?? "n/a"} · ${list(attrs.flexible_load_switches)}`],
+          ["Wallboxen", `${attrs.configured_wallboxes ?? "n/a"} · ${list(attrs.wallbox_switches)}`],
+          ["Wärmepumpen", `${attrs.configured_heat_pumps ?? "n/a"} · ${list(attrs.heat_pump_switches)}`],
+        ];
+        document.getElementById("config").innerHTML = `<table><tbody>${rows.map(([label, value]) => `<tr><td>${label}</td><td>${value ?? "n/a"}</td></tr>`).join("")}</tbody></table>`;
+      }
+
+      function renderRecent(states) {
+        const recent = states
+          .filter((entity) => isHemsEntity(entity))
+          .filter((entity) => HEMS_KEYS.some((key) => entity.entity_id.endsWith(`_${key}`)))
+          .sort((a, b) => new Date(b.last_changed) - new Date(a.last_changed))
+          .slice(0, 8);
+        document.getElementById("recent").innerHTML = recent.length
+          ? `<table><thead><tr><th>Entität</th><th>Wert</th><th>Geändert</th></tr></thead><tbody>${recent.map((entity) => `<tr><td>${nameOf(entity)}</td><td>${formatEntity(entity)}</td><td>${new Date(entity.last_changed).toLocaleString("de-DE")}</td></tr>`).join("")}</tbody></table>`
+          : `<div class="empty">Noch keine HEMS-Historie sichtbar.</div>`;
+      }
+
+      async function load() {
+        try {
+          const response = await fetch("/api/states", { credentials: "same-origin" });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const states = await response.json();
+          renderMetrics(states);
+          renderStatus(states);
+          renderExplain(states);
+          renderSettings(states);
+          renderConfig(states);
+          renderRecent(states);
+        } catch (error) {
+          document.getElementById("statusDot").className = "dot bad";
+          document.getElementById("statusText").textContent = `Fehler: ${error.message}`;
+        }
+      }
+
+      load();
+      window.setInterval(load, 30000);
+    </script>
+  </body>
+</html>

@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "BB HEMS einrichten",
-        "description": "Wähle die Sensoren und schaltbaren Geräte aus. Mehrere Entitäten können in den Textfeldern per Komma getrennt werden.",
+        "description": "Wähle die Sensoren und schaltbaren Geräte aus. PV, Batterien und Verbraucher können als Mehrfachauswahl gepflegt werden.",
         "data": {
           "name": "Name",
           "grid_power_sensor": "Netzleistung aktuell",

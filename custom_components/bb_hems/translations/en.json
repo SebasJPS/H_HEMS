@@ -1,4 +1,78 @@
 {
   "title": "BB HEMS",
-  "config": {"step": {"user": {"title": "Set up BB HEMS", "description": "Select sensors and switchable devices."}}}
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up BB HEMS",
+        "description": "Select sensors and switchable devices.",
+        "data": {
+          "name": "Name",
+          "grid_power_sensor": "Current grid power",
+          "grid_average_sensor": "15-minute grid average",
+          "pv_power_sensors": "PV / balcony power sensors",
+          "pv_average_sensor": "15-minute PV average",
+          "battery_soc_sensors": "Battery SoC sensors",
+          "battery_discharge_sensors": "Battery discharge sensors",
+          "weather_state_sensor": "Weather state",
+          "cloud_sensor": "Cloud coverage",
+          "sunshine_sensor": "Sunshine duration",
+          "flexible_load_switches": "Flexible loads",
+          "wallbox_switches": "Wallboxes",
+          "heat_pump_switches": "Heat pumps"
+        },
+        "data_description": {
+          "name": "Display name of this HEMS instance.",
+          "grid_power_sensor": "Current power at the grid connection in watts. Negative values usually mean export, positive values mean import.",
+          "grid_average_sensor": "Smoothed grid power, ideally a 15-minute average in watts. This avoids frequent switching.",
+          "pv_power_sensors": "One or more current power sensors for PV systems or balcony plants in watts. BB HEMS sums these values.",
+          "pv_average_sensor": "Smoothed PV power, ideally a 15-minute average in watts.",
+          "battery_soc_sensors": "Battery state-of-charge sensors in percent. With multiple batteries, BB HEMS uses the lowest SoC as protection value.",
+          "battery_discharge_sensors": "Current battery discharge power in watts. BB HEMS sums these values and stops flexible loads when discharge is too high.",
+          "weather_state_sensor": "Weather state as a sensor or weather entity, for example sunny, partlycloudy or rainy.",
+          "cloud_sensor": "Cloud coverage in percent. Lower values make PV surplus more likely.",
+          "sunshine_sensor": "Sunshine duration or sunshine indicator. The value should increase when sunshine is currently available.",
+          "flexible_load_switches": "Switchable loads that may be enabled during surplus, for example a dehumidifier.",
+          "wallbox_switches": "Switchable wallboxes or charging-enable entities. Currently stored as a device group for later prioritization.",
+          "heat_pump_switches": "Switchable heat pumps or SG-ready enable entities. Currently stored as a device group for later prioritization."
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Change BB HEMS sources",
+        "data": {
+          "name": "Name",
+          "grid_power_sensor": "Current grid power",
+          "grid_average_sensor": "15-minute grid average",
+          "pv_power_sensors": "PV / balcony power sensors",
+          "pv_average_sensor": "15-minute PV average",
+          "battery_soc_sensors": "Battery SoC sensors",
+          "battery_discharge_sensors": "Battery discharge sensors",
+          "weather_state_sensor": "Weather state",
+          "cloud_sensor": "Cloud coverage",
+          "sunshine_sensor": "Sunshine duration",
+          "flexible_load_switches": "Flexible loads",
+          "wallbox_switches": "Wallboxes",
+          "heat_pump_switches": "Heat pumps"
+        },
+        "data_description": {
+          "name": "Display name of this HEMS instance.",
+          "grid_power_sensor": "Current power at the grid connection in watts. Negative values usually mean export, positive values mean import.",
+          "grid_average_sensor": "Smoothed grid power, ideally a 15-minute average in watts. This avoids frequent switching.",
+          "pv_power_sensors": "One or more current power sensors for PV systems or balcony plants in watts. BB HEMS sums these values.",
+          "pv_average_sensor": "Smoothed PV power, ideally a 15-minute average in watts.",
+          "battery_soc_sensors": "Battery state-of-charge sensors in percent. With multiple batteries, BB HEMS uses the lowest SoC as protection value.",
+          "battery_discharge_sensors": "Current battery discharge power in watts. BB HEMS sums these values and stops flexible loads when discharge is too high.",
+          "weather_state_sensor": "Weather state as a sensor or weather entity, for example sunny, partlycloudy or rainy.",
+          "cloud_sensor": "Cloud coverage in percent. Lower values make PV surplus more likely.",
+          "sunshine_sensor": "Sunshine duration or sunshine indicator. The value should increase when sunshine is currently available.",
+          "flexible_load_switches": "Switchable loads that may be enabled during surplus, for example a dehumidifier.",
+          "wallbox_switches": "Switchable wallboxes or charging-enable entities. Currently stored as a device group for later prioritization.",
+          "heat_pump_switches": "Switchable heat pumps or SG-ready enable entities. Currently stored as a device group for later prioritization."
+        }
+      }
+    }
+  }
 }

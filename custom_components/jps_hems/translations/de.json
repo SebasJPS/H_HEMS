@@ -1,0 +1,85 @@
+{
+  "title": "JPS HEMS",
+  "config": {
+    "step": {
+      "user": {
+        "title": "JPS HEMS einrichten",
+        "description": "Wähle die Sensoren und schaltbaren Geräte aus. Mehrere Entitäten können in den Textfeldern per Komma getrennt werden.",
+        "data": {
+          "name": "Name",
+          "grid_power_sensor": "Netzleistung aktuell",
+          "grid_average_sensor": "Netzleistung 15-Minuten-Mittel",
+          "pv_power_sensors": "PV-/Balkonkraftwerk-Leistungssensoren",
+          "pv_average_sensor": "PV 15-Minuten-Mittel",
+          "battery_soc_sensors": "Batterie-SoC-Sensoren",
+          "battery_discharge_sensors": "Batterie-Entladungssensoren",
+          "weather_state_sensor": "Wetterzustand",
+          "cloud_sensor": "Bewölkungsgrad",
+          "sunshine_sensor": "Sonnenscheindauer",
+          "flexible_load_switches": "Flexible Verbraucher",
+          "wallbox_switches": "Wallboxen",
+          "heat_pump_switches": "Wärmepumpen"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "JPS HEMS Quellen ändern",
+        "data": {
+          "name": "Name",
+          "grid_power_sensor": "Netzleistung aktuell",
+          "grid_average_sensor": "Netzleistung 15-Minuten-Mittel",
+          "pv_power_sensors": "PV-/Balkonkraftwerk-Leistungssensoren",
+          "pv_average_sensor": "PV 15-Minuten-Mittel",
+          "battery_soc_sensors": "Batterie-SoC-Sensoren",
+          "battery_discharge_sensors": "Batterie-Entladungssensoren",
+          "weather_state_sensor": "Wetterzustand",
+          "cloud_sensor": "Bewölkungsgrad",
+          "sunshine_sensor": "Sonnenscheindauer",
+          "flexible_load_switches": "Flexible Verbraucher",
+          "wallbox_switches": "Wallboxen",
+          "heat_pump_switches": "Wärmepumpen"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "energy_mode": { "name": "Energiemodus" },
+      "grid_power": { "name": "Netzleistung aktuell" },
+      "grid_average": { "name": "Netzleistung 15 min" },
+      "pv_power_total": { "name": "PV-Leistung gesamt" },
+      "pv_average": { "name": "PV-Leistung 15 min" },
+      "battery_soc_min": { "name": "Batterie-SoC Minimum" },
+      "battery_discharge_total": { "name": "Batterie-Entladung gesamt" },
+      "grid_tolerance": { "name": "Netztoleranz" },
+      "cloud_coverage": { "name": "Bewölkung" },
+      "sunshine_minutes": { "name": "Sonnenschein" },
+      "active_flexible_loads": { "name": "Aktive flexible Verbraucher" },
+      "configured_assets": { "name": "Konfigurierte Anlagen" }
+    },
+    "binary_sensor": {
+      "surplus_available": { "name": "Überschuss verfügbar" },
+      "battery_protect": { "name": "Batterieschutz" },
+      "good_weather": { "name": "Wetterfreigabe" },
+      "flexible_loads_allowed": { "name": "Flexible Verbraucher erlaubt" }
+    },
+    "number": {
+      "min_battery_soc": { "name": "Mindest-SoC" },
+      "protect_battery_soc": { "name": "Batterieschutz-SoC" },
+      "pv_threshold": { "name": "PV-Schwellwert aktuell" },
+      "pv_avg_threshold": { "name": "PV-Schwellwert 15 min" },
+      "grid_import_limit": { "name": "Netzbezug-Toleranz" },
+      "grid_hard_import_limit": { "name": "Netzbezug hart" },
+      "battery_discharge_limit": { "name": "Entladegrenze Batterie" }
+    },
+    "select": {
+      "mode": { "name": "Betriebsart" }
+    },
+    "switch": {
+      "auto_enabled": { "name": "Automatik aktiv" }
+    }
+  }
+}

@@ -13,7 +13,7 @@ const ALIASES = {
   flexible_loads_allowed: ["flexible_loads_allowed", "flexible verbraucher erlaubt"],
 };
 
-const BB_HEMS_VERSION = "0.1.5";
+const BB_HEMS_VERSION = "0.1.6";
 
 class BbHemsPanel extends HTMLElement {
   set hass(hass) {
@@ -89,6 +89,12 @@ class BbHemsPanel extends HTMLElement {
         .asset-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
         .asset { padding: 12px; background: color-mix(in srgb, var(--card), var(--bg) 28%); }
         .count { margin-top: 8px; font-size: 24px; font-weight: 720; }
+        .actions { display: grid; gap: 10px; }
+        .event { display: grid; grid-template-columns: 88px auto 1fr; gap: 10px; align-items: start; padding: 10px 0; border-bottom: 1px solid var(--line); }
+        .event:last-child { border-bottom: 0; }
+        .event-time { color: var(--muted); font-size: 12px; white-space: nowrap; padding-top: 2px; }
+        .event-title { font-weight: 700; }
+        .event-reason { margin-top: 3px; color: var(--muted); font-size: 13px; line-height: 1.35; }
         .muted { color: var(--muted); }
         table { width: 100%; border-collapse: collapse; font-size: 14px; }
         td, th { padding: 10px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
@@ -141,12 +147,16 @@ class BbHemsPanel extends HTMLElement {
               <div class="head"><h2>Anlagen</h2><span class="muted">Skaliert für mehrere Quellen und Verbraucher</span></div>
               <div class="body"><div class="grid asset-grid">${assets(attrs)}</div></div>
             </section>
+            <section class="card">
+              <div class="head"><h2>Was zuletzt passiert ist</h2><span class="muted">Letzte 10 HEMS-Ereignisse</span></div>
+              <div class="body">${actionHistory(attrs)}</div>
+            </section>
           </div>
 
           <div class="stack">
-            <section class="card"><div class="head"><h2>Einstellungen</h2></div><div class="body">${settings(states)}</div></section>
-            <section class="card"><div class="head"><h2>Konfiguration</h2></div><div class="body">${config(attrs)}</div></section>
             <section class="card"><div class="head"><h2>Letzte HEMS-Werte</h2></div><div class="body">${recent(states)}</div></section>
+            <section class="card"><div class="head"><h2>Konfiguration</h2></div><div class="body">${config(attrs)}</div></section>
+            <section class="card"><div class="head"><h2>Einstellungen</h2></div><div class="body">${settings(states)}</div></section>
           </div>
         </section>
       </main>
@@ -261,6 +271,16 @@ function assets(attrs) {
   ].map(([label, count]) => `<div class="asset"><h3>${label}</h3><div class="count">${count}</div></div>`).join("");
 }
 
+function actionHistory(attrs) {
+  const rows = Array.isArray(attrs.action_history) ? attrs.action_history.slice(0, 10) : [];
+  if (!rows.length) return `<div class="empty">Noch keine HEMS-Ereignisse sichtbar. Die Historie startet nach dem nächsten Update der Integration.</div>`;
+  return `<div class="actions">${rows.map((event) => {
+    const kind = event.kind || "";
+    const state = kind.includes("protect") || kind.includes("block") ? "bad" : kind.includes("allow") || kind.includes("surplus") ? "good" : "warn";
+    return `<div class="event"><span class="event-time">${esc(formatTime(event.time))}</span><span class="dot ${state}"></span><div><div class="event-title">${esc(event.title || "HEMS-Ereignis")}</div><div class="event-reason">${esc(event.reason || "")}</div></div></div>`;
+  }).join("")}</div>`;
+}
+
 function settings(states) {
   const rows = states
     .filter((entity) => ["number", "select", "switch"].includes(entity.entity_id.split(".")[0]))
@@ -313,6 +333,13 @@ function recent(states) {
     .slice(0, 8);
   if (!rows.length) return `<div class="empty">Noch keine BB HEMS-Entitäten sichtbar.</div>`;
   return `<table><thead><tr><th>Entität</th><th>Wert</th></tr></thead><tbody>${rows.map((entity) => `<tr><td>${esc(name(entity))}</td><td>${esc(val(entity))}</td></tr>`).join("")}</tbody></table>`;
+}
+
+function formatTime(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
 customElements.define("bb-hems-panel", BbHemsPanel);

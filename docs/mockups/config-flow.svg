@@ -1,1 +1,25 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="620" viewBox="0 0 1280 620"><rect width="1280" height="620" fill="#f4f7fa"/><rect x="300" y="60" width="680" height="500" rx="8" fill="#fff" stroke="#d9e2ea"/><text x="340" y="110" font-family="Arial" font-size="28" font-weight="700" fill="#16232f">BB HEMS einrichten</text><g font-family="Arial" font-size="16" fill="#16232f"><text x="340" y="170">Netzleistung aktuell</text><rect x="340" y="185" width="600" height="38" rx="6" fill="#f7fafc" stroke="#cfd9e2"/><text x="355" y="210">sensor.power_shelly_gesamt</text><text x="340" y="270">PV-/Balkonkraftwerk-Leistungssensoren</text><rect x="340" y="285" width="600" height="38" rx="6" fill="#f7fafc" stroke="#cfd9e2"/><text x="355" y="310">sensor.pv_sued, sensor.pv_west</text><text x="340" y="370">Flexible Verbraucher</text><rect x="340" y="385" width="600" height="38" rx="6" fill="#f7fafc" stroke="#cfd9e2"/><text x="355" y="410">switch.a8m, switch.boiler</text></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="620" viewBox="0 0 1280 620" role="img" aria-labelledby="title desc">
+  <title id="title">BB HEMS configuration preview</title>
+  <desc id="desc">Configuration preview using the same visual style as the BB HEMS dashboard.</desc>
+  <style>text{font-family:Arial,Helvetica,sans-serif;fill:#111}.muted{fill:#666}.card{fill:#fff;stroke:#e5e5e5}.line{stroke:#eee}.field{fill:#fff;stroke:#e7e7e7}.btn{fill:#eaf7ff;stroke:#49aee8}.h1{font-size:28px;font-weight:700}.h2{font-size:16px;font-weight:700}.label{font-size:13px;font-weight:700}</style>
+  <rect width="1280" height="620" fill="#fafafa"/>
+  <text x="34" y="37" class="h1">BB HEMS</text>
+  <text x="34" y="62" class="muted" font-size="14">Konfiguration im Stil des echten Dashboards</text>
+  <rect x="80" y="92" width="1120" height="440" rx="7" class="card"/>
+  <text x="104" y="126" class="h2">Konfiguration</text>
+  <text x="104" y="154" class="muted" font-size="13">Die Einrichtung sammelt dieselben Entitäten, die später im Dashboard unter Konfiguration angezeigt werden.</text>
+  <g font-size="14">
+    <line x1="104" y1="183" x2="1176" y2="183" class="line"/>
+    <text x="104" y="215" class="label">Netz aktuell</text><rect x="360" y="194" width="610" height="34" rx="5" class="field"/><text x="376" y="216">sensor.power_shelly_gesamt</text>
+    <line x1="104" y1="244" x2="1176" y2="244" class="line"/>
+    <text x="104" y="276" class="label">Netz 15 min</text><rect x="360" y="255" width="610" height="34" rx="5" class="field"/><text x="376" y="277">sensor.grid_average_15m</text>
+    <line x1="104" y1="305" x2="1176" y2="305" class="line"/>
+    <text x="104" y="337" class="label">PV-Quellen</text><rect x="360" y="316" width="610" height="34" rx="5" class="field"/><text x="376" y="338">sensor.shellyplusplugs_b0b21c105338_switch_0_power</text>
+    <line x1="104" y1="366" x2="1176" y2="366" class="line"/>
+    <text x="104" y="398" class="label">Batterie-SoC</text><rect x="360" y="377" width="610" height="34" rx="5" class="field"/><text x="376" y="399">sensor.batterie_geschatzt_soc</text>
+    <line x1="104" y1="427" x2="1176" y2="427" class="line"/>
+    <text x="104" y="459" class="label">Flexible Verbraucher</text><rect x="360" y="438" width="610" height="34" rx="5" class="field"/><text x="376" y="460">switch.a8m</text>
+    <rect x="1002" y="478" width="78" height="32" rx="5" class="field"/><text x="1022" y="499">Zurück</text>
+    <rect x="1094" y="478" width="82" height="32" rx="5" class="btn"/><text x="1117" y="499" fill="#1585c4">Weiter</text>
+  </g>
+</svg>

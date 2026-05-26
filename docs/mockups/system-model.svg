@@ -1,1 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="620" viewBox="0 0 1280 620"><rect width="1280" height="620" fill="#f4f7fa"/><text x="80" y="90" font-family="Arial" font-size="34" font-weight="700" fill="#16232f">BB HEMS Systemmodell</text><g font-family="Arial" fill="#16232f"><rect x="80" y="170" width="260" height="260" rx="8" fill="#fff" stroke="#d9e2ea"/><text x="110" y="220" font-size="24" font-weight="700">Quellen</text><text x="110" y="270" font-size="18">Netz, PV, Batterie</text><text x="110" y="310" font-size="18">Wetter, Verbraucher</text><rect x="510" y="150" width="260" height="300" rx="8" fill="#fff" stroke="#d9e2ea"/><text x="540" y="205" font-size="24" font-weight="700">BB HEMS Controller</text><text x="540" y="255" font-size="18">Energiemodus</text><text x="540" y="295" font-size="18">Batterieschutz</text><text x="540" y="335" font-size="18">Überschussfreigabe</text><rect x="940" y="170" width="260" height="260" rx="8" fill="#fff" stroke="#d9e2ea"/><text x="970" y="220" font-size="24" font-weight="700">Verbraucher</text><text x="970" y="270" font-size="18">Wallboxen</text><text x="970" y="310" font-size="18">Wärmepumpen</text><text x="970" y="350" font-size="18">Flexible Lasten</text><path d="M360 300h120" stroke="#1769aa" stroke-width="4"/><path d="M790 300h120" stroke="#1769aa" stroke-width="4"/></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="620" viewBox="0 0 1280 620" role="img" aria-labelledby="title desc">
+  <title id="title">BB HEMS system model</title>
+  <desc id="desc">System model shown with dashboard cards for sources, controller decisions and consumers.</desc>
+  <style>text{font-family:Arial,Helvetica,sans-serif;fill:#111}.muted{fill:#666}.card{fill:#fff;stroke:#e5e5e5}.soft{fill:#f6fbff;stroke:#8ec8ed}.line{stroke:#eee}.ok{fill:#087b56}.h1{font-size:28px;font-weight:700}.h2{font-size:16px;font-weight:700}.big{font-size:24px;font-weight:700}.label{font-size:13px;font-weight:700;fill:#555}</style>
+  <rect width="1280" height="620" fill="#fafafa"/>
+  <text x="34" y="37" class="h1">BB HEMS</text>
+  <text x="34" y="62" class="muted" font-size="14">Systemmodell im Look des echten Dashboards</text>
+  <rect x="1100" y="14" width="146" height="30" rx="15" class="card"/><circle cx="1116" cy="29" r="5" class="ok"/><text x="1132" y="34" font-size="14">surplus_high</text>
+  <rect x="56" y="106" width="314" height="398" rx="7" class="card"/>
+  <text x="80" y="138" class="h2">Quellen</text><text x="80" y="164" class="muted" font-size="13">Home Assistant Entitäten</text>
+  <rect x="80" y="198" width="254" height="58" rx="7" class="card"/><text x="96" y="222" class="label">Netzleistung</text><text x="96" y="242" class="muted" font-size="13">sensor.power_shelly_gesamt</text>
+  <rect x="80" y="270" width="254" height="58" rx="7" class="card"/><text x="96" y="294" class="label">PV / Balkonkraftwerke</text><text x="96" y="314" class="muted" font-size="13">eine oder mehrere Quellen</text>
+  <rect x="80" y="342" width="254" height="58" rx="7" class="card"/><text x="96" y="366" class="label">Batterie</text><text x="96" y="386" class="muted" font-size="13">SoC und Entladung</text>
+  <rect x="80" y="414" width="254" height="58" rx="7" class="card"/><text x="96" y="438" class="label">Wetter und Status</text><text x="96" y="458" class="muted" font-size="13">Freigaben und Gerätezustände</text>
+  <text x="405" y="314" font-size="32" fill="#555">&gt;</text>
+  <rect x="458" y="86" width="364" height="438" rx="7" class="soft"/>
+  <text x="482" y="120" class="h2">BB HEMS Controller</text><text x="482" y="146" class="muted" font-size="13">Zentrale Entscheidung wie im Dashboard erklärt</text>
+  <rect x="482" y="188" width="316" height="72" rx="7" class="card"/><circle cx="500" cy="210" r="5" class="ok"/><text x="516" y="215" class="label">Überschuss: ja</text><text x="516" y="236" class="muted" font-size="13">PV, Netzbezug und 15-min-Werte passen.</text>
+  <rect x="482" y="278" width="316" height="72" rx="7" class="card"/><circle cx="500" cy="300" r="5" class="ok"/><text x="516" y="305" class="label">Batterieschutz: nein</text><text x="516" y="326" class="muted" font-size="13">SoC und Entladung liegen im erlaubten Bereich.</text>
+  <rect x="482" y="368" width="316" height="72" rx="7" class="card"/><circle cx="500" cy="390" r="5" class="ok"/><text x="516" y="395" class="label">Flexible Verbraucher: ja</text><text x="516" y="416" class="muted" font-size="13">Freigabe wird als Entität und Schaltlogik genutzt.</text>
+  <text x="858" y="314" font-size="32" fill="#555">&gt;</text>
+  <rect x="912" y="106" width="314" height="398" rx="7" class="card"/>
+  <text x="936" y="138" class="h2">Verbraucher</text><text x="936" y="164" class="muted" font-size="13">Aktuelle und geplante Gerätetypen</text>
+  <rect x="936" y="198" width="254" height="58" rx="7" class="card"/><text x="952" y="222" class="label">Flexible Verbraucher</text><text x="952" y="242" class="muted" font-size="13">z. B. switch.a8m</text>
+  <rect x="936" y="270" width="254" height="58" rx="7" class="card"/><text x="952" y="294" class="label">Wallboxen</text><text x="952" y="314" class="muted" font-size="13">für spätere Ladestrategien</text>
+  <rect x="936" y="342" width="254" height="58" rx="7" class="card"/><text x="952" y="366" class="label">Wärmepumpen</text><text x="952" y="386" class="muted" font-size="13">für Komfortbänder und Puffer</text>
+  <rect x="936" y="414" width="254" height="58" rx="7" class="card"/><text x="952" y="438" class="label">Priorisierte Lasten</text><text x="952" y="458" class="muted" font-size="13">nächster Scheduler-Ausbau</text>
+</svg>

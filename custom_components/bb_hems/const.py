@@ -7,6 +7,7 @@ from datetime import timedelta
 DOMAIN = "bb_hems"
 NAME = "BB HEMS"
 PANEL_URL = "bb-hems"
+
 PLATFORMS = ["sensor", "binary_sensor", "number", "select", "switch"]
 SCAN_INTERVAL = timedelta(seconds=30)
 
@@ -52,5 +53,14 @@ DEFAULTS = {
     OPT_BATTERY_DISCHARGE_LIMIT: 250.0,
 }
 
-GOOD_WEATHER = {"sunny", "partlycloudy", "clear", "cloudy", "leicht bewölkt", "bewölkt", "sonnig"}
+GOOD_WEATHER = {
+    "sunny",
+    "partlycloudy",
+    "clear",
+    "cloudy",
+    "leicht bewölkt",
+    "bewölkt",
+    "sonnig",
+}
+
 BAD_WEATHER = {"rainy", "pouring", "fog", "snowy", "hail", "lightning"}

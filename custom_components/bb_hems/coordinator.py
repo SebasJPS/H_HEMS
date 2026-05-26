@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import datetime
+from dataclasses import dataclass, replace
+from datetime import datetime, timedelta
 import logging
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
@@ -97,9 +97,15 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         self.config_entry = entry
         self._action_history: list[dict[str, str]] = []
         self._last_decision_snapshot: dict[str, Any] | None = None
+        self._flexible_loads_allowed_since: datetime | None = None
+        self._flexible_loads_blocked_since: datetime | None = None
 
     async def _async_update_data(self) -> HemsData:
-        return self._calculate()
+        data = self._calculate()
+        action_added = await self._async_apply_flexible_load_control(data)
+        if action_added:
+            return replace(data, action_history=list(self._action_history))
+        return data
 
     @property
     def opts(self) -> dict[str, Any]:
@@ -275,6 +281,63 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             load_reason=load_reason,
             action_history=list(self._action_history),
         )
+
+    async def _async_apply_flexible_load_control(self, data: HemsData) -> bool:
+        """Switch configured flexible loads according to the current HEMS decision."""
+        opts = self.opts
+        if not bool(opts[OPT_AUTO_ENABLED]):
+            return False
+
+        target_on = data.flexible_loads_allowed
+        if not self._flexible_load_decision_is_stable(target_on):
+            return False
+
+        service = "turn_on" if target_on else "turn_off"
+        desired_state = STATE_ON if target_on else STATE_OFF
+        flexible_loads = self.config_entry.data.get(CONF_FLEXIBLE_LOAD_SWITCHES, [])
+        action_added = False
+
+        for entity_id in flexible_loads:
+            state = self.hass.states.get(entity_id)
+            if state is None or state.state in {
+                desired_state,
+                STATE_UNAVAILABLE,
+                STATE_UNKNOWN,
+            }:
+                continue
+
+            domain = entity_id.split(".", 1)[0]
+            if domain not in {"switch", "input_boolean"}:
+                continue
+
+            await self.hass.services.async_call(
+                domain,
+                service,
+                {"entity_id": entity_id},
+                blocking=False,
+            )
+            self._add_action(
+                "Verbraucher geschaltet",
+                f"{entity_id} wurde {'eingeschaltet' if target_on else 'ausgeschaltet'}. {data.load_reason}",
+                "device",
+            )
+            action_added = True
+
+        return action_added
+
+    def _flexible_load_decision_is_stable(self, target_on: bool) -> bool:
+        """Require a stable decision before switching flexible loads."""
+        now = datetime.now()
+        if target_on:
+            self._flexible_loads_blocked_since = None
+            if self._flexible_loads_allowed_since is None:
+                self._flexible_loads_allowed_since = now
+            return now - self._flexible_loads_allowed_since >= timedelta(minutes=10)
+
+        self._flexible_loads_allowed_since = None
+        if self._flexible_loads_blocked_since is None:
+            self._flexible_loads_blocked_since = now
+        return now - self._flexible_loads_blocked_since >= timedelta(minutes=5)
 
     def _add_action(self, title: str, reason: str, kind: str) -> None:
         """Add one dashboard action entry."""

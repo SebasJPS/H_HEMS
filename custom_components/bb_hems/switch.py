@@ -12,12 +12,19 @@ from .coordinator import HemsCoordinator
 from .entity import HemsEntity
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up HEMS switches."""
     coordinator: HemsCoordinator = entry.runtime_data
     async_add_entities([HemsAutoSwitch(coordinator)])
 
 
 class HemsAutoSwitch(HemsEntity, SwitchEntity):
+    """Enable or disable automatic HEMS decisions."""
+
     _attr_translation_key = "auto_enabled"
     _attr_icon = "mdi:autorenew"
 
@@ -26,10 +33,13 @@ class HemsAutoSwitch(HemsEntity, SwitchEntity):
 
     @property
     def is_on(self) -> bool:
+        """Return if automation decisions are enabled."""
         return bool(self.coordinator.opts[OPT_AUTO_ENABLED])
 
     async def async_turn_on(self, **kwargs: object) -> None:
+        """Enable HEMS decisions."""
         await self.coordinator.async_set_option(OPT_AUTO_ENABLED, True)
 
     async def async_turn_off(self, **kwargs: object) -> None:
+        """Disable HEMS decisions."""
         await self.coordinator.async_set_option(OPT_AUTO_ENABLED, False)

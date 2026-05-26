@@ -141,11 +141,14 @@ The first controller version evaluates:
 - Weather state, cloud coverage and sunshine.
 - Configured thresholds and operating mode.
 
-After the central surplus decision, the smart scheduler estimates the available
-surplus budget and selects only the configured loads that fit. Flexible loads use
-the `number.bb_hems_flexible_load_power` estimate and are preferred before
-heating rods, which use `number.bb_hems_heating_rod_power`. This avoids switching
-all surplus consumers at once when only a smaller surplus is available.
+After the central surplus decision, the smart scheduler estimates the real
+surplus budget and selects only the configured loads that fit. It uses current
+grid export plus the estimated power of already running managed loads, then
+subtracts measured battery discharge. Flexible loads use the
+`number.bb_hems_flexible_load_power` estimate and are preferred before heating
+rods, which use `number.bb_hems_heating_rod_power`. This avoids switching all
+surplus consumers at once and also turns running loads off when their estimated
+power is no longer covered by real surplus.
 
 The main output is still exposed for dashboards and optional automations:
 

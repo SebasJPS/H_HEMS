@@ -274,7 +274,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                 controlled_loads,
                 flexible_loads_allowed,
                 grid_power,
-                self._mode_grid_limit(mode, grid_tolerance),
+                battery_discharge,
             )
         )
         switch_on_delay, switch_off_delay = self._response_delays(
@@ -412,11 +412,12 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         loads: list[LoadProfile],
         allowed: bool,
         grid_power: float,
-        grid_limit: float,
+        battery_discharge: float,
     ) -> tuple[tuple[str, ...], float, float, str]:
         """Select the loads that fit into the current surplus budget."""
         active_power = sum(load.estimated_power for load in loads if load.is_on)
-        budget = max(0.0, grid_limit - grid_power) + active_power
+        current_export = max(0.0, -grid_power)
+        budget = max(0.0, current_export + active_power - max(0.0, battery_discharge))
         if not allowed:
             return (), 0.0, budget, "Smart Scheduler blockiert alle Überschussverbraucher, weil die zentrale HEMS-Freigabe fehlt."
         if not loads:
@@ -430,14 +431,14 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                 used_power += load.estimated_power
 
         if not selected:
-            return (), 0.0, budget, f"Smart Scheduler wartet: verfügbares Budget {budget:.0f} W reicht für keinen konfigurierten Verbraucher."
+            return (), 0.0, budget, f"Smart Scheduler wartet: echtes Überschussbudget {budget:.0f} W reicht für keinen konfigurierten Verbraucher. Export {current_export:.0f} W, laufende Lasten {active_power:.0f} W, Batterieentladung {battery_discharge:.0f} W."
 
         names = ", ".join(load.entity_id for load in selected)
         return (
             tuple(load.entity_id for load in selected),
             used_power,
             budget,
-            f"Smart Scheduler plant {len(selected)} Verbraucher mit ca. {used_power:.0f} W: {names}. Verfügbares Budget: {budget:.0f} W.",
+            f"Smart Scheduler plant {len(selected)} Verbraucher mit ca. {used_power:.0f} W: {names}. Echtes Überschussbudget: {budget:.0f} W (Export {current_export:.0f} W + laufende Lasten {active_power:.0f} W - Batterieentladung {battery_discharge:.0f} W).",
         )
 
     def _flexible_load_decision_is_stable(

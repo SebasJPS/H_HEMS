@@ -161,6 +161,11 @@ Configured flexible loads and heating rods are switched by the integration itsel
 - In `minutes`, configured surplus loads switch on after 10 minutes and off after 5 minutes.
 - When `switch.bb_hems_auto_enabled` is off, BB HEMS does not switch devices automatically.
 
+To avoid using the battery for surplus consumers, set
+`number.bb_hems_battery_discharge_limit` to `0`. Any positive configured battery
+discharge then activates battery protection and switches planned surplus loads
+off. Higher values intentionally tolerate that many watts of battery discharge.
+
 ## Installation
 
 Copy this folder into Home Assistant:

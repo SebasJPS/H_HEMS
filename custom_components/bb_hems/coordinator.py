@@ -653,7 +653,10 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         opts = self.opts
         if battery_soc is not None and battery_soc < float(opts[OPT_PROTECT_BATTERY_SOC]):
             return True
-        if battery_discharge > float(opts[OPT_BATTERY_DISCHARGE_LIMIT]):
+        discharge_limit = float(opts[OPT_BATTERY_DISCHARGE_LIMIT])
+        if discharge_limit <= 0 and battery_discharge > 0:
+            return True
+        if discharge_limit > 0 and battery_discharge >= discharge_limit:
             return True
         return bool(bad_weather and battery_soc is not None and battery_soc < 70)
 
@@ -669,8 +672,10 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         discharge_limit = float(opts[OPT_BATTERY_DISCHARGE_LIMIT])
         if battery_soc is not None and battery_soc < protect_soc:
             return f"Batterieschutz aktiv: SoC {battery_soc:.1f}% liegt unter Schutzgrenze {protect_soc:.1f}%."
-        if battery_discharge > discharge_limit:
-            return f"Batterieschutz aktiv: Batterie entlädt mit {battery_discharge:.1f} W über Grenze {discharge_limit:.1f} W."
+        if discharge_limit <= 0 and battery_discharge > 0:
+            return f"Batterieschutz aktiv: Batterie entlädt mit {battery_discharge:.1f} W; die Entladegrenze ist auf 0 W gesetzt."
+        if discharge_limit > 0 and battery_discharge >= discharge_limit:
+            return f"Batterieschutz aktiv: Batterie entlädt mit {battery_discharge:.1f} W und erreicht die Grenze {discharge_limit:.1f} W."
         if bad_weather and battery_soc is not None and battery_soc < 70:
             return f"Batterieschutz aktiv: schlechtes Wetter und SoC {battery_soc:.1f}% unter 70%."
         if battery_protect:

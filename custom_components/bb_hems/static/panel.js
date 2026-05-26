@@ -13,7 +13,7 @@ const ALIASES = {
   flexible_loads_allowed: ["flexible_loads_allowed", "flexible verbraucher erlaubt"],
 };
 
-const BB_HEMS_VERSION = "0.1.4";
+const BB_HEMS_VERSION = "0.1.5";
 
 class BbHemsPanel extends HTMLElement {
   set hass(hass) {
@@ -97,6 +97,11 @@ class BbHemsPanel extends HTMLElement {
         .row { display: grid; grid-template-columns: minmax(120px, .8fr) minmax(0, 1.2fr); gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
         .row:last-child { border-bottom: 0; }
         .empty { padding: 14px; border: 1px dashed var(--line); border-radius: 8px; color: var(--muted); font-size: 14px; }
+        .control { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); }
+        .control:last-child { border-bottom: 0; }
+        .control input, .control select { min-height: 34px; border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; background: var(--card); color: var(--text); font: inherit; }
+        .control button, .action { min-height: 34px; border: 1px solid var(--accent); border-radius: 6px; padding: 5px 10px; background: color-mix(in srgb, var(--accent), transparent 88%); color: var(--accent); font: inherit; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+        .hint { margin-top: 8px; color: var(--muted); font-size: 12px; }
         @media (max-width: 1100px) { .layout, .hero, .asset-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .flow { grid-template-columns: 1fr; } .arrow { display: none; } }
         @media (max-width: 720px) { .page { width: min(100vw - 20px, 100%); padding-top: 12px; } .top, .layout, .hero, .decisions, .asset-grid { grid-template-columns: 1fr; } .pill { justify-self: start; white-space: normal; } }
       </style>
@@ -126,10 +131,10 @@ class BbHemsPanel extends HTMLElement {
             <section class="card">
               <div class="head"><h2>Entscheidung</h2><span class="muted">Warum Verbraucher freigegeben oder gesperrt sind</span></div>
               <div class="body"><div class="grid decisions">
-                ${decision("Überschuss", surplus, `PV ${val(byKey(states, "pv_power_total"))}, PV 15 min ${val(byKey(states, "pv_average"))}, Netz ${val(byKey(states, "grid_power"))}, Toleranz ${val(byKey(states, "grid_tolerance"))}.`)}
-                ${decision("Batterieschutz", protect, "Aktiv bei niedrigem SoC, hoher Batterieentladung oder sehr schlechtem Wetter.", true)}
-                ${decision("Wetterfreigabe", weather, "Bewertet Wetterzustand, Bewölkung, Sonne und Batterie-SoC.")}
-                ${decision("Flexible Verbraucher", allowed, "Nur aktiv, wenn Überschuss, Wetterfreigabe und Batterieschutz zusammen passen.")}
+                ${decision("Überschuss", surplus, attrs.surplus_reason || `PV ${val(byKey(states, "pv_power_total"))}, PV 15 min ${val(byKey(states, "pv_average"))}, Netz ${val(byKey(states, "grid_power"))}, Toleranz ${val(byKey(states, "grid_tolerance"))}.`)}
+                ${decision("Batterieschutz", protect, attrs.battery_reason || "Aktiv bei niedrigem SoC, hoher Batterieentladung oder sehr schlechtem Wetter.", true)}
+                ${decision("Wetterfreigabe", weather, attrs.weather_reason || "Bewertet Wetterzustand, Bewölkung, Sonne und Batterie-SoC.")}
+                ${decision("Flexible Verbraucher", allowed, attrs.load_reason || "Nur aktiv, wenn Überschuss, Wetterfreigabe und Batterieschutz zusammen passen.")}
               </div></div>
             </section>
             <section class="card">
@@ -146,6 +151,34 @@ class BbHemsPanel extends HTMLElement {
         </section>
       </main>
     `;
+    this.bindControls(states);
+  }
+
+  bindControls(states) {
+    this.querySelectorAll("[data-number-entity]").forEach((input) => {
+      input.addEventListener("change", () => {
+        this._hass.callService("number", "set_value", {
+          entity_id: input.dataset.numberEntity,
+          value: Number(input.value),
+        });
+      });
+    });
+    this.querySelectorAll("[data-select-entity]").forEach((select) => {
+      select.addEventListener("change", () => {
+        this._hass.callService("select", "select_option", {
+          entity_id: select.dataset.selectEntity,
+          option: select.value,
+        });
+      });
+    });
+    this.querySelectorAll("[data-switch-entity]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const entity = states.find((item) => item.entity_id === button.dataset.switchEntity);
+        this._hass.callService("switch", entity?.state === "on" ? "turn_off" : "turn_on", {
+          entity_id: button.dataset.switchEntity,
+        });
+      });
+    });
   }
 }
 
@@ -233,7 +266,22 @@ function settings(states) {
     .filter((entity) => ["number", "select", "switch"].includes(entity.entity_id.split(".")[0]))
     .sort((a, b) => name(a).localeCompare(name(b)));
   if (!rows.length) return `<div class="empty">Keine HEMS-Einstellungen gefunden.</div>`;
-  return `<table><tbody>${rows.map((entity) => `<tr><td>${esc(name(entity))}</td><td>${esc(val(entity))}</td></tr>`).join("")}</tbody></table>`;
+  return `<div>${rows.map((entity) => settingControl(entity)).join("")}<div class="hint">Änderungen werden direkt an Home Assistant gesendet.</div></div>`;
+}
+
+function settingControl(entity) {
+  const domain = entity.entity_id.split(".")[0];
+  if (domain === "number") {
+    const min = entity.attributes.min ?? "";
+    const max = entity.attributes.max ?? "";
+    const step = entity.attributes.step ?? 1;
+    return `<label class="control"><span>${esc(name(entity))}</span><input data-number-entity="${esc(entity.entity_id)}" type="number" value="${esc(entity.state)}" min="${esc(min)}" max="${esc(max)}" step="${esc(step)}"></label>`;
+  }
+  if (domain === "select") {
+    const options = entity.attributes.options || [];
+    return `<label class="control"><span>${esc(name(entity))}</span><select data-select-entity="${esc(entity.entity_id)}">${options.map((option) => `<option value="${esc(option)}" ${option === entity.state ? "selected" : ""}>${esc(option)}</option>`).join("")}</select></label>`;
+  }
+  return `<div class="control"><span>${esc(name(entity))}</span><button data-switch-entity="${esc(entity.entity_id)}">${entity.state === "on" ? "Ausschalten" : "Einschalten"}</button></div>`;
 }
 
 function list(value) {
@@ -242,7 +290,7 @@ function list(value) {
 }
 
 function config(attrs) {
-  if (!Object.keys(attrs).length) return `<div class="empty">Die Konfiguration ist noch nicht sichtbar. Erwartet wird der BB HEMS Energiemodus-Sensor mit Attributen.</div>`;
+  if (!Object.keys(attrs).length) return `<div class="empty">Die Konfiguration ist noch nicht sichtbar. Erwartet wird der BB HEMS Energiemodus-Sensor mit Attributen.</div><div class="hint"><a class="action" href="/config/integrations/integration/bb_hems">Konfiguration öffnen</a></div>`;
   const rows = [
     ["Netz aktuell", attrs.grid_power_sensor],
     ["Netz 15 min", attrs.grid_average_sensor],
@@ -255,7 +303,7 @@ function config(attrs) {
     ["Wallboxen", attrs.wallbox_switches],
     ["Wärmepumpen", attrs.heat_pump_switches],
   ];
-  return `<div class="rows">${rows.map(([label, value]) => `<div class="row"><strong>${label}</strong><span>${esc(list(value))}</span></div>`).join("")}</div>`;
+  return `<div class="rows">${rows.map(([label, value]) => `<div class="row"><strong>${label}</strong><span>${esc(list(value))}</span></div>`).join("")}</div><div class="hint"><a class="action" href="/config/integrations/integration/bb_hems">Konfiguration ändern</a></div>`;
 }
 
 function recent(states) {

@@ -10,7 +10,7 @@ from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import NAME, PANEL_URL, PLATFORMS
+from .const import DEFAULTS, NAME, OPT_DASHBOARD_ENABLED, PANEL_URL, PLATFORMS
 from .coordinator import HemsCoordinator
 
 PANEL_COMPONENT_NAME = "bb-hems-panel"
@@ -35,7 +35,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.runtime_data = coordinator
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    await _async_register_dashboard(hass)
+    if {**DEFAULTS, **dict(entry.options)}[OPT_DASHBOARD_ENABLED]:
+        await _async_register_dashboard(hass)
+    else:
+        frontend.async_remove_panel(hass, PANEL_URL)
     return True
 
 

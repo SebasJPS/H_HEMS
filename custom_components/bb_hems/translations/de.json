@@ -17,9 +17,11 @@
           "cloud_sensor": "Bewölkungsgrad",
           "sunshine_sensor": "Sonnenscheindauer",
           "flexible_load_switches": "Flexible Verbraucher",
+          "flexible_load_power_sensors": "Leistungssensoren flexible Verbraucher",
           "wallbox_switches": "Wallboxen",
           "heat_pump_switches": "Wärmepumpen",
-          "heating_rod_switches": "Heizstäbe"
+          "heating_rod_switches": "Heizstäbe",
+          "heating_rod_power_sensors": "Leistungssensoren Heizstäbe"
         },
         "data_description": {
           "name": "Anzeigename der HEMS-Instanz.",
@@ -33,9 +35,11 @@
           "cloud_sensor": "Bewölkung in Prozent. Niedrige Werte machen PV-Überschuss wahrscheinlicher.",
           "sunshine_sensor": "Sonnenscheindauer oder Sonnenindikator. Der Wert sollte größer werden, wenn aktuell Sonne verfügbar ist.",
           "flexible_load_switches": "Schaltbare Verbraucher, die bei Überschuss freigegeben werden dürfen, z.B. Luftentfeuchter.",
+          "flexible_load_power_sensors": "Optionale Leistungssensoren der flexiblen Verbraucher in gleicher Reihenfolge wie die Schalter. Wenn ein Verbraucher läuft, nutzt BB HEMS diesen echten Verbrauch statt des pauschalen Schätzwerts.",
           "wallbox_switches": "Schaltbare Wallboxen oder Ladefreigaben. Wird aktuell als Gerätegruppe erfasst und später priorisiert.",
           "heat_pump_switches": "Schaltbare Wärmepumpen oder SG-Ready-Freigaben. Wird aktuell als Gerätegruppe erfasst und später priorisiert.",
-          "heating_rod_switches": "Schaltbare Heizstäbe oder Boiler-Freigaben. BB HEMS behandelt sie als Überschussverbraucher."
+          "heating_rod_switches": "Schaltbare Heizstäbe oder Boiler-Freigaben. BB HEMS behandelt sie als Überschussverbraucher.",
+          "heating_rod_power_sensors": "Optionale Leistungssensoren der Heizstäbe in gleicher Reihenfolge wie die Schalter."
         }
       }
     }
@@ -56,9 +60,11 @@
           "cloud_sensor": "Bewölkungsgrad",
           "sunshine_sensor": "Sonnenscheindauer",
           "flexible_load_switches": "Flexible Verbraucher",
+          "flexible_load_power_sensors": "Leistungssensoren flexible Verbraucher",
           "wallbox_switches": "Wallboxen",
           "heat_pump_switches": "Wärmepumpen",
-          "heating_rod_switches": "Heizstäbe"
+          "heating_rod_switches": "Heizstäbe",
+          "heating_rod_power_sensors": "Leistungssensoren Heizstäbe"
         },
         "data_description": {
           "name": "Anzeigename der HEMS-Instanz.",
@@ -72,9 +78,11 @@
           "cloud_sensor": "Bewölkung in Prozent. Niedrige Werte machen PV-Überschuss wahrscheinlicher.",
           "sunshine_sensor": "Sonnenscheindauer oder Sonnenindikator. Der Wert sollte größer werden, wenn aktuell Sonne verfügbar ist.",
           "flexible_load_switches": "Schaltbare Verbraucher, die bei Überschuss freigegeben werden dürfen, z.B. Luftentfeuchter.",
+          "flexible_load_power_sensors": "Optionale Leistungssensoren der flexiblen Verbraucher in gleicher Reihenfolge wie die Schalter. Wenn ein Verbraucher läuft, nutzt BB HEMS diesen echten Verbrauch statt des pauschalen Schätzwerts.",
           "wallbox_switches": "Schaltbare Wallboxen oder Ladefreigaben. Wird aktuell als Gerätegruppe erfasst und später priorisiert.",
           "heat_pump_switches": "Schaltbare Wärmepumpen oder SG-Ready-Freigaben. Wird aktuell als Gerätegruppe erfasst und später priorisiert.",
-          "heating_rod_switches": "Schaltbare Heizstäbe oder Boiler-Freigaben. BB HEMS behandelt sie als Überschussverbraucher."
+          "heating_rod_switches": "Schaltbare Heizstäbe oder Boiler-Freigaben. BB HEMS behandelt sie als Überschussverbraucher.",
+          "heating_rod_power_sensors": "Optionale Leistungssensoren der Heizstäbe in gleicher Reihenfolge wie die Schalter."
         }
       }
     }
@@ -118,7 +126,8 @@
       "response_profile": { "name": "Reaktionsmodus" }
     },
     "switch": {
-      "auto_enabled": { "name": "Automatik aktiv" }
+      "auto_enabled": { "name": "Automatik aktiv" },
+      "dashboard_enabled": { "name": "Dashboard aktiv" }
     }
   }
 }

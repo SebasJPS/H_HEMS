@@ -15,10 +15,12 @@ from .const import (
     CONF_BATTERY_DISCHARGE_SENSORS,
     CONF_BATTERY_SOC_SENSORS,
     CONF_CLOUD_SENSOR,
+    CONF_FLEXIBLE_LOAD_POWER_SENSORS,
     CONF_FLEXIBLE_LOAD_SWITCHES,
     CONF_GRID_AVERAGE_SENSOR,
     CONF_GRID_POWER_SENSOR,
     CONF_HEAT_PUMP_SWITCHES,
+    CONF_HEATING_ROD_POWER_SENSORS,
     CONF_HEATING_ROD_SWITCHES,
     CONF_PV_AVERAGE_SENSOR,
     CONF_PV_POWER_SENSORS,
@@ -86,6 +88,9 @@ class BbHemsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_FLEXIBLE_LOAD_SWITCHES: _entity_list(
                     user_input.get(CONF_FLEXIBLE_LOAD_SWITCHES)
                 ),
+                CONF_FLEXIBLE_LOAD_POWER_SENSORS: _entity_list(
+                    user_input.get(CONF_FLEXIBLE_LOAD_POWER_SENSORS)
+                ),
                 CONF_WALLBOX_SWITCHES: _entity_list(
                     user_input.get(CONF_WALLBOX_SWITCHES)
                 ),
@@ -94,6 +99,9 @@ class BbHemsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 ),
                 CONF_HEATING_ROD_SWITCHES: _entity_list(
                     user_input.get(CONF_HEATING_ROD_SWITCHES)
+                ),
+                CONF_HEATING_ROD_POWER_SENSORS: _entity_list(
+                    user_input.get(CONF_HEATING_ROD_POWER_SENSORS)
                 ),
             }
             return self.async_create_entry(title=data[CONF_NAME], data=data, options=DEFAULTS)
@@ -149,6 +157,9 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
                     CONF_FLEXIBLE_LOAD_SWITCHES: _entity_list(
                         user_input.get(CONF_FLEXIBLE_LOAD_SWITCHES)
                     ),
+                    CONF_FLEXIBLE_LOAD_POWER_SENSORS: _entity_list(
+                        user_input.get(CONF_FLEXIBLE_LOAD_POWER_SENSORS)
+                    ),
                     CONF_WALLBOX_SWITCHES: _entity_list(
                         user_input.get(CONF_WALLBOX_SWITCHES)
                     ),
@@ -157,6 +168,9 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
                     ),
                     CONF_HEATING_ROD_SWITCHES: _entity_list(
                         user_input.get(CONF_HEATING_ROD_SWITCHES)
+                    ),
+                    CONF_HEATING_ROD_POWER_SENSORS: _entity_list(
+                        user_input.get(CONF_HEATING_ROD_POWER_SENSORS)
                     ),
                 }
             )
@@ -179,10 +193,16 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
             CONF_FLEXIBLE_LOAD_SWITCHES: _entity_list(
                 data.get(CONF_FLEXIBLE_LOAD_SWITCHES)
             ),
+            CONF_FLEXIBLE_LOAD_POWER_SENSORS: _entity_list(
+                data.get(CONF_FLEXIBLE_LOAD_POWER_SENSORS)
+            ),
             CONF_WALLBOX_SWITCHES: _entity_list(data.get(CONF_WALLBOX_SWITCHES)),
             CONF_HEAT_PUMP_SWITCHES: _entity_list(data.get(CONF_HEAT_PUMP_SWITCHES)),
             CONF_HEATING_ROD_SWITCHES: _entity_list(
                 data.get(CONF_HEATING_ROD_SWITCHES)
+            ),
+            CONF_HEATING_ROD_POWER_SENSORS: _entity_list(
+                data.get(CONF_HEATING_ROD_POWER_SENSORS)
             ),
         }
         return self.async_show_form(step_id="init", data_schema=_schema(defaults))
@@ -253,6 +273,12 @@ def _schema(defaults: dict[str, Any]) -> vol.Schema:
                 selector.EntitySelectorConfig(domain=SWITCHABLE_DOMAINS, multiple=True)
             ),
             vol.Optional(
+                CONF_FLEXIBLE_LOAD_POWER_SENSORS,
+                default=defaults.get(CONF_FLEXIBLE_LOAD_POWER_SENSORS, []),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+            ),
+            vol.Optional(
                 CONF_WALLBOX_SWITCHES,
                 default=defaults.get(CONF_WALLBOX_SWITCHES, []),
             ): selector.EntitySelector(
@@ -269,6 +295,12 @@ def _schema(defaults: dict[str, Any]) -> vol.Schema:
                 default=defaults.get(CONF_HEATING_ROD_SWITCHES, []),
             ): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain=SWITCHABLE_DOMAINS, multiple=True)
+            ),
+            vol.Optional(
+                CONF_HEATING_ROD_POWER_SENSORS,
+                default=defaults.get(CONF_HEATING_ROD_POWER_SENSORS, []),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
             ),
         }
     )

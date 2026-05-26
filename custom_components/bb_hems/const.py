@@ -21,13 +21,16 @@ CONF_WEATHER_STATE_SENSOR = "weather_state_sensor"
 CONF_CLOUD_SENSOR = "cloud_sensor"
 CONF_SUNSHINE_SENSOR = "sunshine_sensor"
 CONF_FLEXIBLE_LOAD_SWITCHES = "flexible_load_switches"
+CONF_FLEXIBLE_LOAD_POWER_SENSORS = "flexible_load_power_sensors"
 CONF_WALLBOX_SWITCHES = "wallbox_switches"
 CONF_HEAT_PUMP_SWITCHES = "heat_pump_switches"
 CONF_HEATING_ROD_SWITCHES = "heating_rod_switches"
+CONF_HEATING_ROD_POWER_SENSORS = "heating_rod_power_sensors"
 
 OPT_MODE = "mode"
 OPT_RESPONSE_PROFILE = "response_profile"
 OPT_AUTO_ENABLED = "auto_enabled"
+OPT_DASHBOARD_ENABLED = "dashboard_enabled"
 OPT_MIN_BATTERY_SOC = "min_battery_soc"
 OPT_PROTECT_BATTERY_SOC = "protect_battery_soc"
 OPT_PV_THRESHOLD = "pv_threshold"
@@ -60,6 +63,7 @@ DEFAULTS = {
     OPT_MODE: MODE_AUTO,
     OPT_RESPONSE_PROFILE: RESPONSE_AUTO,
     OPT_AUTO_ENABLED: True,
+    OPT_DASHBOARD_ENABLED: True,
     OPT_MIN_BATTERY_SOC: 50.0,
     OPT_PROTECT_BATTERY_SOC: 45.0,
     OPT_PV_THRESHOLD: 180.0,

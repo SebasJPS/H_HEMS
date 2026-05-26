@@ -17,10 +17,12 @@ from .const import (
     CONF_BATTERY_DISCHARGE_SENSORS,
     CONF_BATTERY_SOC_SENSORS,
     CONF_CLOUD_SENSOR,
+    CONF_FLEXIBLE_LOAD_POWER_SENSORS,
     CONF_FLEXIBLE_LOAD_SWITCHES,
     CONF_GRID_AVERAGE_SENSOR,
     CONF_GRID_POWER_SENSOR,
     CONF_HEAT_PUMP_SWITCHES,
+    CONF_HEATING_ROD_POWER_SENSORS,
     CONF_HEATING_ROD_SWITCHES,
     CONF_PV_AVERAGE_SENSOR,
     CONF_PV_POWER_SENSORS,
@@ -37,6 +39,7 @@ from .const import (
     MODE_OFF,
     OPT_AUTO_ENABLED,
     OPT_BATTERY_DISCHARGE_LIMIT,
+    OPT_DASHBOARD_ENABLED,
     OPT_FLEXIBLE_LOAD_POWER,
     OPT_GRID_HARD_IMPORT_LIMIT,
     OPT_GRID_IMPORT_LIMIT,
@@ -64,8 +67,17 @@ class LoadProfile:
     entity_id: str
     category: str
     estimated_power: float
+    actual_power: float | None
+    power_sensor: str | None
     priority: int
     is_on: bool
+
+    @property
+    def scheduling_power(self) -> float:
+        """Return the best available power value for scheduling."""
+        if self.is_on and self.actual_power is not None and self.actual_power > 0:
+            return self.actual_power
+        return self.estimated_power
 
 
 @dataclass(frozen=True)
@@ -383,29 +395,43 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         opts = self.opts
         flexible_power = float(opts[OPT_FLEXIBLE_LOAD_POWER])
         heating_rod_power = float(opts[OPT_HEATING_ROD_POWER])
+        flexible_power_sensors = data.get(CONF_FLEXIBLE_LOAD_POWER_SENSORS, [])
+        heating_rod_power_sensors = data.get(CONF_HEATING_ROD_POWER_SENSORS, [])
 
         profiles: list[LoadProfile] = []
-        for entity_id in data.get(CONF_FLEXIBLE_LOAD_SWITCHES, []):
+        for index, entity_id in enumerate(data.get(CONF_FLEXIBLE_LOAD_SWITCHES, [])):
+            power_sensor = self._matching_entity(flexible_power_sensors, index)
             profiles.append(
                 LoadProfile(
                     entity_id=entity_id,
                     category="flexible_load",
                     estimated_power=flexible_power,
+                    actual_power=self._positive_float_state(power_sensor),
+                    power_sensor=power_sensor,
                     priority=10,
                     is_on=self.hass.states.is_state(entity_id, STATE_ON),
                 )
             )
-        for entity_id in data.get(CONF_HEATING_ROD_SWITCHES, []):
+        for index, entity_id in enumerate(data.get(CONF_HEATING_ROD_SWITCHES, [])):
+            power_sensor = self._matching_entity(heating_rod_power_sensors, index)
             profiles.append(
                 LoadProfile(
                     entity_id=entity_id,
                     category="heating_rod",
                     estimated_power=heating_rod_power,
+                    actual_power=self._positive_float_state(power_sensor),
+                    power_sensor=power_sensor,
                     priority=30,
                     is_on=self.hass.states.is_state(entity_id, STATE_ON),
                 )
             )
         return profiles
+
+    def _matching_entity(self, entity_ids: list[str], index: int) -> str | None:
+        """Return the same-position entity from a parallel entity list."""
+        if index >= len(entity_ids):
+            return None
+        return entity_ids[index]
 
     def _schedule_surplus_loads(
         self,
@@ -415,7 +441,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         battery_discharge: float,
     ) -> tuple[tuple[str, ...], float, float, str]:
         """Select the loads that fit into the current surplus budget."""
-        active_power = sum(load.estimated_power for load in loads if load.is_on)
+        active_power = sum(load.scheduling_power for load in loads if load.is_on)
         current_export = max(0.0, -grid_power)
         budget = max(0.0, current_export + active_power - max(0.0, battery_discharge))
         if not allowed:
@@ -426,9 +452,10 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         selected: list[LoadProfile] = []
         used_power = 0.0
         for load in sorted(loads, key=lambda item: (item.priority, not item.is_on, item.estimated_power)):
-            if load.estimated_power <= 0 or used_power + load.estimated_power <= budget:
+            load_power = load.scheduling_power
+            if load_power <= 0 or used_power + load_power <= budget:
                 selected.append(load)
-                used_power += load.estimated_power
+                used_power += load_power
 
         if not selected:
             return (), 0.0, budget, f"Smart Scheduler wartet: echtes Überschussbudget {budget:.0f} W reicht für keinen konfigurierten Verbraucher. Export {current_export:.0f} W, laufende Lasten {active_power:.0f} W, Batterieentladung {battery_discharge:.0f} W."
@@ -561,6 +588,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         return {
             OPT_AUTO_ENABLED: "Automatik",
             OPT_BATTERY_DISCHARGE_LIMIT: "Entladegrenze Batterie",
+            OPT_DASHBOARD_ENABLED: "Dashboard",
             OPT_GRID_HARD_IMPORT_LIMIT: "Netzbezug hart",
             OPT_GRID_IMPORT_LIMIT: "Netzbezug-Toleranz",
             OPT_FLEXIBLE_LOAD_POWER: "Leistung flexible Verbraucher",
@@ -589,6 +617,12 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             return float(state.replace(",", "."))
         except (TypeError, ValueError):
             return default
+
+    def _positive_float_state(self, entity_id: str | None) -> float | None:
+        value = self._float_state(entity_id, None)
+        if value is None:
+            return None
+        return max(0.0, value)
 
     def _good_weather(
         self,

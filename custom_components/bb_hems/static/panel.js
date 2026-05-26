@@ -13,7 +13,7 @@ const ALIASES = {
   flexible_loads_allowed: ["flexible_loads_allowed", "flexible verbraucher erlaubt"],
 };
 
-const BB_HEMS_VERSION = "0.1.12";
+const BB_HEMS_VERSION = "0.1.13";
 
 class BbHemsPanel extends HTMLElement {
   set hass(hass) {
@@ -330,9 +330,11 @@ function config(attrs) {
     ["Batterie-Entladung", attrs.battery_discharge_sensors],
     ["Wetter", attrs.weather_state_sensor],
     ["Flexible Verbraucher", attrs.flexible_load_switches],
+    ["Leistung flexible Verbraucher", attrs.flexible_load_power_sensors],
     ["Wallboxen", attrs.wallbox_switches],
     ["Wärmepumpen", attrs.heat_pump_switches],
     ["Heizstäbe", attrs.heating_rod_switches],
+    ["Leistung Heizstäbe", attrs.heating_rod_power_sensors],
     ["Reaktionsmodus", attrs.response_profile],
     ["Einschaltverzögerung", formatSeconds(attrs.switch_on_delay_seconds)],
     ["Ausschaltverzögerung", formatSeconds(attrs.switch_off_delay_seconds)],

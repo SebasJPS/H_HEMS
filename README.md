@@ -66,7 +66,9 @@ Suggested mapping from the original automation:
 | Cloud coverage | `sensor.berlin_tempelhof_bewolkungsgrad` |
 | Sunshine duration | `sensor.berlin_tempelhof_sonnenscheindauer` |
 | Flexible loads | `switch.a8m` |
+| Flexible load power sensors | `sensor.a8m_power` |
 | Heating rods | `switch.boiler_heating_rod` |
+| Heating rod power sensors | `sensor.boiler_heating_rod_power` |
 
 ## Entities
 
@@ -98,6 +100,7 @@ Suggested mapping from the original automation:
 
 - `select.bb_hems_mode`
 - `switch.bb_hems_auto_enabled`
+- `switch.bb_hems_dashboard_enabled`
 - `number.bb_hems_min_battery_soc`
 - `number.bb_hems_protect_battery_soc`
 - `number.bb_hems_pv_threshold`
@@ -143,12 +146,13 @@ The first controller version evaluates:
 
 After the central surplus decision, the smart scheduler estimates the real
 surplus budget and selects only the configured loads that fit. It uses current
-grid export plus the estimated power of already running managed loads, then
-subtracts measured battery discharge. Flexible loads use the
-`number.bb_hems_flexible_load_power` estimate and are preferred before heating
-rods, which use `number.bb_hems_heating_rod_power`. This avoids switching all
-surplus consumers at once and also turns running loads off when their estimated
-power is no longer covered by real surplus.
+grid export plus the measured or estimated power of already running managed
+loads, then subtracts measured battery discharge. Optional power sensors can be
+assigned in the integration options in the same order as their switches. While a
+load is running, BB HEMS uses that live power sensor; otherwise it falls back to
+`number.bb_hems_flexible_load_power` or `number.bb_hems_heating_rod_power` for
+planning. This avoids switching all surplus consumers at once and also turns
+running loads off when their actual power is no longer covered by real surplus.
 
 The main output is still exposed for dashboards and optional automations:
 
@@ -184,6 +188,9 @@ Settings -> Devices & services -> Add integration -> BB HEMS
 ```
 
 After setup, a `BB HEMS` entry appears in the Home Assistant sidebar.
+The sidebar dashboard can be hidden with `switch.bb_hems_dashboard_enabled`.
+All HEMS functions remain available as normal Home Assistant entities for users
+who prefer building their own dashboards.
 
 ## Support
 

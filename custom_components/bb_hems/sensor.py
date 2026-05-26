@@ -20,10 +20,12 @@ from .const import (
     CONF_BATTERY_DISCHARGE_SENSORS,
     CONF_BATTERY_SOC_SENSORS,
     CONF_CLOUD_SENSOR,
+    CONF_FLEXIBLE_LOAD_POWER_SENSORS,
     CONF_FLEXIBLE_LOAD_SWITCHES,
     CONF_GRID_AVERAGE_SENSOR,
     CONF_GRID_POWER_SENSOR,
     CONF_HEAT_PUMP_SWITCHES,
+    CONF_HEATING_ROD_POWER_SENSORS,
     CONF_HEATING_ROD_SWITCHES,
     CONF_PV_AVERAGE_SENSOR,
     CONF_PV_POWER_SENSORS,
@@ -234,7 +236,13 @@ class HemsSensor(HemsEntity, SensorEntity):
             "cloud_sensor": config.get(CONF_CLOUD_SENSOR),
             "sunshine_sensor": config.get(CONF_SUNSHINE_SENSOR),
             "flexible_load_switches": config.get(CONF_FLEXIBLE_LOAD_SWITCHES, []),
+            "flexible_load_power_sensors": config.get(
+                CONF_FLEXIBLE_LOAD_POWER_SENSORS, []
+            ),
             "wallbox_switches": config.get(CONF_WALLBOX_SWITCHES, []),
             "heat_pump_switches": config.get(CONF_HEAT_PUMP_SWITCHES, []),
             "heating_rod_switches": config.get(CONF_HEATING_ROD_SWITCHES, []),
+            "heating_rod_power_sensors": config.get(
+                CONF_HEATING_ROD_POWER_SENSORS, []
+            ),
         }

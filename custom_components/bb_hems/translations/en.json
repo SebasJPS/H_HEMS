@@ -17,9 +17,11 @@
           "cloud_sensor": "Cloud coverage",
           "sunshine_sensor": "Sunshine duration",
           "flexible_load_switches": "Flexible loads",
+          "flexible_load_power_sensors": "Flexible load power sensors",
           "wallbox_switches": "Wallboxes",
           "heat_pump_switches": "Heat pumps",
-          "heating_rod_switches": "Heating rods"
+          "heating_rod_switches": "Heating rods",
+          "heating_rod_power_sensors": "Heating rod power sensors"
         },
         "data_description": {
           "name": "Display name of this HEMS instance.",
@@ -33,9 +35,11 @@
           "cloud_sensor": "Cloud coverage in percent. Lower values make PV surplus more likely.",
           "sunshine_sensor": "Sunshine duration or sunshine indicator. The value should increase when sunshine is currently available.",
           "flexible_load_switches": "Switchable loads that may be enabled during surplus, for example a dehumidifier.",
+          "flexible_load_power_sensors": "Optional power sensors for flexible loads in the same order as the switches. While a load is running, BB HEMS uses this real consumption instead of the global estimate.",
           "wallbox_switches": "Switchable wallboxes or charging-enable entities. Currently stored as a device group for later prioritization.",
           "heat_pump_switches": "Switchable heat pumps or SG-ready enable entities. Currently stored as a device group for later prioritization.",
-          "heating_rod_switches": "Switchable heating rods or boiler-enable entities. BB HEMS treats them as surplus loads."
+          "heating_rod_switches": "Switchable heating rods or boiler-enable entities. BB HEMS treats them as surplus loads.",
+          "heating_rod_power_sensors": "Optional power sensors for heating rods in the same order as the switches."
         }
       }
     }
@@ -56,9 +60,11 @@
           "cloud_sensor": "Cloud coverage",
           "sunshine_sensor": "Sunshine duration",
           "flexible_load_switches": "Flexible loads",
+          "flexible_load_power_sensors": "Flexible load power sensors",
           "wallbox_switches": "Wallboxes",
           "heat_pump_switches": "Heat pumps",
-          "heating_rod_switches": "Heating rods"
+          "heating_rod_switches": "Heating rods",
+          "heating_rod_power_sensors": "Heating rod power sensors"
         },
         "data_description": {
           "name": "Display name of this HEMS instance.",
@@ -72,9 +78,11 @@
           "cloud_sensor": "Cloud coverage in percent. Lower values make PV surplus more likely.",
           "sunshine_sensor": "Sunshine duration or sunshine indicator. The value should increase when sunshine is currently available.",
           "flexible_load_switches": "Switchable loads that may be enabled during surplus, for example a dehumidifier.",
+          "flexible_load_power_sensors": "Optional power sensors for flexible loads in the same order as the switches. While a load is running, BB HEMS uses this real consumption instead of the global estimate.",
           "wallbox_switches": "Switchable wallboxes or charging-enable entities. Currently stored as a device group for later prioritization.",
           "heat_pump_switches": "Switchable heat pumps or SG-ready enable entities. Currently stored as a device group for later prioritization.",
-          "heating_rod_switches": "Switchable heating rods or boiler-enable entities. BB HEMS treats them as surplus loads."
+          "heating_rod_switches": "Switchable heating rods or boiler-enable entities. BB HEMS treats them as surplus loads.",
+          "heating_rod_power_sensors": "Optional power sensors for heating rods in the same order as the switches."
         }
       }
     }
@@ -91,6 +99,9 @@
     "select": {
       "mode": { "name": "Operating mode" },
       "response_profile": { "name": "Response profile" }
+    },
+    "switch": {
+      "dashboard_enabled": { "name": "Dashboard enabled" }
     }
   }
 }

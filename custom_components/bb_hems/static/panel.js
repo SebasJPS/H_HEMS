@@ -13,7 +13,7 @@ const ALIASES = {
   flexible_loads_allowed: ["flexible_loads_allowed", "flexible verbraucher erlaubt"],
 };
 
-const BB_HEMS_VERSION = "0.1.8";
+const BB_HEMS_VERSION = "0.1.10";
 
 class BbHemsPanel extends HTMLElement {
   set hass(hass) {
@@ -86,7 +86,7 @@ class BbHemsPanel extends HTMLElement {
         .arrow { color: var(--muted); font-size: 26px; }
         .decisions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .decision { display: grid; grid-template-columns: auto 1fr; gap: 10px; padding: 12px; background: color-mix(in srgb, var(--card), var(--bg) 28%); }
-        .asset-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+        .asset-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
         .asset { padding: 12px; background: color-mix(in srgb, var(--card), var(--bg) 28%); }
         .count { margin-top: 8px; font-size: 24px; font-weight: 720; }
         .actions { display: grid; gap: 10px; }
@@ -145,7 +145,7 @@ class BbHemsPanel extends HTMLElement {
                 ${decision("Überschuss", surplus, attrs.surplus_reason || `PV ${val(byKey(states, "pv_power_total"))}, PV 15 min ${val(byKey(states, "pv_average"))}, Netz ${val(byKey(states, "grid_power"))}, Toleranz ${val(byKey(states, "grid_tolerance"))}.`)}
                 ${decision("Batterieschutz", protect, attrs.battery_reason || "Aktiv bei niedrigem SoC, hoher Batterieentladung oder sehr schlechtem Wetter.", true)}
                 ${decision("Wetterfreigabe", weather, attrs.weather_reason || "Bewertet Wetterzustand, Bewölkung, Sonne und Batterie-SoC.")}
-                ${decision("Flexible Verbraucher", allowed, attrs.load_reason || "Nur aktiv, wenn Überschuss, Wetterfreigabe und Batterieschutz zusammen passen.")}
+                ${decision("Flexible Verbraucher", allowed, attrs.scheduler_reason || attrs.load_reason || "Nur aktiv, wenn Überschuss, Wetterfreigabe und Batterieschutz zusammen passen.")}
               </div></div>
             </section>
             <section class="card">
@@ -274,6 +274,7 @@ function assets(attrs) {
     ["Verbraucher", attrs.configured_flexible_loads ?? 0],
     ["Wallboxen", attrs.configured_wallboxes ?? 0],
     ["Wärmepumpen", attrs.configured_heat_pumps ?? 0],
+    ["Heizstäbe", attrs.configured_heating_rods ?? 0],
   ].map(([label, count]) => `<div class="asset"><h3>${label}</h3><div class="count">${count}</div></div>`).join("");
 }
 
@@ -331,6 +332,13 @@ function config(attrs) {
     ["Flexible Verbraucher", attrs.flexible_load_switches],
     ["Wallboxen", attrs.wallbox_switches],
     ["Wärmepumpen", attrs.heat_pump_switches],
+    ["Heizstäbe", attrs.heating_rod_switches],
+    ["Reaktionsmodus", attrs.response_profile],
+    ["Einschaltverzögerung", formatSeconds(attrs.switch_on_delay_seconds)],
+    ["Ausschaltverzögerung", formatSeconds(attrs.switch_off_delay_seconds)],
+    ["Verfügbares Budget", formatWatts(attrs.available_surplus_budget)],
+    ["Geplante Verbraucher", attrs.scheduled_surplus_loads],
+    ["Geplante Leistung", formatWatts(attrs.scheduled_surplus_power)],
   ];
   return `<div class="rows">${rows.map(([label, value]) => `<div class="row"><strong>${label}</strong><span>${esc(list(value))}</span></div>`).join("")}</div><div class="hint"><a class="action" href="/config/integrations/integration/bb_hems">Konfiguration ändern</a></div>`;
 }
@@ -349,6 +357,20 @@ function formatTime(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
+function formatSeconds(value) {
+  const seconds = Number(value);
+  if (!Number.isFinite(seconds)) return "nicht gesetzt";
+  if (seconds === 0) return "sofort";
+  if (seconds < 60) return `${seconds} s`;
+  return `${Math.round(seconds / 60)} min`;
+}
+
+function formatWatts(value) {
+  const watts = Number(value);
+  if (!Number.isFinite(watts)) return "nicht gesetzt";
+  return `${Math.round(watts)} W`;
 }
 
 customElements.define("bb-hems-panel", BbHemsPanel);

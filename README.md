@@ -26,10 +26,10 @@ This repository contains an initial custom integration scaffold:
 - Number entities for editable thresholds.
 - Select entity for HEMS operating mode.
 - Switch entity for enabling or disabling automatic HEMS decisions.
-- Direct control of configured flexible loads when the HEMS decision allows or blocks them.
+- Direct control of configured flexible loads and heating rods when the HEMS decision allows or blocks them.
 - Sidebar dashboard served by the integration.
 
-The current version calculates central decisions and directly switches configured flexible loads. It does not yet schedule every individual device by priority; that is the next layer.
+The current version calculates central decisions and directly switches configured flexible loads and heating rods. It does not yet schedule every individual device by priority; that is the next layer.
 
 ## System Model
 
@@ -66,6 +66,7 @@ Suggested mapping from the original automation:
 | Cloud coverage | `sensor.berlin_tempelhof_bewolkungsgrad` |
 | Sunshine duration | `sensor.berlin_tempelhof_sonnenscheindauer` |
 | Flexible loads | `switch.a8m` |
+| Heating rods | `switch.boiler_heating_rod` |
 
 ## Entities
 
@@ -82,6 +83,8 @@ Suggested mapping from the original automation:
 - `sensor.bb_hems_cloud_coverage`
 - `sensor.bb_hems_sunshine_minutes`
 - `sensor.bb_hems_active_flexible_loads`
+- `sensor.bb_hems_available_surplus_budget`
+- `sensor.bb_hems_scheduled_surplus_power`
 - `sensor.bb_hems_configured_assets`
 
 ### Binary Sensors
@@ -102,6 +105,9 @@ Suggested mapping from the original automation:
 - `number.bb_hems_grid_import_limit`
 - `number.bb_hems_grid_hard_import_limit`
 - `number.bb_hems_battery_discharge_limit`
+- `number.bb_hems_flexible_load_power`
+- `number.bb_hems_heating_rod_power`
+- `select.bb_hems_response_profile`
 
 ## Operating Modes
 
@@ -112,6 +118,15 @@ Suggested mapping from the original automation:
 | `comfort` | Allows more grid tolerance when the house should favor comfort. |
 | `force_surplus` | Treats surplus as available unless battery protection blocks it. |
 | `off` | Disables HEMS decisions. |
+
+## Response Profiles
+
+| Profile | Behavior |
+|---|---|
+| `auto` | Default. Near real-time where sensible: critical protection switches off immediately, normal surplus switching uses short second-level stability. |
+| `realtime` | Switches on the next 10-second coordinator update without additional stability delay. |
+| `seconds` | Uses short delays: 60 seconds before switching on, 30 seconds before switching off. |
+| `minutes` | Conservative legacy behavior: 10 minutes before switching on, 5 minutes before switching off. |
 
 ## Decision Logic
 
@@ -126,16 +141,24 @@ The first controller version evaluates:
 - Weather state, cloud coverage and sunshine.
 - Configured thresholds and operating mode.
 
+After the central surplus decision, the smart scheduler estimates the available
+surplus budget and selects only the configured loads that fit. Flexible loads use
+the `number.bb_hems_flexible_load_power` estimate and are preferred before
+heating rods, which use `number.bb_hems_heating_rod_power`. This avoids switching
+all surplus consumers at once when only a smaller surplus is available.
+
 The main output is still exposed for dashboards and optional automations:
 
 ```yaml
 binary_sensor.bb_hems_flexible_loads_allowed
 ```
 
-Configured flexible loads are switched by the integration itself:
+Configured flexible loads and heating rods are switched by the integration itself:
 
-- When `binary_sensor.bb_hems_flexible_loads_allowed` stays on for 10 minutes, configured flexible-load switches are turned on.
-- When it stays off for 5 minutes, configured flexible-load switches are turned off.
+- In `auto`, critical protection cases switch off immediately; normal switching uses short second-level stability.
+- In `realtime`, the next 10-second coordinator update can switch devices.
+- In `seconds`, configured surplus loads switch on after 60 seconds and off after 30 seconds.
+- In `minutes`, configured surplus loads switch on after 10 minutes and off after 5 minutes.
 - When `switch.bb_hems_auto_enabled` is off, BB HEMS does not switch devices automatically.
 
 ## Installation

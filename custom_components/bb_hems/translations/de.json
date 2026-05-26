@@ -18,7 +18,8 @@
           "sunshine_sensor": "Sonnenscheindauer",
           "flexible_load_switches": "Flexible Verbraucher",
           "wallbox_switches": "Wallboxen",
-          "heat_pump_switches": "Wärmepumpen"
+          "heat_pump_switches": "Wärmepumpen",
+          "heating_rod_switches": "Heizstäbe"
         },
         "data_description": {
           "name": "Anzeigename der HEMS-Instanz.",
@@ -33,7 +34,8 @@
           "sunshine_sensor": "Sonnenscheindauer oder Sonnenindikator. Der Wert sollte größer werden, wenn aktuell Sonne verfügbar ist.",
           "flexible_load_switches": "Schaltbare Verbraucher, die bei Überschuss freigegeben werden dürfen, z.B. Luftentfeuchter.",
           "wallbox_switches": "Schaltbare Wallboxen oder Ladefreigaben. Wird aktuell als Gerätegruppe erfasst und später priorisiert.",
-          "heat_pump_switches": "Schaltbare Wärmepumpen oder SG-Ready-Freigaben. Wird aktuell als Gerätegruppe erfasst und später priorisiert."
+          "heat_pump_switches": "Schaltbare Wärmepumpen oder SG-Ready-Freigaben. Wird aktuell als Gerätegruppe erfasst und später priorisiert.",
+          "heating_rod_switches": "Schaltbare Heizstäbe oder Boiler-Freigaben. BB HEMS behandelt sie als Überschussverbraucher."
         }
       }
     }
@@ -55,7 +57,8 @@
           "sunshine_sensor": "Sonnenscheindauer",
           "flexible_load_switches": "Flexible Verbraucher",
           "wallbox_switches": "Wallboxen",
-          "heat_pump_switches": "Wärmepumpen"
+          "heat_pump_switches": "Wärmepumpen",
+          "heating_rod_switches": "Heizstäbe"
         },
         "data_description": {
           "name": "Anzeigename der HEMS-Instanz.",
@@ -70,7 +73,8 @@
           "sunshine_sensor": "Sonnenscheindauer oder Sonnenindikator. Der Wert sollte größer werden, wenn aktuell Sonne verfügbar ist.",
           "flexible_load_switches": "Schaltbare Verbraucher, die bei Überschuss freigegeben werden dürfen, z.B. Luftentfeuchter.",
           "wallbox_switches": "Schaltbare Wallboxen oder Ladefreigaben. Wird aktuell als Gerätegruppe erfasst und später priorisiert.",
-          "heat_pump_switches": "Schaltbare Wärmepumpen oder SG-Ready-Freigaben. Wird aktuell als Gerätegruppe erfasst und später priorisiert."
+          "heat_pump_switches": "Schaltbare Wärmepumpen oder SG-Ready-Freigaben. Wird aktuell als Gerätegruppe erfasst und später priorisiert.",
+          "heating_rod_switches": "Schaltbare Heizstäbe oder Boiler-Freigaben. BB HEMS behandelt sie als Überschussverbraucher."
         }
       }
     }
@@ -88,6 +92,8 @@
       "cloud_coverage": { "name": "Bewölkung" },
       "sunshine_minutes": { "name": "Sonnenschein" },
       "active_flexible_loads": { "name": "Aktive flexible Verbraucher" },
+      "available_surplus_budget": { "name": "Verfügbares Überschussbudget" },
+      "scheduled_surplus_power": { "name": "Geplante Überschussleistung" },
       "configured_assets": { "name": "Konfigurierte Anlagen" }
     },
     "binary_sensor": {
@@ -103,10 +109,13 @@
       "pv_avg_threshold": { "name": "PV-Schwellwert 15 min" },
       "grid_import_limit": { "name": "Netzbezug-Toleranz" },
       "grid_hard_import_limit": { "name": "Netzbezug hart" },
-      "battery_discharge_limit": { "name": "Entladegrenze Batterie" }
+      "battery_discharge_limit": { "name": "Entladegrenze Batterie" },
+      "flexible_load_power": { "name": "Leistung flexible Verbraucher" },
+      "heating_rod_power": { "name": "Leistung Heizstab" }
     },
     "select": {
-      "mode": { "name": "Betriebsart" }
+      "mode": { "name": "Betriebsart" },
+      "response_profile": { "name": "Reaktionsmodus" }
     },
     "switch": {
       "auto_enabled": { "name": "Automatik aktiv" }

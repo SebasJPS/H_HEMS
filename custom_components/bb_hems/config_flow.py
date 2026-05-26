@@ -19,6 +19,7 @@ from .const import (
     CONF_GRID_AVERAGE_SENSOR,
     CONF_GRID_POWER_SENSOR,
     CONF_HEAT_PUMP_SWITCHES,
+    CONF_HEATING_ROD_SWITCHES,
     CONF_PV_AVERAGE_SENSOR,
     CONF_PV_POWER_SENSORS,
     CONF_SUNSHINE_SENSOR,
@@ -91,6 +92,9 @@ class BbHemsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_HEAT_PUMP_SWITCHES: _entity_list(
                     user_input.get(CONF_HEAT_PUMP_SWITCHES)
                 ),
+                CONF_HEATING_ROD_SWITCHES: _entity_list(
+                    user_input.get(CONF_HEATING_ROD_SWITCHES)
+                ),
             }
             return self.async_create_entry(title=data[CONF_NAME], data=data, options=DEFAULTS)
 
@@ -151,6 +155,9 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
                     CONF_HEAT_PUMP_SWITCHES: _entity_list(
                         user_input.get(CONF_HEAT_PUMP_SWITCHES)
                     ),
+                    CONF_HEATING_ROD_SWITCHES: _entity_list(
+                        user_input.get(CONF_HEATING_ROD_SWITCHES)
+                    ),
                 }
             )
             self.hass.config_entries.async_update_entry(self._entry, data=data)
@@ -174,6 +181,9 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
             ),
             CONF_WALLBOX_SWITCHES: _entity_list(data.get(CONF_WALLBOX_SWITCHES)),
             CONF_HEAT_PUMP_SWITCHES: _entity_list(data.get(CONF_HEAT_PUMP_SWITCHES)),
+            CONF_HEATING_ROD_SWITCHES: _entity_list(
+                data.get(CONF_HEATING_ROD_SWITCHES)
+            ),
         }
         return self.async_show_form(step_id="init", data_schema=_schema(defaults))
 
@@ -251,6 +261,12 @@ def _schema(defaults: dict[str, Any]) -> vol.Schema:
             vol.Optional(
                 CONF_HEAT_PUMP_SWITCHES,
                 default=defaults.get(CONF_HEAT_PUMP_SWITCHES, []),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=SWITCHABLE_DOMAINS, multiple=True)
+            ),
+            vol.Optional(
+                CONF_HEATING_ROD_SWITCHES,
+                default=defaults.get(CONF_HEATING_ROD_SWITCHES, []),
             ): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain=SWITCHABLE_DOMAINS, multiple=True)
             ),

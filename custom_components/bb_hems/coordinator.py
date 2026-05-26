@@ -21,6 +21,7 @@ from .const import (
     CONF_GRID_AVERAGE_SENSOR,
     CONF_GRID_POWER_SENSOR,
     CONF_HEAT_PUMP_SWITCHES,
+    CONF_HEATING_ROD_SWITCHES,
     CONF_PV_AVERAGE_SENSOR,
     CONF_PV_POWER_SENSORS,
     CONF_SUNSHINE_SENSOR,
@@ -36,17 +37,35 @@ from .const import (
     MODE_OFF,
     OPT_AUTO_ENABLED,
     OPT_BATTERY_DISCHARGE_LIMIT,
+    OPT_FLEXIBLE_LOAD_POWER,
     OPT_GRID_HARD_IMPORT_LIMIT,
     OPT_GRID_IMPORT_LIMIT,
+    OPT_HEATING_ROD_POWER,
     OPT_MIN_BATTERY_SOC,
     OPT_MODE,
     OPT_PROTECT_BATTERY_SOC,
     OPT_PV_AVG_THRESHOLD,
     OPT_PV_THRESHOLD,
+    OPT_RESPONSE_PROFILE,
+    RESPONSE_AUTO,
+    RESPONSE_MINUTES,
+    RESPONSE_REALTIME,
+    RESPONSE_SECONDS,
     SCAN_INTERVAL,
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class LoadProfile:
+    """A controllable surplus load with a simple smart scheduling profile."""
+
+    entity_id: str
+    category: str
+    estimated_power: float
+    priority: int
+    is_on: bool
 
 
 @dataclass(frozen=True)
@@ -75,6 +94,14 @@ class HemsData:
     configured_flexible_loads: int
     configured_wallboxes: int
     configured_heat_pumps: int
+    configured_heating_rods: int
+    response_profile: str
+    switch_on_delay_seconds: int
+    switch_off_delay_seconds: int
+    available_surplus_budget: float
+    scheduled_surplus_loads: tuple[str, ...]
+    scheduled_surplus_power: float
+    scheduler_reason: str
     weather_reason: str
     surplus_reason: str
     battery_reason: str
@@ -139,6 +166,8 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         flexible_loads = data.get(CONF_FLEXIBLE_LOAD_SWITCHES, [])
         wallboxes = data.get(CONF_WALLBOX_SWITCHES, [])
         heat_pumps = data.get(CONF_HEAT_PUMP_SWITCHES, [])
+        heating_rods = data.get(CONF_HEATING_ROD_SWITCHES, [])
+        controlled_loads = self._controlled_surplus_load_profiles()
 
         pv_power = sum(self._float_state(entity_id, 0.0) for entity_id in pv_sources)
         pv_average = self._float_state(data.get(CONF_PV_AVERAGE_SENSOR), pv_power)
@@ -232,14 +261,26 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
 
         active_flexible_loads = sum(
             1
-            for entity_id in flexible_loads
-            if self.hass.states.is_state(entity_id, STATE_ON)
+            for load in controlled_loads
+            if load.is_on
         )
         active_flexible_entities = [
-            entity_id
-            for entity_id in flexible_loads
-            if self.hass.states.is_state(entity_id, STATE_ON)
+            load.entity_id
+            for load in controlled_loads
+            if load.is_on
         ]
+        scheduled_loads, scheduled_power, available_budget, scheduler_reason = (
+            self._schedule_surplus_loads(
+                controlled_loads,
+                flexible_loads_allowed,
+                grid_power,
+                self._mode_grid_limit(mode, grid_tolerance),
+            )
+        )
+        switch_on_delay, switch_off_delay = self._response_delays(
+            battery_protect=battery_protect,
+            grid_power=grid_power,
+        )
         self._update_action_history(
             energy_mode,
             surplus_available,
@@ -273,6 +314,14 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             configured_flexible_loads=len(flexible_loads),
             configured_wallboxes=len(wallboxes),
             configured_heat_pumps=len(heat_pumps),
+            configured_heating_rods=len(heating_rods),
+            response_profile=str(opts[OPT_RESPONSE_PROFILE]),
+            switch_on_delay_seconds=int(switch_on_delay.total_seconds()),
+            switch_off_delay_seconds=int(switch_off_delay.total_seconds()),
+            available_surplus_budget=available_budget,
+            scheduled_surplus_loads=scheduled_loads,
+            scheduled_surplus_power=scheduled_power,
+            scheduler_reason=scheduler_reason,
             weather_reason=weather_reason,
             surplus_reason=surplus_reason,
             battery_reason=self._battery_reason(
@@ -288,17 +337,20 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         if not bool(opts[OPT_AUTO_ENABLED]):
             return False
 
-        target_on = data.flexible_loads_allowed
-        if not self._flexible_load_decision_is_stable(target_on):
+        target_on = data.flexible_loads_allowed and bool(data.scheduled_surplus_loads)
+        if not self._flexible_load_decision_is_stable(target_on, data):
             return False
 
-        service = "turn_on" if target_on else "turn_off"
-        desired_state = STATE_ON if target_on else STATE_OFF
-        flexible_loads = self.config_entry.data.get(CONF_FLEXIBLE_LOAD_SWITCHES, [])
+        desired_on = set(data.scheduled_surplus_loads) if target_on else set()
+        flexible_loads = self._controlled_surplus_load_profiles()
         action_added = False
 
-        for entity_id in flexible_loads:
-            state = self.hass.states.get(entity_id)
+        for load in flexible_loads:
+            entity_id = load.entity_id
+            should_be_on = entity_id in desired_on
+            service = "turn_on" if should_be_on else "turn_off"
+            desired_state = STATE_ON if should_be_on else STATE_OFF
+            state = self.hass.states.get(load.entity_id)
             if state is None or state.state in {
                 desired_state,
                 STATE_UNAVAILABLE,
@@ -318,26 +370,120 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             )
             self._add_action(
                 "Verbraucher geschaltet",
-                f"{entity_id} wurde {'eingeschaltet' if target_on else 'ausgeschaltet'}. {data.load_reason}",
+                f"{entity_id} wurde {'eingeschaltet' if should_be_on else 'ausgeschaltet'}. {data.scheduler_reason}",
                 "device",
             )
             action_added = True
 
         return action_added
 
-    def _flexible_load_decision_is_stable(self, target_on: bool) -> bool:
+    def _controlled_surplus_load_profiles(self) -> list[LoadProfile]:
+        """Return all loads controlled by the smart surplus scheduler."""
+        data = self.config_entry.data
+        opts = self.opts
+        flexible_power = float(opts[OPT_FLEXIBLE_LOAD_POWER])
+        heating_rod_power = float(opts[OPT_HEATING_ROD_POWER])
+
+        profiles: list[LoadProfile] = []
+        for entity_id in data.get(CONF_FLEXIBLE_LOAD_SWITCHES, []):
+            profiles.append(
+                LoadProfile(
+                    entity_id=entity_id,
+                    category="flexible_load",
+                    estimated_power=flexible_power,
+                    priority=10,
+                    is_on=self.hass.states.is_state(entity_id, STATE_ON),
+                )
+            )
+        for entity_id in data.get(CONF_HEATING_ROD_SWITCHES, []):
+            profiles.append(
+                LoadProfile(
+                    entity_id=entity_id,
+                    category="heating_rod",
+                    estimated_power=heating_rod_power,
+                    priority=30,
+                    is_on=self.hass.states.is_state(entity_id, STATE_ON),
+                )
+            )
+        return profiles
+
+    def _schedule_surplus_loads(
+        self,
+        loads: list[LoadProfile],
+        allowed: bool,
+        grid_power: float,
+        grid_limit: float,
+    ) -> tuple[tuple[str, ...], float, float, str]:
+        """Select the loads that fit into the current surplus budget."""
+        active_power = sum(load.estimated_power for load in loads if load.is_on)
+        budget = max(0.0, grid_limit - grid_power) + active_power
+        if not allowed:
+            return (), 0.0, budget, "Smart Scheduler blockiert alle Überschussverbraucher, weil die zentrale HEMS-Freigabe fehlt."
+        if not loads:
+            return (), 0.0, budget, "Smart Scheduler hat keine schaltbaren Überschussverbraucher konfiguriert."
+
+        selected: list[LoadProfile] = []
+        used_power = 0.0
+        for load in sorted(loads, key=lambda item: (item.priority, not item.is_on, item.estimated_power)):
+            if load.estimated_power <= 0 or used_power + load.estimated_power <= budget:
+                selected.append(load)
+                used_power += load.estimated_power
+
+        if not selected:
+            return (), 0.0, budget, f"Smart Scheduler wartet: verfügbares Budget {budget:.0f} W reicht für keinen konfigurierten Verbraucher."
+
+        names = ", ".join(load.entity_id for load in selected)
+        return (
+            tuple(load.entity_id for load in selected),
+            used_power,
+            budget,
+            f"Smart Scheduler plant {len(selected)} Verbraucher mit ca. {used_power:.0f} W: {names}. Verfügbares Budget: {budget:.0f} W.",
+        )
+
+    def _flexible_load_decision_is_stable(
+        self, target_on: bool, data: HemsData
+    ) -> bool:
         """Require a stable decision before switching flexible loads."""
         now = datetime.now()
+        switch_on_delay, switch_off_delay = self._response_delays(data)
         if target_on:
             self._flexible_loads_blocked_since = None
             if self._flexible_loads_allowed_since is None:
                 self._flexible_loads_allowed_since = now
-            return now - self._flexible_loads_allowed_since >= timedelta(minutes=10)
+            return now - self._flexible_loads_allowed_since >= switch_on_delay
 
         self._flexible_loads_allowed_since = None
         if self._flexible_loads_blocked_since is None:
             self._flexible_loads_blocked_since = now
-        return now - self._flexible_loads_blocked_since >= timedelta(minutes=5)
+        return now - self._flexible_loads_blocked_since >= switch_off_delay
+
+    def _response_delays(
+        self,
+        data: HemsData | None = None,
+        *,
+        battery_protect: bool | None = None,
+        grid_power: float | None = None,
+    ) -> tuple[timedelta, timedelta]:
+        """Return on/off stability delays for the selected response profile."""
+        profile = str(self.opts[OPT_RESPONSE_PROFILE])
+        if profile == RESPONSE_REALTIME:
+            return timedelta(seconds=0), timedelta(seconds=0)
+        if profile == RESPONSE_SECONDS:
+            return timedelta(seconds=60), timedelta(seconds=30)
+        if profile == RESPONSE_MINUTES:
+            return timedelta(minutes=10), timedelta(minutes=5)
+
+        if profile == RESPONSE_AUTO:
+            protect = data.battery_protect if data is not None else battery_protect
+            grid = data.grid_power if data is not None else grid_power
+            hard_import = grid is not None and grid > float(
+                self.opts[OPT_GRID_HARD_IMPORT_LIMIT]
+            )
+            if protect or hard_import:
+                return timedelta(seconds=60), timedelta(seconds=0)
+            return timedelta(seconds=60), timedelta(seconds=30)
+
+        return timedelta(seconds=60), timedelta(seconds=30)
 
     def _add_action(self, title: str, reason: str, kind: str) -> None:
         """Add one dashboard action entry."""
@@ -416,8 +562,11 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             OPT_BATTERY_DISCHARGE_LIMIT: "Entladegrenze Batterie",
             OPT_GRID_HARD_IMPORT_LIMIT: "Netzbezug hart",
             OPT_GRID_IMPORT_LIMIT: "Netzbezug-Toleranz",
+            OPT_FLEXIBLE_LOAD_POWER: "Leistung flexible Verbraucher",
+            OPT_HEATING_ROD_POWER: "Leistung Heizstab",
             OPT_MIN_BATTERY_SOC: "Mindest-SoC",
             OPT_MODE: "Betriebsart",
+            OPT_RESPONSE_PROFILE: "Reaktionsmodus",
             OPT_PROTECT_BATTERY_SOC: "Batterieschutz-SoC",
             OPT_PV_AVG_THRESHOLD: "PV-Schwellwert 15 min",
             OPT_PV_THRESHOLD: "PV-Schwellwert aktuell",

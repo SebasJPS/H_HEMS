@@ -7,7 +7,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import MODES, OPT_MODE
+from .const import MODES, OPT_MODE, OPT_RESPONSE_PROFILE, RESPONSE_PROFILES
 from .coordinator import HemsCoordinator
 from .entity import HemsEntity
 
@@ -19,7 +19,12 @@ async def async_setup_entry(
 ) -> None:
     """Set up HEMS select settings."""
     coordinator: HemsCoordinator = entry.runtime_data
-    async_add_entities([HemsModeSelect(coordinator)])
+    async_add_entities(
+        [
+            HemsModeSelect(coordinator),
+            HemsResponseProfileSelect(coordinator),
+        ]
+    )
 
 
 class HemsModeSelect(HemsEntity, SelectEntity):
@@ -42,3 +47,25 @@ class HemsModeSelect(HemsEntity, SelectEntity):
         if option not in MODES:
             return
         await self.coordinator.async_set_option(OPT_MODE, option)
+
+
+class HemsResponseProfileSelect(HemsEntity, SelectEntity):
+    """HEMS switching response profile."""
+
+    _attr_translation_key = "response_profile"
+    _attr_icon = "mdi:speedometer"
+    _attr_options = RESPONSE_PROFILES
+
+    def __init__(self, coordinator: HemsCoordinator) -> None:
+        super().__init__(coordinator, "response_profile")
+
+    @property
+    def current_option(self) -> str:
+        """Return selected response profile."""
+        return str(self.coordinator.opts[OPT_RESPONSE_PROFILE])
+
+    async def async_select_option(self, option: str) -> None:
+        """Change response profile."""
+        if option not in RESPONSE_PROFILES:
+            return
+        await self.coordinator.async_set_option(OPT_RESPONSE_PROFILE, option)

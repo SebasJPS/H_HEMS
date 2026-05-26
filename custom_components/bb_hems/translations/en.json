@@ -18,7 +18,8 @@
           "sunshine_sensor": "Sunshine duration",
           "flexible_load_switches": "Flexible loads",
           "wallbox_switches": "Wallboxes",
-          "heat_pump_switches": "Heat pumps"
+          "heat_pump_switches": "Heat pumps",
+          "heating_rod_switches": "Heating rods"
         },
         "data_description": {
           "name": "Display name of this HEMS instance.",
@@ -33,7 +34,8 @@
           "sunshine_sensor": "Sunshine duration or sunshine indicator. The value should increase when sunshine is currently available.",
           "flexible_load_switches": "Switchable loads that may be enabled during surplus, for example a dehumidifier.",
           "wallbox_switches": "Switchable wallboxes or charging-enable entities. Currently stored as a device group for later prioritization.",
-          "heat_pump_switches": "Switchable heat pumps or SG-ready enable entities. Currently stored as a device group for later prioritization."
+          "heat_pump_switches": "Switchable heat pumps or SG-ready enable entities. Currently stored as a device group for later prioritization.",
+          "heating_rod_switches": "Switchable heating rods or boiler-enable entities. BB HEMS treats them as surplus loads."
         }
       }
     }
@@ -55,7 +57,8 @@
           "sunshine_sensor": "Sunshine duration",
           "flexible_load_switches": "Flexible loads",
           "wallbox_switches": "Wallboxes",
-          "heat_pump_switches": "Heat pumps"
+          "heat_pump_switches": "Heat pumps",
+          "heating_rod_switches": "Heating rods"
         },
         "data_description": {
           "name": "Display name of this HEMS instance.",
@@ -70,9 +73,24 @@
           "sunshine_sensor": "Sunshine duration or sunshine indicator. The value should increase when sunshine is currently available.",
           "flexible_load_switches": "Switchable loads that may be enabled during surplus, for example a dehumidifier.",
           "wallbox_switches": "Switchable wallboxes or charging-enable entities. Currently stored as a device group for later prioritization.",
-          "heat_pump_switches": "Switchable heat pumps or SG-ready enable entities. Currently stored as a device group for later prioritization."
+          "heat_pump_switches": "Switchable heat pumps or SG-ready enable entities. Currently stored as a device group for later prioritization.",
+          "heating_rod_switches": "Switchable heating rods or boiler-enable entities. BB HEMS treats them as surplus loads."
         }
       }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "available_surplus_budget": { "name": "Available surplus budget" },
+      "scheduled_surplus_power": { "name": "Scheduled surplus power" }
+    },
+    "number": {
+      "flexible_load_power": { "name": "Flexible load power" },
+      "heating_rod_power": { "name": "Heating rod power" }
+    },
+    "select": {
+      "mode": { "name": "Operating mode" },
+      "response_profile": { "name": "Response profile" }
     }
   }
 }

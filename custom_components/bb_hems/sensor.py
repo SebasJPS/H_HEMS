@@ -24,6 +24,7 @@ from .const import (
     CONF_GRID_AVERAGE_SENSOR,
     CONF_GRID_POWER_SENSOR,
     CONF_HEAT_PUMP_SWITCHES,
+    CONF_HEATING_ROD_SWITCHES,
     CONF_PV_AVERAGE_SENSOR,
     CONF_PV_POWER_SENSORS,
     CONF_SUNSHINE_SENSOR,
@@ -130,6 +131,22 @@ SENSORS: tuple[HemsSensorDescription, ...] = (
         value_fn=lambda data: data.active_flexible_loads,
     ),
     HemsSensorDescription(
+        key="available_surplus_budget",
+        translation_key="available_surplus_budget",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: round(data.available_surplus_budget, 1),
+    ),
+    HemsSensorDescription(
+        key="scheduled_surplus_power",
+        translation_key="scheduled_surplus_power",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: round(data.scheduled_surplus_power, 1),
+    ),
+    HemsSensorDescription(
         key="configured_assets",
         translation_key="configured_assets",
         icon="mdi:counter",
@@ -139,6 +156,7 @@ SENSORS: tuple[HemsSensorDescription, ...] = (
             + data.configured_flexible_loads
             + data.configured_wallboxes
             + data.configured_heat_pumps
+            + data.configured_heating_rods
         ),
     ),
 )
@@ -196,6 +214,14 @@ class HemsSensor(HemsEntity, SensorEntity):
             "configured_flexible_loads": data.configured_flexible_loads,
             "configured_wallboxes": data.configured_wallboxes,
             "configured_heat_pumps": data.configured_heat_pumps,
+            "configured_heating_rods": data.configured_heating_rods,
+            "response_profile": data.response_profile,
+            "switch_on_delay_seconds": data.switch_on_delay_seconds,
+            "switch_off_delay_seconds": data.switch_off_delay_seconds,
+            "available_surplus_budget": data.available_surplus_budget,
+            "scheduled_surplus_loads": data.scheduled_surplus_loads,
+            "scheduled_surplus_power": data.scheduled_surplus_power,
+            "scheduler_reason": data.scheduler_reason,
             "grid_power_sensor": config.get(CONF_GRID_POWER_SENSOR),
             "grid_average_sensor": config.get(CONF_GRID_AVERAGE_SENSOR),
             "pv_power_sensors": config.get(CONF_PV_POWER_SENSORS, []),
@@ -210,4 +236,5 @@ class HemsSensor(HemsEntity, SensorEntity):
             "flexible_load_switches": config.get(CONF_FLEXIBLE_LOAD_SWITCHES, []),
             "wallbox_switches": config.get(CONF_WALLBOX_SWITCHES, []),
             "heat_pump_switches": config.get(CONF_HEAT_PUMP_SWITCHES, []),
+            "heating_rod_switches": config.get(CONF_HEATING_ROD_SWITCHES, []),
         }

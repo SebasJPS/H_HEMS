@@ -9,7 +9,7 @@ NAME = "BB HEMS"
 PANEL_URL = "bb-hems"
 
 PLATFORMS = ["sensor", "binary_sensor", "number", "select", "switch"]
-SCAN_INTERVAL = timedelta(seconds=30)
+SCAN_INTERVAL = timedelta(seconds=10)
 
 CONF_GRID_POWER_SENSOR = "grid_power_sensor"
 CONF_GRID_AVERAGE_SENSOR = "grid_average_sensor"
@@ -23,8 +23,10 @@ CONF_SUNSHINE_SENSOR = "sunshine_sensor"
 CONF_FLEXIBLE_LOAD_SWITCHES = "flexible_load_switches"
 CONF_WALLBOX_SWITCHES = "wallbox_switches"
 CONF_HEAT_PUMP_SWITCHES = "heat_pump_switches"
+CONF_HEATING_ROD_SWITCHES = "heating_rod_switches"
 
 OPT_MODE = "mode"
+OPT_RESPONSE_PROFILE = "response_profile"
 OPT_AUTO_ENABLED = "auto_enabled"
 OPT_MIN_BATTERY_SOC = "min_battery_soc"
 OPT_PROTECT_BATTERY_SOC = "protect_battery_soc"
@@ -33,6 +35,8 @@ OPT_PV_AVG_THRESHOLD = "pv_avg_threshold"
 OPT_GRID_IMPORT_LIMIT = "grid_import_limit"
 OPT_GRID_HARD_IMPORT_LIMIT = "grid_hard_import_limit"
 OPT_BATTERY_DISCHARGE_LIMIT = "battery_discharge_limit"
+OPT_FLEXIBLE_LOAD_POWER = "flexible_load_power"
+OPT_HEATING_ROD_POWER = "heating_rod_power"
 
 MODE_AUTO = "auto"
 MODE_ECO = "eco"
@@ -41,8 +45,20 @@ MODE_FORCE_SURPLUS = "force_surplus"
 MODE_OFF = "off"
 MODES = [MODE_AUTO, MODE_ECO, MODE_COMFORT, MODE_FORCE_SURPLUS, MODE_OFF]
 
+RESPONSE_AUTO = "auto"
+RESPONSE_REALTIME = "realtime"
+RESPONSE_SECONDS = "seconds"
+RESPONSE_MINUTES = "minutes"
+RESPONSE_PROFILES = [
+    RESPONSE_AUTO,
+    RESPONSE_REALTIME,
+    RESPONSE_SECONDS,
+    RESPONSE_MINUTES,
+]
+
 DEFAULTS = {
     OPT_MODE: MODE_AUTO,
+    OPT_RESPONSE_PROFILE: RESPONSE_AUTO,
     OPT_AUTO_ENABLED: True,
     OPT_MIN_BATTERY_SOC: 50.0,
     OPT_PROTECT_BATTERY_SOC: 45.0,
@@ -51,6 +67,8 @@ DEFAULTS = {
     OPT_GRID_IMPORT_LIMIT: 100.0,
     OPT_GRID_HARD_IMPORT_LIMIT: 350.0,
     OPT_BATTERY_DISCHARGE_LIMIT: 250.0,
+    OPT_FLEXIBLE_LOAD_POWER: 250.0,
+    OPT_HEATING_ROD_POWER: 1000.0,
 }
 
 GOOD_WEATHER = {

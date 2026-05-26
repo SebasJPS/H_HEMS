@@ -13,7 +13,7 @@ const ALIASES = {
   flexible_loads_allowed: ["flexible_loads_allowed", "flexible verbraucher erlaubt"],
 };
 
-const BB_HEMS_VERSION = "0.1.7";
+const BB_HEMS_VERSION = "0.1.8";
 
 class BbHemsPanel extends HTMLElement {
   set hass(hass) {
@@ -105,8 +105,13 @@ class BbHemsPanel extends HTMLElement {
         .empty { padding: 14px; border: 1px dashed var(--line); border-radius: 8px; color: var(--muted); font-size: 14px; }
         .control { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); }
         .control:last-child { border-bottom: 0; }
-        .control input, .control select { min-height: 34px; border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; background: var(--card); color: var(--text); font: inherit; }
+        .control.select-control { grid-template-columns: minmax(0, 1fr); }
+        .control input { min-height: 34px; border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; background: var(--card); color: var(--text); font: inherit; }
         .control button, .action { min-height: 34px; border: 1px solid var(--accent); border-radius: 6px; padding: 5px 10px; background: color-mix(in srgb, var(--accent), transparent 88%); color: var(--accent); font: inherit; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+        .mode-buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+        .mode-option { width: 100%; min-height: 38px; }
+        .mode-option.active { background: var(--accent); color: var(--card); }
+        .mode-option[disabled] { cursor: default; opacity: 1; }
         .hint { margin-top: 8px; color: var(--muted); font-size: 12px; }
         @media (max-width: 1100px) { .layout, .hero, .asset-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .flow { grid-template-columns: 1fr; } .arrow { display: none; } }
         @media (max-width: 720px) { .page { width: min(100vw - 20px, 100%); padding-top: 12px; } .top, .layout, .hero, .decisions, .asset-grid { grid-template-columns: 1fr; } .pill { justify-self: start; white-space: normal; } }
@@ -173,11 +178,12 @@ class BbHemsPanel extends HTMLElement {
         });
       });
     });
-    this.querySelectorAll("[data-select-entity]").forEach((select) => {
-      select.addEventListener("change", () => {
+    this.querySelectorAll("[data-select-option]").forEach((button) => {
+      button.addEventListener("click", () => {
+        if (button.disabled) return;
         this._hass.callService("select", "select_option", {
-          entity_id: select.dataset.selectEntity,
-          option: select.value,
+          entity_id: button.dataset.selectEntity,
+          option: button.dataset.selectOption,
         });
       });
     });
@@ -299,7 +305,10 @@ function settingControl(entity) {
   }
   if (domain === "select") {
     const options = entity.attributes.options || [];
-    return `<label class="control"><span>${esc(name(entity))}</span><select data-select-entity="${esc(entity.entity_id)}">${options.map((option) => `<option value="${esc(option)}" ${option === entity.state ? "selected" : ""}>${esc(option)}</option>`).join("")}</select></label>`;
+    return `<div class="control select-control"><span>${esc(name(entity))}</span><div class="mode-buttons">${options.map((option) => {
+      const active = option === entity.state;
+      return `<button class="mode-option ${active ? "active" : ""}" data-select-entity="${esc(entity.entity_id)}" data-select-option="${esc(option)}" ${active ? "disabled" : ""}>${esc(option)}</button>`;
+    }).join("")}</div></div>`;
   }
   return `<div class="control"><span>${esc(name(entity))}</span><button data-switch-entity="${esc(entity.entity_id)}">${entity.state === "on" ? "Ausschalten" : "Einschalten"}</button></div>`;
 }

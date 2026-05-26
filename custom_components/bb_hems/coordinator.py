@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 import logging
 from typing import Any
 
@@ -78,6 +79,7 @@ class HemsData:
     surplus_reason: str
     battery_reason: str
     load_reason: str
+    action_history: list[dict[str, str]]
 
 
 class HemsCoordinator(DataUpdateCoordinator[HemsData]):
@@ -93,6 +95,8 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             update_interval=SCAN_INTERVAL,
         )
         self.config_entry = entry
+        self._action_history: list[dict[str, str]] = []
+        self._last_decision_snapshot: dict[str, Any] | None = None
 
     async def _async_update_data(self) -> HemsData:
         return self._calculate()
@@ -105,7 +109,13 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
     async def async_set_option(self, key: str, value: Any) -> None:
         """Persist an option and refresh entities."""
         options = dict(self.config_entry.options)
+        previous = options.get(key, DEFAULTS.get(key))
         options[key] = value
+        self._add_action(
+            "Einstellung geändert",
+            f"{self._option_label(key)}: {previous} -> {value}",
+            "manual",
+        )
         self.hass.config_entries.async_update_entry(self.config_entry, options=options)
         await self.async_request_refresh()
 
@@ -219,6 +229,20 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             for entity_id in flexible_loads
             if self.hass.states.is_state(entity_id, STATE_ON)
         )
+        active_flexible_entities = [
+            entity_id
+            for entity_id in flexible_loads
+            if self.hass.states.is_state(entity_id, STATE_ON)
+        ]
+        self._update_action_history(
+            energy_mode,
+            surplus_available,
+            flexible_loads_allowed,
+            battery_protect,
+            active_flexible_loads,
+            active_flexible_entities,
+            load_reason,
+        )
 
         return HemsData(
             grid_power=grid_power,
@@ -249,7 +273,92 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                 battery_soc_min, battery_discharge, bad_weather, battery_protect
             ),
             load_reason=load_reason,
+            action_history=list(self._action_history),
         )
+
+    def _add_action(self, title: str, reason: str, kind: str) -> None:
+        """Add one dashboard action entry."""
+        self._action_history.insert(
+            0,
+            {
+                "time": datetime.now().isoformat(timespec="seconds"),
+                "title": title,
+                "reason": reason,
+                "kind": kind,
+            },
+        )
+        del self._action_history[10:]
+
+    def _update_action_history(
+        self,
+        energy_mode: str,
+        surplus_available: bool,
+        flexible_loads_allowed: bool,
+        battery_protect: bool,
+        active_flexible_loads: int,
+        active_flexible_entities: list[str],
+        load_reason: str,
+    ) -> None:
+        """Track meaningful decision changes for the dashboard."""
+        snapshot = {
+            "energy_mode": energy_mode,
+            "surplus_available": surplus_available,
+            "flexible_loads_allowed": flexible_loads_allowed,
+            "battery_protect": battery_protect,
+            "active_flexible_loads": active_flexible_loads,
+            "active_flexible_entities": tuple(active_flexible_entities),
+        }
+        previous = self._last_decision_snapshot
+        self._last_decision_snapshot = snapshot
+
+        if previous is None:
+            self._add_action("HEMS bewertet", load_reason, energy_mode)
+            return
+
+        if previous["energy_mode"] != energy_mode:
+            self._add_action(
+                "Modus geändert",
+                f"{previous['energy_mode']} -> {energy_mode}. {load_reason}",
+                energy_mode,
+            )
+        if previous["flexible_loads_allowed"] != flexible_loads_allowed:
+            self._add_action(
+                "Flexible Verbraucher freigegeben"
+                if flexible_loads_allowed
+                else "Flexible Verbraucher gesperrt",
+                load_reason,
+                "allow" if flexible_loads_allowed else "block",
+            )
+        if previous["battery_protect"] != battery_protect:
+            self._add_action(
+                "Batterieschutz aktiv" if battery_protect else "Batterieschutz beendet",
+                load_reason,
+                "protect" if battery_protect else "allow",
+            )
+        if (
+            previous["active_flexible_loads"] != active_flexible_loads
+            or previous["active_flexible_entities"] != tuple(active_flexible_entities)
+        ):
+            active = ", ".join(active_flexible_entities) or "keiner"
+            self._add_action(
+                "Verbraucherstatus geändert",
+                f"{active_flexible_loads} aktive flexible Verbraucher: {active}.",
+                "device",
+            )
+
+    def _option_label(self, key: str) -> str:
+        """Return a readable option label for the dashboard history."""
+        return {
+            OPT_AUTO_ENABLED: "Automatik",
+            OPT_BATTERY_DISCHARGE_LIMIT: "Entladegrenze Batterie",
+            OPT_GRID_HARD_IMPORT_LIMIT: "Netzbezug hart",
+            OPT_GRID_IMPORT_LIMIT: "Netzbezug-Toleranz",
+            OPT_MIN_BATTERY_SOC: "Mindest-SoC",
+            OPT_MODE: "Betriebsart",
+            OPT_PROTECT_BATTERY_SOC: "Batterieschutz-SoC",
+            OPT_PV_AVG_THRESHOLD: "PV-Schwellwert 15 min",
+            OPT_PV_THRESHOLD: "PV-Schwellwert aktuell",
+        }.get(key, key)
 
     def _state(self, entity_id: str | None) -> str | None:
         if not entity_id:

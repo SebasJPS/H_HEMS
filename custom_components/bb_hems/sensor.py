@@ -190,6 +190,7 @@ class HemsSensor(HemsEntity, SensorEntity):
             "surplus_reason": data.surplus_reason,
             "battery_reason": data.battery_reason,
             "load_reason": data.load_reason,
+            "action_history": data.action_history,
             "configured_pv_sources": data.configured_pv_sources,
             "configured_batteries": data.configured_batteries,
             "configured_flexible_loads": data.configured_flexible_loads,

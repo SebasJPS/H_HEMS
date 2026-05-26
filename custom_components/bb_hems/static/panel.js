@@ -13,6 +13,8 @@ const ALIASES = {
   flexible_loads_allowed: ["flexible_loads_allowed", "flexible verbraucher erlaubt"],
 };
 
+const BB_HEMS_VERSION = "0.1.4";
+
 class BbHemsPanel extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
@@ -103,7 +105,7 @@ class BbHemsPanel extends HTMLElement {
         <header class="top">
           <div>
             <h1>BB HEMS</h1>
-            <p class="sub">Live-Status, Freigaben, Schutzlogik und konfigurierte Energiequellen</p>
+            <p class="sub">Version ${BB_HEMS_VERSION} · Live-Status, Freigaben, Schutzlogik und konfigurierte Energiequellen</p>
           </div>
           <div class="pill"><span class="dot ${protect ? "bad" : allowed ? "good" : "warn"}"></span>${mode ? `Aktuell: ${esc(mode.state)}` : "BB HEMS-Entitäten nicht gefunden"}</div>
         </header>

@@ -13,7 +13,7 @@ const ALIASES = {
   flexible_loads_allowed: ["flexible_loads_allowed", "flexible verbraucher erlaubt"],
 };
 
-const BB_HEMS_VERSION = "0.1.13";
+const BB_HEMS_VERSION = "0.1.14";
 
 class BbHemsPanel extends HTMLElement {
   set hass(hass) {
@@ -161,7 +161,7 @@ class BbHemsPanel extends HTMLElement {
           <div class="stack">
             <section class="card"><div class="head"><h2>Letzte HEMS-Werte</h2></div><div class="body">${recent(states)}</div></section>
             <section class="card"><div class="head"><h2>Konfiguration</h2></div><div class="body">${config(attrs)}</div></section>
-            <section class="card"><div class="head"><h2>Einstellungen</h2></div><div class="body">${settings(states)}</div></section>
+            <section class="card"><div class="head"><h2>Einstellungen</h2></div><div class="body">${settings(states, attrs)}</div></section>
           </div>
         </section>
       </main>
@@ -288,12 +288,20 @@ function actionHistory(attrs) {
   }).join("")}</div>`;
 }
 
-function settings(states) {
+function settings(states, attrs) {
   const rows = states
     .filter((entity) => ["number", "select", "switch"].includes(entity.entity_id.split(".")[0]))
+    .filter((entity) => shouldShowSetting(entity, attrs))
     .sort((a, b) => name(a).localeCompare(name(b)));
   if (!rows.length) return `<div class="empty">Keine HEMS-Einstellungen gefunden.</div>`;
   return `<div>${rows.map((entity) => settingControl(entity)).join("")}<div class="hint">Änderungen werden direkt an Home Assistant gesendet.</div></div>`;
+}
+
+function shouldShowSetting(entity, attrs) {
+  const entityId = entity.entity_id || "";
+  if (entityId.includes("flexible_load_power") && hasItems(attrs.flexible_load_power_sensors)) return false;
+  if (entityId.includes("heating_rod_power") && hasItems(attrs.heating_rod_power_sensors)) return false;
+  return true;
 }
 
 function settingControl(entity) {
@@ -317,6 +325,10 @@ function settingControl(entity) {
 function list(value) {
   if (Array.isArray(value)) return value.length ? value.join(", ") : "nicht gesetzt";
   return value || "nicht gesetzt";
+}
+
+function hasItems(value) {
+  return Array.isArray(value) && value.length > 0;
 }
 
 function config(attrs) {

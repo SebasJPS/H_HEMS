@@ -93,8 +93,8 @@
       "scheduled_surplus_power": { "name": "Scheduled surplus power" }
     },
     "number": {
-      "flexible_load_power": { "name": "Flexible load power" },
-      "heating_rod_power": { "name": "Heating rod power" }
+      "flexible_load_power": { "name": "Fallback flexible load power" },
+      "heating_rod_power": { "name": "Fallback heating rod power" }
     },
     "select": {
       "mode": { "name": "Operating mode" },

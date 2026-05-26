@@ -108,8 +108,8 @@ Suggested mapping from the original automation:
 - `number.bb_hems_grid_import_limit`
 - `number.bb_hems_grid_hard_import_limit`
 - `number.bb_hems_battery_discharge_limit`
-- `number.bb_hems_flexible_load_power`
-- `number.bb_hems_heating_rod_power`
+- `number.bb_hems_flexible_load_power` fallback/start estimate
+- `number.bb_hems_heating_rod_power` fallback/start estimate
 - `select.bb_hems_response_profile`
 
 ## Operating Modes
@@ -149,10 +149,13 @@ surplus budget and selects only the configured loads that fit. It uses current
 grid export plus the measured or estimated power of already running managed
 loads, then subtracts measured battery discharge. Optional power sensors can be
 assigned in the integration options in the same order as their switches. While a
-load is running, BB HEMS uses that live power sensor; otherwise it falls back to
-`number.bb_hems_flexible_load_power` or `number.bb_hems_heating_rod_power` for
-planning. This avoids switching all surplus consumers at once and also turns
-running loads off when their actual power is no longer covered by real surplus.
+load is running, BB HEMS uses that live power sensor. When a load is off or no
+power sensor is configured, it falls back to `number.bb_hems_flexible_load_power`
+or `number.bb_hems_heating_rod_power` as a start estimate. In the bundled
+dashboard these fallback settings are hidden when matching real power sensors
+are configured, but the entities remain available for custom dashboards. This
+avoids switching all surplus consumers at once and also turns running loads off
+when their actual power is no longer covered by real surplus.
 
 The main output is still exposed for dashboards and optional automations:
 

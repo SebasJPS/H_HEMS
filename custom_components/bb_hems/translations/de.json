@@ -118,8 +118,8 @@
       "grid_import_limit": { "name": "Netzbezug-Toleranz" },
       "grid_hard_import_limit": { "name": "Netzbezug hart" },
       "battery_discharge_limit": { "name": "Entladegrenze Batterie" },
-      "flexible_load_power": { "name": "Leistung flexible Verbraucher" },
-      "heating_rod_power": { "name": "Leistung Heizstab" }
+      "flexible_load_power": { "name": "Fallback-Leistung flexible Verbraucher" },
+      "heating_rod_power": { "name": "Fallback-Leistung Heizstab" }
     },
     "select": {
       "mode": { "name": "Betriebsart" },

@@ -116,13 +116,13 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
     """Change HEMS sources and thresholds."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        self.config_entry = config_entry
+        self._entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
         if user_input is not None:
-            data = dict(self.config_entry.data)
+            data = dict(self._entry.data)
             data.update(
                 {
                     CONF_GRID_POWER_SENSOR: user_input.get(CONF_GRID_POWER_SENSOR),
@@ -153,10 +153,10 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
                     ),
                 }
             )
-            self.hass.config_entries.async_update_entry(self.config_entry, data=data)
-            return self.async_create_entry(title="", data=dict(self.config_entry.options))
+            self.hass.config_entries.async_update_entry(self._entry, data=data)
+            return self.async_create_entry(title="", data=dict(self._entry.options))
 
-        data = self.config_entry.data
+        data = self._entry.data
         defaults = {
             CONF_GRID_POWER_SENSOR: data.get(CONF_GRID_POWER_SENSOR),
             CONF_GRID_AVERAGE_SENSOR: data.get(CONF_GRID_AVERAGE_SENSOR),

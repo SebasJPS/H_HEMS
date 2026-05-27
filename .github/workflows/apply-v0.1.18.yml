@@ -1,0 +1,61 @@
+name: Apply BB HEMS v0.1.18
+
+on:
+  push:
+    paths:
+      - .github/workflows/apply-v0.1.18.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply v0.1.18 files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PAYLOAD_BLOB: c31d78da0e5dc26fa996dd00de198208dabcc7a7
+        run: |
+          gh api repos/SebasJPS/H_HEMS/git/blobs/$PAYLOAD_BLOB --jq .content | tr -d '\n' | base64 -d > payload.b64
+          base64 -d payload.b64 > payload.tgz
+          tar -xzf payload.tgz
+
+      - name: Validate
+        run: |
+          python -m py_compile custom_components/bb_hems/*.py
+          python -m json.tool custom_components/bb_hems/manifest.json >/dev/null
+          python -m json.tool custom_components/bb_hems/translations/de.json >/dev/null
+          python -m json.tool custom_components/bb_hems/translations/en.json >/dev/null
+
+      - name: Commit, tag and release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md custom_components/bb_hems
+          if git diff --cached --quiet; then
+            echo "No file changes to commit"
+          else
+            git commit -m "feat: release BB HEMS v0.1.18"
+            git push origin HEAD:main
+          fi
+          git fetch --tags origin
+          git tag -f v0.1.18 HEAD
+          git push -f origin v0.1.18
+          gh release view v0.1.18 >/dev/null 2>&1 && gh release delete v0.1.18 --yes || true
+          gh release create v0.1.18 --title "BB HEMS v0.1.18" --notes "BB HEMS v0.1.18 adds weighted PV array profiles for multiple PV surfaces/modules and keeps PV forecast sensors optional."
+
+      - name: Remove one-time workflow
+        if: always()
+        run: |
+          git pull --rebase origin main || true
+          git rm -f .github/workflows/apply-v0.1.18.yml || true
+          git commit -m "chore: remove v0.1.18 apply workflow" || true
+          git push origin HEAD:main || true

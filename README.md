@@ -45,13 +45,16 @@ dashboard, not as a configuration page.
 
 It shows:
 
+- A Home-Assistant-Energy style `Strom` view with tab navigation.
 - Live HEMS mode, PV power, grid import/export and battery state.
 - Quick controls for `select.bb_hems_mode` and `switch.bb_hems_auto_enabled`.
-- Live energy flow between PV, battery, house/HEMS loads and the grid.
+- Energy distribution between PV, battery, grid and home.
+- Stromnutzung and PV-Erzeugung chart sections for the current day.
 - Today's HEMS-relevant values: surplus budget, grid direction and shifted
   energy estimate.
 - Estimated HEMS benefit in kWh and EUR.
-- Power share bars for PV, house load, planned HEMS load, battery and grid.
+- Grid balance and gauge cards for feed-in, PV self-consumption, autonomy and
+  CO2-neutral consumption share.
 - HEMS switching history explaining when and why devices were allowed, blocked
   or switched.
 

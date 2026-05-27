@@ -4,7 +4,7 @@ Modular Home Energy Management System for Home Assistant.
 
 BB HEMS turns existing Home Assistant sensors and switches into one central energy decision layer. It is designed for homes with balcony power plants, PV inverters, batteries, wallboxes, heat pumps and flexible consumers such as dehumidifiers, boilers or appliances.
 
-![BB HEMS dashboard screenshot](docs/screenshots/dashboard-overview.svg)
+[BB HEMS energy dashboard mockup](docs/mockups/energy-dashboard.html)
 
 ## Goals
 
@@ -13,7 +13,8 @@ BB HEMS turns existing Home Assistant sensors and switches into one central ener
 - Support several batteries and use the lowest SoC for conservative protection.
 - Provide one central HEMS state instead of repeating the same YAML logic per device.
 - Expose settings directly as Home Assistant entities.
-- Add a sidebar dashboard that explains what the HEMS is doing and why.
+- Add a sidebar energy dashboard with live flow, today values, HEMS controls,
+  switching history and estimated HEMS benefit.
 - Prepare the model for many controllable consumers with priorities and categories.
 
 ## Current Status
@@ -21,15 +22,41 @@ BB HEMS turns existing Home Assistant sensors and switches into one central ener
 This repository contains an initial custom integration scaffold:
 
 - Config flow for selecting Home Assistant entities.
-- Sensors for grid power, PV total, battery minimum SoC, battery discharge, grid tolerance and energy mode.
+- Sensors for grid power, PV total, battery minimum SoC, battery discharge,
+  grid tolerance, energy mode, planned surplus power, shifted energy today and
+  estimated savings today.
 - Binary sensors for surplus availability, battery protection, weather approval and flexible-load approval.
 - Number entities for editable thresholds.
 - Select entity for HEMS operating mode.
 - Switch entity for enabling or disabling automatic HEMS decisions.
 - Direct control of configured flexible loads and heating rods when the HEMS decision allows or blocks them.
-- Sidebar dashboard served by the integration.
+- Energy-style sidebar dashboard served by the integration.
 
-The current version calculates central decisions and directly switches configured flexible loads and heating rods. It does not yet schedule every individual device by priority; that is the next layer.
+The current version calculates central decisions, directly switches configured
+flexible loads and heating rods, estimates the energy shifted into surplus
+periods today, and shows the result in an energy-dashboard style sidebar.
+Full long-term energy statistics and device-level cost accounting are still
+planned.
+
+## Sidebar Energy Dashboard
+
+The bundled `BB HEMS` sidebar panel is intended as an operational energy
+dashboard, not as a configuration page.
+
+It shows:
+
+- Live HEMS mode, PV power, grid import/export and battery state.
+- Quick controls for `select.bb_hems_mode` and `switch.bb_hems_auto_enabled`.
+- Live energy flow between PV, battery, house/HEMS loads and the grid.
+- Today's HEMS-relevant values: surplus budget, grid direction and shifted
+  energy estimate.
+- Estimated HEMS benefit in kWh and EUR.
+- Power share bars for PV, house load, planned HEMS load, battery and grid.
+- HEMS switching history explaining when and why devices were allowed, blocked
+  or switched.
+
+Configuration is intentionally reduced to links from the dashboard. Detailed
+setup remains in Home Assistant's integration options and entity settings.
 
 ## System Model
 
@@ -98,6 +125,8 @@ Suggested mapping from the original automation:
 - `sensor.bb_hems_active_flexible_loads`
 - `sensor.bb_hems_available_surplus_budget`
 - `sensor.bb_hems_scheduled_surplus_power`
+- `sensor.bb_hems_shifted_energy_today`
+- `sensor.bb_hems_estimated_savings_today`
 - `sensor.bb_hems_configured_assets`
 
 ### Binary Sensors
@@ -186,6 +215,13 @@ are configured, but the entities remain available for custom dashboards. This
 avoids switching all surplus consumers at once and also turns running loads off
 when their actual power is no longer covered by real surplus.
 
+BB HEMS also estimates how much energy it has shifted into surplus periods
+today. The estimate integrates the planned HEMS surplus load while flexible
+loads are allowed. `sensor.bb_hems_shifted_energy_today` exposes this value in
+kWh. `sensor.bb_hems_estimated_savings_today` multiplies it by a conservative
+default grid-price estimate of 0.32 EUR/kWh. These values are estimates for the
+dashboard, not a replacement for metered utility billing.
+
 If battery charge sensors are configured, BB HEMS can also use active battery
 charging as a smart surplus signal. This is intentionally conservative: the
 lowest battery SoC must be at least 60%, weather must be approved and BB HEMS
@@ -224,10 +260,12 @@ Restart Home Assistant, then add the integration:
 Settings -> Devices & services -> Add integration -> BB HEMS
 ```
 
-After setup, a `BB HEMS` entry appears in the Home Assistant sidebar.
-The sidebar dashboard can be hidden with `switch.bb_hems_dashboard_enabled`.
-All HEMS functions remain available as normal Home Assistant entities for users
-who prefer building their own dashboards.
+After setup, a `BB HEMS` entry appears in the Home Assistant sidebar. The
+sidebar opens the energy dashboard and provides quick links to configuration,
+entities and devices. The sidebar dashboard can be hidden with
+`switch.bb_hems_dashboard_enabled`. All HEMS functions remain available as
+normal Home Assistant entities for users who prefer building their own
+dashboards.
 
 ## Support
 
@@ -243,10 +281,11 @@ Home Health Overview is free and will remain free.
 - Priority scheduler for many flexible loads.
 - Dedicated wallbox strategy with charge-current control.
 - Heat-pump strategy with comfort bands and thermal buffer support.
-- Device-level history: why a device was allowed, blocked, started or stopped.
+- Persistent device-level history beyond Home Assistant restarts.
 - Forecast-aware planning for PV windows.
 - Import/export cost awareness.
-- Native Lovelace cards or a richer frontend panel.
+- Configurable energy price and savings model.
+- Native Lovelace cards.
 
 ## Development
 

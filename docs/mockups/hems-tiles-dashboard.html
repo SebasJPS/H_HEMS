@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BB HEMS Tile Dashboard Mockup</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --card: #fff;
+      --text: #202124;
+      --muted: #66727d;
+      --line: #dfe3e8;
+      --accent: #03a9c7;
+      --good: #2e9f50;
+      --warn: #d97904;
+      --bad: #c93c37;
+      --idle: #607d8b;
+      --soft-good: #edf8f0;
+      --soft-warn: #fff6e8;
+      --soft-bad: #fff1ef;
+      --soft-info: #eef7fb;
+      --shadow: 0 1px 2px rgba(60, 64, 67, .12);
+      font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); letter-spacing: 0; }
+    h1, h2, h3, p { margin: 0; }
+
+    .top {
+      position: sticky;
+      top: 0;
+      z-index: 3;
+      min-height: 68px;
+      display: flex;
+      justify-content: space-between;
+      align-items: stretch;
+      gap: 16px;
+      padding: 0 28px;
+      border-bottom: 1px solid var(--line);
+      background: var(--card);
+    }
+    .tabs { display: flex; gap: 24px; }
+    .tab {
+      display: inline-flex;
+      align-items: center;
+      border-bottom: 3px solid transparent;
+      color: var(--muted);
+      font-weight: 650;
+      text-decoration: none;
+    }
+    .tab.active { color: var(--text); border-bottom-color: var(--text); }
+    .actions { display: flex; align-items: center; gap: 10px; }
+    .icon-button {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 23px;
+    }
+
+    .page { width: min(1480px, calc(100vw - 32px)); margin: 0 auto; padding: 24px 0 40px; }
+    .headline {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: start;
+      margin-bottom: 16px;
+    }
+    h1 { font-size: 30px; line-height: 1.1; font-weight: 650; }
+    .subtitle { margin-top: 6px; color: var(--muted); font-size: 14px; }
+    .link-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: end; }
+    .link {
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--card);
+      color: #007fa3;
+      font-size: 14px;
+      text-decoration: none;
+      box-shadow: var(--shadow);
+    }
+
+    .section { margin-top: 16px; }
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+      padding: 0 2px;
+    }
+    h2 { font-size: 18px; line-height: 1.2; font-weight: 650; }
+    .section-note { color: var(--muted); font-size: 13px; }
+
+    .tile-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .tile-grid.wide { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .tile-grid.loads { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    .tile {
+      position: relative;
+      min-height: 128px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .tile::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 5px;
+      background: var(--idle);
+    }
+    .tile.good::before { background: var(--good); }
+    .tile.warn::before { background: var(--warn); }
+    .tile.bad::before { background: var(--bad); }
+    .tile.info::before { background: var(--accent); }
+    .tile.good { background: linear-gradient(90deg, var(--soft-good), var(--card) 44%); }
+    .tile.warn { background: linear-gradient(90deg, var(--soft-warn), var(--card) 44%); }
+    .tile.bad { background: linear-gradient(90deg, var(--soft-bad), var(--card) 44%); }
+    .tile.info { background: linear-gradient(90deg, var(--soft-info), var(--card) 44%); }
+
+    .tile-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: start;
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+    .icon {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: #edf1f4;
+      color: var(--text);
+      font-size: 18px;
+      flex: 0 0 auto;
+    }
+    .value { font-size: 28px; line-height: 1.05; font-weight: 760; overflow-wrap: anywhere; }
+    .small-value { font-size: 21px; }
+    .note { margin-top: 8px; color: var(--muted); font-size: 12px; line-height: 1.35; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #eef2f4;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .pill.good { background: #e4f5e9; color: #17713a; }
+    .pill.warn { background: #fff0d6; color: #9a5a00; }
+    .pill.bad { background: #ffe5e1; color: #a9332f; }
+
+    .control-panel {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+    .segmented {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(82px, 1fr));
+      gap: 4px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #f0f2f4;
+    }
+    .segment {
+      min-height: 38px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      font: inherit;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .segment.active {
+      background: var(--card);
+      color: var(--accent);
+      font-weight: 700;
+      box-shadow: var(--shadow);
+    }
+    .power {
+      min-height: 46px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border: 1px solid #b9e2c9;
+      border-radius: 10px;
+      background: #eef9f2;
+      color: #17713a;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--good);
+      box-shadow: inset 0 0 0 5px #fff;
+    }
+
+    .main-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(360px, .75fr);
+      gap: 12px;
+    }
+    .stack { display: grid; gap: 12px; }
+
+    .event-card {
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+    .event-list { margin-top: 10px; display: grid; gap: 0; }
+    .event {
+      display: grid;
+      grid-template-columns: 62px minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: start;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
+    }
+    .event:last-child { border-bottom: 0; }
+    .event-time { color: var(--muted); white-space: nowrap; }
+    .event-title { font-weight: 700; }
+    .event-reason { margin-top: 4px; color: var(--muted); line-height: 1.35; }
+
+    .next-card {
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+    .next-card h3 { font-size: 15px; }
+    .next-item {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .next-item:last-child { border-bottom: 0; }
+    .marker {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-top: 5px;
+      background: var(--accent);
+    }
+
+    @media (max-width: 1120px) {
+      .headline, .main-layout, .control-panel { grid-template-columns: 1fr; }
+      .link-row { justify-content: start; }
+      .tile-grid, .tile-grid.wide, .tile-grid.loads { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 680px) {
+      .top { padding: 0 12px; overflow-x: auto; }
+      .actions { display: none; }
+      .page { width: min(100vw - 20px, 100%); padding-top: 16px; }
+      .tile-grid, .tile-grid.wide, .tile-grid.loads, .segmented { grid-template-columns: 1fr; }
+      .event { grid-template-columns: 54px minmax(0, 1fr); }
+      .event .pill { grid-column: 2; justify-self: start; }
+      h1 { font-size: 26px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <nav class="tabs">
+      <a class="tab active" href="#">HEMS</a>
+      <a class="tab" href="#">Entscheidung</a>
+      <a class="tab" href="#">Historie</a>
+    </nav>
+    <div class="actions">
+      <a class="icon-button" href="#" title="Konfiguration">+</a>
+      <a class="icon-button" href="#" title="Entitäten">▣</a>
+      <a class="icon-button" href="#" title="Bearbeiten">✎</a>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="headline">
+      <div>
+        <h1>BB HEMS</h1>
+        <p class="subtitle">Was HEMS gerade entscheidet, schaltet und einspart</p>
+      </div>
+      <div class="link-row">
+        <a class="link" href="#">Konfiguration</a>
+        <a class="link" href="#">Entitäten</a>
+        <a class="link" href="#">Geräte</a>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="control-panel">
+        <div>
+          <h2>Steuerung</h2>
+          <p class="section-note">Schnell umstellen, ohne die Integration zu öffnen</p>
+        </div>
+        <div class="segmented">
+          <button class="segment active">Auto</button>
+          <button class="segment">Eco</button>
+          <button class="segment">Comfort</button>
+          <button class="segment">PV erzwingen</button>
+          <button class="segment">Aus</button>
+        </div>
+        <div class="power"><span class="dot"></span>HEMS aktiv</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>Nutzen heute</h2>
+        <span class="section-note">Nur HEMS-Werte, keine allgemeine Energiebilanz</span>
+      </div>
+      <div class="tile-grid">
+        <article class="tile good">
+          <div class="tile-top"><span>HEMS verschoben</span><span class="icon">↗</span></div>
+          <div class="value">4,62 kWh</div>
+          <div class="note">Energie wurde in PV-/Überschusszeit gelegt.</div>
+        </article>
+        <article class="tile good">
+          <div class="tile-top"><span>geschätzte Ersparnis</span><span class="icon">€</span></div>
+          <div class="value">1,48 €</div>
+          <div class="note">Berechnet mit 0,32 €/kWh als konservativer Schätzwert.</div>
+        </article>
+        <article class="tile info">
+          <div class="tile-top"><span>geplante Leistung</span><span class="icon">⚡</span></div>
+          <div class="value">1,8 kW</div>
+          <div class="note">Aktuell für HEMS-Verbraucher eingeplant.</div>
+        </article>
+        <article class="tile warn">
+          <div class="tile-top"><span>vermiedener Netzbezug</span><span class="icon">↓</span></div>
+          <div class="value">3,9 kWh</div>
+          <div class="note">Schätzung aus verschobener Last und Netzbezugslage.</div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section main-layout">
+      <div class="stack">
+        <div>
+          <div class="section-head">
+            <h2>Entscheidung jetzt</h2>
+            <span class="section-note">Warum HEMS gerade schalten darf oder wartet</span>
+          </div>
+          <div class="tile-grid wide">
+            <article class="tile good">
+              <div class="tile-top"><span>Status</span><span class="pill good">frei</span></div>
+              <div class="value small-value">Überschuss aktiv</div>
+              <div class="note">PV-Fenster ist gut, Batterie ist geschützt, flexible Lasten sind erlaubt.</div>
+            </article>
+            <article class="tile good">
+              <div class="tile-top"><span>Überschussbudget</span><span class="pill good">passt</span></div>
+              <div class="value">2,4 kW</div>
+              <div class="note">Reicht für den Heizstab, aber noch nicht für die Wallbox.</div>
+            </article>
+            <article class="tile warn">
+              <div class="tile-top"><span>Nächster Kandidat</span><span class="pill warn">wartet</span></div>
+              <div class="value small-value">Wallbox</div>
+              <div class="note">Wird freigegeben, wenn 3,6 kW Budget 2 Minuten stabil verfügbar sind.</div>
+            </article>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-head">
+            <h2>Verbraucher</h2>
+            <span class="section-note">Was HEMS aktiv steuert</span>
+          </div>
+          <div class="tile-grid loads">
+            <article class="tile good">
+              <div class="tile-top"><span>Heizstab</span><span class="pill good">aktiv</span></div>
+              <div class="value">1,8 kW</div>
+              <div class="note">Eingeschaltet um 13:48 wegen stabiler PV-Reserve.</div>
+            </article>
+            <article class="tile warn">
+              <div class="tile-top"><span>Wallbox</span><span class="pill warn">wartet</span></div>
+              <div class="value small-value">nicht frei</div>
+              <div class="note">Budget zu klein, Batterie soll weiter laden.</div>
+            </article>
+            <article class="tile info">
+              <div class="tile-top"><span>Flexible Lasten</span><span class="pill good">frei</span></div>
+              <div class="value">1 Gerät</div>
+              <div class="note">Luftentfeuchter darf bei Überschuss starten.</div>
+            </article>
+            <article class="tile bad">
+              <div class="tile-top"><span>Wärmepumpe</span><span class="pill bad">nicht konfiguriert</span></div>
+              <div class="value small-value">kein Gerät</div>
+              <div class="note">Kann später als HEMS-Verbraucher ergänzt werden.</div>
+            </article>
+          </div>
+        </div>
+      </div>
+
+      <aside class="stack">
+        <section class="next-card">
+          <h2>Blocker & Freigaben</h2>
+          <div class="next-item"><span class="marker" style="background:var(--good)"></span><div><strong>Batterieschutz frei</strong><p class="note">SoC 78%, keine kritische Entladung.</p></div></div>
+          <div class="next-item"><span class="marker" style="background:var(--good)"></span><div><strong>PV-Fenster gut</strong><p class="note">Forecast und aktueller PV-Wert passen.</p></div></div>
+          <div class="next-item"><span class="marker" style="background:var(--warn)"></span><div><strong>Wallbox blockiert</strong><p class="note">Noch nicht genug Überschussbudget.</p></div></div>
+          <div class="next-item"><span class="marker" style="background:var(--accent)"></span><div><strong>Nächste Aktion</strong><p class="note">Wallbox prüfen, sobald Budget stabil über 3,6 kW liegt.</p></div></div>
+        </section>
+
+        <section class="event-card">
+          <h2>HEMS Ereignisse</h2>
+          <div class="event-list">
+            <div class="event">
+              <div class="event-time">13:48</div>
+              <div><div class="event-title">Heizstab eingeschaltet</div><div class="event-reason">PV 4,1 kW, Netz -0,9 kW, Batterie 77%.</div></div>
+              <span class="pill good">aktiv</span>
+            </div>
+            <div class="event">
+              <div class="event-time">12:16</div>
+              <div><div class="event-title">Wallbox weiter gesperrt</div><div class="event-reason">PV-Fenster gut, aber Batterie unter Ziel-SoC.</div></div>
+              <span class="pill warn">wartet</span>
+            </div>
+            <div class="event">
+              <div class="event-time">10:42</div>
+              <div><div class="event-title">Batterieschutz aufgehoben</div><div class="event-reason">SoC wieder über 60%, Entladung unter Grenze.</div></div>
+              <span class="pill good">frei</span>
+            </div>
+            <div class="event">
+              <div class="event-time">09:31</div>
+              <div><div class="event-title">Flexible Lasten gesperrt</div><div class="event-reason">Netzbezug 0,7 kW und schwacher PV-Forecast.</div></div>
+              <span class="pill bad">aus</span>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </section>
+  </main>
+</body>
+</html>

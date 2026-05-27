@@ -38,23 +38,24 @@ periods today, and shows the result in an energy-dashboard style sidebar.
 Full long-term energy statistics and device-level cost accounting are still
 planned.
 
-## Sidebar Energy Dashboard
+## Sidebar HEMS Dashboard
 
-The bundled `BB HEMS` sidebar panel is intended as an operational energy
-dashboard, not as a configuration page.
+The bundled `BB HEMS` sidebar panel is intended as an operational HEMS
+dashboard, not as a second general energy dashboard and not as a configuration
+page.
 
 It shows:
 
-- A Home-Assistant-Energy style `Strom` view with tab navigation.
-- Live HEMS mode, PV power, grid import/export and battery state.
+- Home Assistant-style tiles focused on HEMS decisions and benefit.
 - Quick controls for `select.bb_hems_mode` and `switch.bb_hems_auto_enabled`.
-- Energy distribution between PV, battery, grid and home.
-- Stromnutzung and PV-Erzeugung chart sections for the current day.
-- Today's HEMS-relevant values: surplus budget, grid direction and shifted
-  energy estimate.
-- Estimated HEMS benefit in kWh and EUR.
-- Grid balance and gauge cards for feed-in, PV self-consumption, autonomy and
-  CO2-neutral consumption share.
+- Today's HEMS benefit: shifted energy, estimated savings, planned HEMS load and
+  active HEMS loads.
+- The current decision: surplus status, usable budget, next candidate and the
+  relevant reason text.
+- Managed consumer groups such as flexible loads, heating rods, wallboxes and
+  heat pumps.
+- Blockers and approvals such as battery protection, weather approval, PV
+  window and surplus budget.
 - HEMS switching history explaining when and why devices were allowed, blocked
   or switched.
 

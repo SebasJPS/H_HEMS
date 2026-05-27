@@ -26,3 +26,5 @@ jobs:
             --target "$GITHUB_SHA" \
             --title "BB HEMS v0.1.15" \
             --notes "BB HEMS v0.1.15 adds PV forecast window signals, sun-position awareness, PV azimuth/tilt settings, forecast entities and dashboard visibility for the smarter HEMS decision layer."
+
+# Triggered by Codex after workflow creation.

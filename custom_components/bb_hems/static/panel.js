@@ -14,7 +14,7 @@ const ALIASES = {
   flexible_loads_allowed: ["flexible_loads_allowed", "flexible verbraucher erlaubt"],
 };
 
-const BB_HEMS_VERSION = "0.1.15";
+const BB_HEMS_VERSION = "0.1.16";
 
 class BbHemsPanel extends HTMLElement {
   set hass(hass) {

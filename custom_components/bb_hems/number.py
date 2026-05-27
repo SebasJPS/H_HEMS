@@ -18,7 +18,9 @@ from .const import (
     OPT_HEATING_ROD_POWER,
     OPT_MIN_BATTERY_SOC,
     OPT_PROTECT_BATTERY_SOC,
+    OPT_PV_AZIMUTH,
     OPT_PV_AVG_THRESHOLD,
+    OPT_PV_TILT,
     OPT_PV_THRESHOLD,
 )
 from .coordinator import HemsCoordinator
@@ -113,6 +115,24 @@ NUMBERS: tuple[HemsNumberDescription, ...] = (
         native_max_value=10000,
         native_step=10,
         native_unit_of_measurement=UnitOfPower.WATT,
+    ),
+    HemsNumberDescription(
+        key="pv_azimuth",
+        translation_key="pv_azimuth",
+        option_key=OPT_PV_AZIMUTH,
+        native_min_value=0,
+        native_max_value=360,
+        native_step=1,
+        icon="mdi:compass",
+    ),
+    HemsNumberDescription(
+        key="pv_tilt",
+        translation_key="pv_tilt",
+        option_key=OPT_PV_TILT,
+        native_min_value=0,
+        native_max_value=90,
+        native_step=1,
+        icon="mdi:angle-acute",
     ),
 )
 

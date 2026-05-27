@@ -4,6 +4,7 @@ const ALIASES = {
   grid_average: ["grid_average", "netzleistung 15 min", "netzleistung 15 minuten mittel"],
   pv_power_total: ["pv_power_total", "pv leistung gesamt", "pv gesamt"],
   pv_average: ["pv_average", "pv leistung 15 min", "pv 15 minuten mittel"],
+  pv_window: ["pv_window", "pv fenster"],
   battery_soc_min: ["battery_soc_min", "batterie soc minimum", "batterie min"],
   battery_discharge_total: ["battery_discharge_total", "batterie entladung gesamt", "batterie entladung"],
   grid_tolerance: ["grid_tolerance", "netztoleranz"],
@@ -13,7 +14,7 @@ const ALIASES = {
   flexible_loads_allowed: ["flexible_loads_allowed", "flexible verbraucher erlaubt"],
 };
 
-const BB_HEMS_VERSION = "0.1.14";
+const BB_HEMS_VERSION = "0.1.15";
 
 class BbHemsPanel extends HTMLElement {
   set hass(hass) {
@@ -130,7 +131,7 @@ class BbHemsPanel extends HTMLElement {
           ${metric(states, "energy_mode", "Betrieb", "Aktueller HEMS-Modus", true)}
           ${metric(states, "grid_power", "Netz", "Negativ = Einspeisung")}
           ${metric(states, "pv_power_total", "PV", "Summe aller PV-Quellen")}
-          ${metric(states, "battery_soc_min", "Batterie", "Niedrigster SoC")}
+          ${metric(states, "pv_window", "PV-Fenster", "Forecast und Sonnenstand")}
         </section>
 
         <section class="grid layout">
@@ -146,6 +147,7 @@ class BbHemsPanel extends HTMLElement {
                 ${decision("Batterieschutz", protect, attrs.battery_reason || "Aktiv bei niedrigem SoC, hoher Batterieentladung oder sehr schlechtem Wetter.", true)}
                 ${decision("Wetterfreigabe", weather, attrs.weather_reason || "Bewertet Wetterzustand, Bewölkung, Sonne und Batterie-SoC.")}
                 ${decision("Flexible Verbraucher", allowed, attrs.scheduler_reason || attrs.load_reason || "Nur aktiv, wenn Überschuss, Wetterfreigabe und Batterieschutz zusammen passen.")}
+                ${decision("PV-Fenster", !["night", "low_today", "weak_now"].includes(attrs.pv_window), attrs.pv_window_reason || "Bewertet PV-Forecast, Sonnenstand und PV-Ausrichtung.")}
               </div></div>
             </section>
             <section class="card">
@@ -338,6 +340,10 @@ function config(attrs) {
     ["Netz 15 min", attrs.grid_average_sensor],
     ["PV-Quellen", attrs.pv_power_sensors],
     ["PV 15 min", attrs.pv_average_sensor],
+    ["PV Forecast heute", attrs.pv_forecast_today_sensor],
+    ["PV Forecast nächste Stunde", attrs.pv_forecast_next_hour_sensor],
+    ["PV Forecast nächste 3 h", attrs.pv_forecast_next_3h_sensor],
+    ["Sonne", attrs.sun_entity],
     ["Batterie-SoC", attrs.battery_soc_sensors],
     ["Batterie-Entladung", attrs.battery_discharge_sensors],
     ["Wetter", attrs.weather_state_sensor],

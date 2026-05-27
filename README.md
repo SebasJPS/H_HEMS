@@ -60,11 +60,15 @@ Suggested mapping from the original automation:
 | Grid average | `sensor.grid_average_15m` |
 | PV power sources | `sensor.shellyplusplugs_b0b21c105338_switch_0_power` |
 | PV average | `sensor.pv_average_15m` |
+| PV forecast today | `sensor.pv_forecast_today` |
+| PV forecast next hour | `sensor.pv_forecast_next_hour` |
+| PV forecast next 3 hours | `sensor.pv_forecast_next_3h` |
 | Battery SoC | `sensor.batterie_geschatzt_soc` |
 | Battery discharge | `sensor.batterie_discharge` |
 | Weather state | `sensor.berlin_tempelhof_wetterzustand` |
 | Cloud coverage | `sensor.berlin_tempelhof_bewolkungsgrad` |
 | Sunshine duration | `sensor.berlin_tempelhof_sonnenscheindauer` |
+| Sun position | `sun.sun` |
 | Flexible loads | `switch.a8m` |
 | Flexible load power sensors | `sensor.a8m_power` |
 | Heating rods | `switch.boiler_heating_rod` |
@@ -79,6 +83,9 @@ Suggested mapping from the original automation:
 - `sensor.bb_hems_grid_average`
 - `sensor.bb_hems_pv_power_total`
 - `sensor.bb_hems_pv_average`
+- `sensor.bb_hems_pv_window`
+- `sensor.bb_hems_pv_forecast_next_3h`
+- `sensor.bb_hems_sun_elevation`
 - `sensor.bb_hems_battery_soc_min`
 - `sensor.bb_hems_battery_discharge_total`
 - `sensor.bb_hems_grid_tolerance`
@@ -105,6 +112,8 @@ Suggested mapping from the original automation:
 - `number.bb_hems_protect_battery_soc`
 - `number.bb_hems_pv_threshold`
 - `number.bb_hems_pv_avg_threshold`
+- `number.bb_hems_pv_azimuth`
+- `number.bb_hems_pv_tilt`
 - `number.bb_hems_grid_import_limit`
 - `number.bb_hems_grid_hard_import_limit`
 - `number.bb_hems_battery_discharge_limit`
@@ -142,7 +151,14 @@ The first controller version evaluates:
 - Minimum battery SoC across all configured batteries.
 - Total battery discharge.
 - Weather state, cloud coverage and sunshine.
+- PV forecast for today and PV power forecast for the next hour / next 3 hours when configured.
+- Sun elevation/azimuth from `sun.sun` and configured PV azimuth/tilt.
 - Configured thresholds and operating mode.
+
+BB HEMS classifies the current PV window as `night`, `low_today`,
+`weak_now`, `rising`, `good_later`, `usable_now`, `peak_now` or `falling`.
+This gives dashboards and automations a stable signal for whether a better PV
+window is likely later or whether the current moment is already suitable.
 
 After the central surplus decision, the smart scheduler estimates the real
 surplus budget and selects only the configured loads that fit. It uses current

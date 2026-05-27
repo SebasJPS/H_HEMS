@@ -25,7 +25,11 @@ from .const import (
     CONF_HEATING_ROD_POWER_SENSORS,
     CONF_HEATING_ROD_SWITCHES,
     CONF_PV_AVERAGE_SENSOR,
+    CONF_PV_FORECAST_NEXT_3H_SENSOR,
+    CONF_PV_FORECAST_NEXT_HOUR_SENSOR,
+    CONF_PV_FORECAST_TODAY_SENSOR,
     CONF_PV_POWER_SENSORS,
+    CONF_SUN_ENTITY,
     CONF_SUNSHINE_SENSOR,
     CONF_WALLBOX_SWITCHES,
     CONF_WEATHER_STATE_SENSOR,
@@ -47,7 +51,9 @@ from .const import (
     OPT_MIN_BATTERY_SOC,
     OPT_MODE,
     OPT_PROTECT_BATTERY_SOC,
+    OPT_PV_AZIMUTH,
     OPT_PV_AVG_THRESHOLD,
+    OPT_PV_TILT,
     OPT_PV_THRESHOLD,
     OPT_RESPONSE_PROFILE,
     RESPONSE_AUTO,
@@ -88,6 +94,13 @@ class HemsData:
     grid_average: float
     pv_power: float
     pv_average: float
+    pv_forecast_today: float | None
+    pv_forecast_next_hour: float | None
+    pv_forecast_next_3h: float | None
+    sun_elevation: float | None
+    sun_azimuth: float | None
+    pv_window: str
+    pv_window_reason: str
     battery_soc_min: float | None
     battery_discharge: float
     cloud_coverage: float | None
@@ -183,6 +196,27 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
 
         pv_power = sum(self._float_state(entity_id, 0.0) for entity_id in pv_sources)
         pv_average = self._float_state(data.get(CONF_PV_AVERAGE_SENSOR), pv_power)
+        pv_forecast_today = self._float_state(
+            data.get(CONF_PV_FORECAST_TODAY_SENSOR), None
+        )
+        pv_forecast_next_hour = self._float_state(
+            data.get(CONF_PV_FORECAST_NEXT_HOUR_SENSOR), None
+        )
+        pv_forecast_next_3h = self._float_state(
+            data.get(CONF_PV_FORECAST_NEXT_3H_SENSOR), None
+        )
+        sun_entity = data.get(CONF_SUN_ENTITY) or "sun.sun"
+        sun_elevation = self._float_attr(sun_entity, "elevation", None)
+        sun_azimuth = self._float_attr(sun_entity, "azimuth", None)
+        pv_window, pv_window_reason = self._pv_window(
+            pv_power,
+            pv_average,
+            pv_forecast_today,
+            pv_forecast_next_hour,
+            pv_forecast_next_3h,
+            sun_elevation,
+            sun_azimuth,
+        )
         battery_socs = [
             self._float_state(entity_id, None) for entity_id in battery_soc_sources
         ]
@@ -308,6 +342,13 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             grid_average=grid_average,
             pv_power=pv_power,
             pv_average=pv_average,
+            pv_forecast_today=pv_forecast_today,
+            pv_forecast_next_hour=pv_forecast_next_hour,
+            pv_forecast_next_3h=pv_forecast_next_3h,
+            sun_elevation=sun_elevation,
+            sun_azimuth=sun_azimuth,
+            pv_window=pv_window,
+            pv_window_reason=pv_window_reason,
             battery_soc_min=battery_soc_min,
             battery_discharge=battery_discharge,
             cloud_coverage=cloud_coverage,
@@ -597,7 +638,9 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             OPT_MODE: "Betriebsart",
             OPT_RESPONSE_PROFILE: "Reaktionsmodus",
             OPT_PROTECT_BATTERY_SOC: "Batterieschutz-SoC",
+            OPT_PV_AZIMUTH: "PV-Ausrichtung",
             OPT_PV_AVG_THRESHOLD: "PV-Schwellwert 15 min",
+            OPT_PV_TILT: "PV-Neigung",
             OPT_PV_THRESHOLD: "PV-Schwellwert aktuell",
         }.get(key, key)
 
@@ -618,11 +661,84 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         except (TypeError, ValueError):
             return default
 
+    def _float_attr(
+        self, entity_id: str | None, attribute: str, default: float | None
+    ) -> float | None:
+        if not entity_id:
+            return default
+        state = self.hass.states.get(entity_id)
+        if state is None:
+            return default
+        value = state.attributes.get(attribute)
+        if value is None:
+            return default
+        try:
+            return float(str(value).replace(",", "."))
+        except (TypeError, ValueError):
+            return default
+
     def _positive_float_state(self, entity_id: str | None) -> float | None:
         value = self._float_state(entity_id, None)
         if value is None:
             return None
         return max(0.0, value)
+
+    def _pv_window(
+        self,
+        pv_power: float,
+        pv_average: float,
+        forecast_today: float | None,
+        forecast_next_hour: float | None,
+        forecast_next_3h: float | None,
+        sun_elevation: float | None,
+        sun_azimuth: float | None,
+    ) -> tuple[str, str]:
+        """Classify the current PV production window."""
+        pv_threshold = float(self.opts[OPT_PV_THRESHOLD])
+        pv_azimuth = float(self.opts[OPT_PV_AZIMUTH])
+        pv_tilt = float(self.opts[OPT_PV_TILT])
+        next_hour = forecast_next_hour
+        next_3h = forecast_next_3h
+
+        if sun_elevation is not None and sun_elevation <= 0:
+            return "night", "Sonne ist unter dem Horizont; PV-Fenster ist nachts geschlossen."
+
+        if (
+            next_3h is not None
+            and next_3h < pv_threshold
+            and pv_power < pv_threshold
+        ):
+            today_text = (
+                f", heute {forecast_today:.1f}" if forecast_today is not None else ""
+            )
+            return "low_today", f"PV-Forecast bleibt niedrig: nächste 3 h {next_3h:.1f}{today_text}; aktuelles PV {pv_power:.1f} W."
+
+        if next_3h is not None and next_3h >= max(pv_power * 1.5, pv_threshold * 2):
+            return "good_later", f"PV-Forecast erwartet später deutlich mehr: nächste 3 h {next_3h:.1f} gegenüber aktuell {pv_power:.1f} W."
+
+        if next_hour is not None and next_hour >= max(pv_power * 1.25, pv_threshold * 1.5):
+            return "rising", f"PV steigt voraussichtlich: nächste Stunde {next_hour:.1f}, aktuell {pv_power:.1f} W."
+
+        if sun_azimuth is not None and sun_elevation is not None:
+            azimuth_delta = self._angle_delta(sun_azimuth, pv_azimuth)
+            if azimuth_delta <= 35 and sun_elevation >= max(10.0, pv_tilt * 0.4):
+                return "peak_now", f"Sonne steht günstig zur PV-Ausrichtung: Azimut-Differenz {azimuth_delta:.1f}°, Elevation {sun_elevation:.1f}°."
+            if sun_azimuth > pv_azimuth + 45 or sun_elevation < 12:
+                return "falling", f"PV-Fenster fällt: Sonne Azimut {sun_azimuth:.1f}° zur PV-Ausrichtung {pv_azimuth:.1f}°, Elevation {sun_elevation:.1f}°."
+
+        if pv_power > pv_average * 1.1 and pv_power >= pv_threshold:
+            return "rising", f"PV-Leistung liegt über dem 15-Minuten-Mittel: aktuell {pv_power:.1f} W, Mittel {pv_average:.1f} W."
+        if pv_power < pv_average * 0.8 and pv_average >= pv_threshold:
+            return "falling", f"PV-Leistung fällt unter das 15-Minuten-Mittel: aktuell {pv_power:.1f} W, Mittel {pv_average:.1f} W."
+
+        if pv_power >= pv_threshold:
+            return "usable_now", f"PV-Fenster ist nutzbar: aktuell {pv_power:.1f} W über Schwellwert {pv_threshold:.1f} W."
+        return "weak_now", f"PV-Fenster ist schwach: aktuell {pv_power:.1f} W unter Schwellwert {pv_threshold:.1f} W."
+
+    def _angle_delta(self, first: float, second: float) -> float:
+        """Return smallest difference between two compass angles."""
+        delta = abs((first - second + 180) % 360 - 180)
+        return float(delta)
 
     def _good_weather(
         self,

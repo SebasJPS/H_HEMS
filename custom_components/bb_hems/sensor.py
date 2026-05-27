@@ -28,7 +28,11 @@ from .const import (
     CONF_HEATING_ROD_POWER_SENSORS,
     CONF_HEATING_ROD_SWITCHES,
     CONF_PV_AVERAGE_SENSOR,
+    CONF_PV_FORECAST_NEXT_3H_SENSOR,
+    CONF_PV_FORECAST_NEXT_HOUR_SENSOR,
+    CONF_PV_FORECAST_TODAY_SENSOR,
     CONF_PV_POWER_SENSORS,
+    CONF_SUN_ENTITY,
     CONF_SUNSHINE_SENSOR,
     CONF_WALLBOX_SWITCHES,
     CONF_WEATHER_STATE_SENSOR,
@@ -82,6 +86,28 @@ SENSORS: tuple[HemsSensorDescription, ...] = (
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda data: round(data.pv_average, 1),
+    ),
+    HemsSensorDescription(
+        key="pv_window",
+        translation_key="pv_window",
+        icon="mdi:solar-power-variant",
+        value_fn=lambda data: data.pv_window,
+    ),
+    HemsSensorDescription(
+        key="pv_forecast_next_3h",
+        translation_key="pv_forecast_next_3h",
+        icon="mdi:weather-sunny-alert",
+        value_fn=lambda data: None
+        if data.pv_forecast_next_3h is None
+        else round(data.pv_forecast_next_3h, 1),
+    ),
+    HemsSensorDescription(
+        key="sun_elevation",
+        translation_key="sun_elevation",
+        icon="mdi:weather-sunny",
+        value_fn=lambda data: None
+        if data.sun_elevation is None
+        else round(data.sun_elevation, 1),
     ),
     HemsSensorDescription(
         key="battery_soc_min",
@@ -206,6 +232,13 @@ class HemsSensor(HemsEntity, SensorEntity):
             "weather_state": data.weather_state,
             "cloud_coverage": data.cloud_coverage,
             "sunshine_minutes": data.sunshine_minutes,
+            "pv_forecast_today": data.pv_forecast_today,
+            "pv_forecast_next_hour": data.pv_forecast_next_hour,
+            "pv_forecast_next_3h": data.pv_forecast_next_3h,
+            "sun_elevation": data.sun_elevation,
+            "sun_azimuth": data.sun_azimuth,
+            "pv_window": data.pv_window,
+            "pv_window_reason": data.pv_window_reason,
             "weather_reason": data.weather_reason,
             "surplus_reason": data.surplus_reason,
             "battery_reason": data.battery_reason,
@@ -228,6 +261,11 @@ class HemsSensor(HemsEntity, SensorEntity):
             "grid_average_sensor": config.get(CONF_GRID_AVERAGE_SENSOR),
             "pv_power_sensors": config.get(CONF_PV_POWER_SENSORS, []),
             "pv_average_sensor": config.get(CONF_PV_AVERAGE_SENSOR),
+            "pv_forecast_today_sensor": config.get(CONF_PV_FORECAST_TODAY_SENSOR),
+            "pv_forecast_next_hour_sensor": config.get(
+                CONF_PV_FORECAST_NEXT_HOUR_SENSOR
+            ),
+            "pv_forecast_next_3h_sensor": config.get(CONF_PV_FORECAST_NEXT_3H_SENSOR),
             "battery_soc_sensors": config.get(CONF_BATTERY_SOC_SENSORS, []),
             "battery_discharge_sensors": config.get(
                 CONF_BATTERY_DISCHARGE_SENSORS, []
@@ -235,6 +273,7 @@ class HemsSensor(HemsEntity, SensorEntity):
             "weather_state_sensor": config.get(CONF_WEATHER_STATE_SENSOR),
             "cloud_sensor": config.get(CONF_CLOUD_SENSOR),
             "sunshine_sensor": config.get(CONF_SUNSHINE_SENSOR),
+            "sun_entity": config.get(CONF_SUN_ENTITY),
             "flexible_load_switches": config.get(CONF_FLEXIBLE_LOAD_SWITCHES, []),
             "flexible_load_power_sensors": config.get(
                 CONF_FLEXIBLE_LOAD_POWER_SENSORS, []

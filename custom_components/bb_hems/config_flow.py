@@ -57,6 +57,14 @@ def _entity_list(value: Any) -> list[str]:
     return [item for item in value if item]
 
 
+def _optional_entity(defaults: dict[str, Any], key: str) -> vol.Optional:
+    """Return an optional schema key without forcing an empty default."""
+    value = defaults.get(key)
+    if value:
+        return vol.Optional(key, default=value)
+    return vol.Optional(key)
+
+
 class BbHemsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for BB HEMS."""
 
@@ -266,21 +274,18 @@ def _schema(defaults: dict[str, Any]) -> vol.Schema:
             ): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
             ),
-            vol.Optional(
-                CONF_PV_FORECAST_TODAY_SENSOR,
-                default=defaults.get(CONF_PV_FORECAST_TODAY_SENSOR),
+            _optional_entity(
+                defaults, CONF_PV_FORECAST_TODAY_SENSOR
             ): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
             ),
-            vol.Optional(
-                CONF_PV_FORECAST_NEXT_HOUR_SENSOR,
-                default=defaults.get(CONF_PV_FORECAST_NEXT_HOUR_SENSOR),
+            _optional_entity(
+                defaults, CONF_PV_FORECAST_NEXT_HOUR_SENSOR
             ): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
             ),
-            vol.Optional(
-                CONF_PV_FORECAST_NEXT_3H_SENSOR,
-                default=defaults.get(CONF_PV_FORECAST_NEXT_3H_SENSOR),
+            _optional_entity(
+                defaults, CONF_PV_FORECAST_NEXT_3H_SENSOR
             ): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
             ),

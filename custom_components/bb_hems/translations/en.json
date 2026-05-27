@@ -170,7 +170,9 @@
       "battery_charge_total": { "name": "Battery charge total" },
       "usable_battery_charge": { "name": "Usable battery charge" },
       "available_surplus_budget": { "name": "Available surplus budget" },
-      "scheduled_surplus_power": { "name": "Scheduled surplus power" }
+      "scheduled_surplus_power": { "name": "Scheduled surplus power" },
+      "shifted_energy_today": { "name": "HEMS shifted energy today" },
+      "estimated_savings_today": { "name": "HEMS savings today" }
     },
     "number": {
       "flexible_load_power": { "name": "Fallback flexible load power" },

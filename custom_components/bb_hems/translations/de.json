@@ -182,6 +182,8 @@
       "active_flexible_loads": { "name": "Aktive flexible Verbraucher" },
       "available_surplus_budget": { "name": "Verfügbares Überschussbudget" },
       "scheduled_surplus_power": { "name": "Geplante Überschussleistung" },
+      "shifted_energy_today": { "name": "HEMS verschobene Energie heute" },
+      "estimated_savings_today": { "name": "HEMS Ersparnis heute" },
       "configured_assets": { "name": "Konfigurierte Anlagen" }
     },
     "binary_sensor": {

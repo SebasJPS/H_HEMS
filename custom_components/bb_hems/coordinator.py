@@ -66,6 +66,7 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+ESTIMATED_GRID_PRICE_EUR_PER_KWH = 0.32
 
 
 @dataclass(frozen=True)
@@ -145,6 +146,8 @@ class HemsData:
     available_surplus_budget: float
     scheduled_surplus_loads: tuple[str, ...]
     scheduled_surplus_power: float
+    shifted_energy_today: float
+    estimated_savings_today: float
     scheduler_reason: str
     weather_reason: str
     surplus_reason: str
@@ -170,6 +173,11 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         self._last_decision_snapshot: dict[str, Any] | None = None
         self._flexible_loads_allowed_since: datetime | None = None
         self._flexible_loads_blocked_since: datetime | None = None
+        self._energy_estimate_day: str | None = None
+        self._energy_estimate_last_update: datetime | None = None
+        self._energy_estimate_last_power: float = 0.0
+        self._shifted_energy_today: float = 0.0
+        self._shifted_energy_total: float = 0.0
 
     async def _async_update_data(self) -> HemsData:
         data = self._calculate()
@@ -369,6 +377,12 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             battery_protect=battery_protect,
             grid_power=grid_power,
         )
+        shifted_energy_today = self._update_shifted_energy_estimate(
+            scheduled_power if flexible_loads_allowed else 0.0
+        )
+        estimated_savings_today = (
+            shifted_energy_today * ESTIMATED_GRID_PRICE_EUR_PER_KWH
+        )
         self._update_action_history(
             energy_mode,
             surplus_available,
@@ -425,6 +439,8 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             available_surplus_budget=available_budget,
             scheduled_surplus_loads=scheduled_loads,
             scheduled_surplus_power=scheduled_power,
+            shifted_energy_today=shifted_energy_today,
+            estimated_savings_today=estimated_savings_today,
             scheduler_reason=scheduler_reason,
             weather_reason=weather_reason,
             surplus_reason=surplus_reason,
@@ -434,6 +450,29 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             load_reason=load_reason,
             action_history=list(self._action_history),
         )
+
+    def _update_shifted_energy_estimate(self, current_power: float) -> float:
+        """Estimate kWh shifted into surplus periods by integrating planned HEMS load."""
+        now = datetime.now()
+        today = now.date().isoformat()
+        if self._energy_estimate_day != today:
+            self._energy_estimate_day = today
+            self._shifted_energy_today = 0.0
+            self._energy_estimate_last_update = now
+            self._energy_estimate_last_power = max(0.0, current_power)
+            return self._shifted_energy_today
+
+        if self._energy_estimate_last_update is not None:
+            elapsed_hours = max(
+                0.0, (now - self._energy_estimate_last_update).total_seconds() / 3600
+            )
+            added_kwh = max(0.0, self._energy_estimate_last_power) * elapsed_hours / 1000
+            self._shifted_energy_today += added_kwh
+            self._shifted_energy_total += added_kwh
+
+        self._energy_estimate_last_update = now
+        self._energy_estimate_last_power = max(0.0, current_power)
+        return self._shifted_energy_today
 
     async def _async_apply_flexible_load_control(self, data: HemsData) -> bool:
         """Switch configured flexible loads according to the current HEMS decision."""

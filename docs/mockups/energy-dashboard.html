@@ -1,0 +1,613 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BB HEMS Energy Dashboard Mockup</title>
+  <style>
+    :root {
+      --bg: #f5f6f7;
+      --card: #fff;
+      --text: #1f2428;
+      --muted: #68737d;
+      --line: #dfe4e8;
+      --accent: #03a9c7;
+      --pv: #f7b731;
+      --grid: #4f8fd9;
+      --battery: #26a269;
+      --load: #8e6ad8;
+      --warn: #d97904;
+      --bad: #c93c37;
+      --shadow: 0 1px 2px rgba(15, 23, 42, .08);
+      font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      letter-spacing: 0;
+    }
+
+    .page {
+      width: min(1440px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 28px 0 40px;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px;
+      align-items: start;
+      margin-bottom: 18px;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: 30px; line-height: 1.1; font-weight: 620; }
+    h2 { font-size: 18px; line-height: 1.2; font-weight: 620; }
+    h3 { font-size: 13px; color: var(--muted); font-weight: 600; }
+    .sub { margin-top: 7px; color: var(--muted); font-size: 14px; }
+
+    .links {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: end;
+    }
+
+    .link {
+      min-height: 36px;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--card);
+      color: #007fa3;
+      font-size: 14px;
+      text-decoration: none;
+      box-shadow: var(--shadow);
+    }
+
+    .status-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .control-strip {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .mode-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 70px;
+      padding: 12px 14px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .mode-summary {
+      display: grid;
+      gap: 4px;
+      min-width: 180px;
+    }
+
+    .mode-title { font-weight: 650; }
+    .mode-note { color: var(--muted); font-size: 13px; }
+
+    .segmented {
+      display: inline-grid;
+      grid-template-columns: repeat(4, minmax(92px, 1fr));
+      gap: 4px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #eef2f5;
+    }
+
+    .segment, .power-toggle {
+      min-height: 36px;
+      border: 0;
+      border-radius: 6px;
+      padding: 7px 12px;
+      background: transparent;
+      color: var(--text);
+      font: inherit;
+      font-size: 14px;
+      cursor: default;
+      white-space: nowrap;
+    }
+
+    .segment.active {
+      background: var(--card);
+      color: #007fa3;
+      box-shadow: var(--shadow);
+      font-weight: 650;
+    }
+
+    .power-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 44px;
+      padding: 9px 14px;
+      border: 1px solid #b9e2c9;
+      background: #eef9f2;
+      color: #167342;
+      font-weight: 650;
+      box-shadow: var(--shadow);
+    }
+
+    .power-toggle .switch-dot {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--battery);
+      box-shadow: inset 0 0 0 5px #fff;
+    }
+
+    .card, .tile {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .tile { padding: 14px; min-height: 108px; }
+    .tile .label {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+    .tile .value { font-size: 28px; line-height: 1; font-weight: 700; }
+    .tile .note { margin-top: 9px; color: var(--muted); font-size: 12px; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.42fr) minmax(360px, .88fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .stack { display: grid; gap: 14px; }
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 15px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+    .card-body { padding: 16px; }
+    .muted { color: var(--muted); }
+
+    .flow-wrap {
+      min-height: 410px;
+      display: grid;
+      grid-template-columns: 1fr 1.08fr 1fr;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .source-column, .target-column {
+      display: grid;
+      gap: 12px;
+    }
+
+    .energy-node {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr);
+      gap: 12px;
+      align-items: center;
+      min-height: 86px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--card), var(--bg) 35%);
+    }
+
+    .icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-weight: 800;
+      font-size: 15px;
+    }
+    .pv { background: var(--pv); }
+    .battery { background: var(--battery); }
+    .grid { background: var(--grid); }
+    .load { background: var(--load); }
+    .warn { background: var(--warn); }
+
+    .node-title { font-size: 14px; font-weight: 650; }
+    .node-value { margin-top: 4px; font-size: 21px; font-weight: 720; }
+    .node-note { margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.35; }
+
+    .center-flow {
+      position: relative;
+      min-height: 360px;
+      display: grid;
+      place-items: center;
+    }
+
+    .home-core {
+      width: 190px;
+      height: 190px;
+      border-radius: 50%;
+      border: 8px solid #e9eef2;
+      background: #fff;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      box-shadow: 0 12px 28px rgba(15, 23, 42, .12);
+      z-index: 2;
+    }
+    .home-core strong { display: block; font-size: 24px; }
+    .home-core span { color: var(--muted); font-size: 13px; }
+
+    .path {
+      position: absolute;
+      height: 8px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      opacity: .78;
+    }
+    .path.pv-home { width: 210px; transform: rotate(22deg); top: 102px; left: -10px; }
+    .path.batt-home { width: 190px; transform: rotate(-18deg); bottom: 96px; left: 0; background: linear-gradient(90deg, transparent, var(--battery), transparent); }
+    .path.home-load { width: 210px; transform: rotate(-18deg); top: 104px; right: -10px; background: linear-gradient(90deg, transparent, var(--load), transparent); }
+    .path.home-grid { width: 190px; transform: rotate(18deg); bottom: 96px; right: 0; background: linear-gradient(90deg, transparent, var(--grid), transparent); }
+
+    .today-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .mini {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--card), var(--bg) 30%);
+    }
+    .mini .kpi { margin-top: 8px; font-size: 23px; font-weight: 720; }
+    .mini .delta { margin-top: 6px; font-size: 12px; color: var(--battery); }
+    .mini .delta.bad { color: var(--bad); }
+
+    .bars { display: grid; gap: 10px; }
+    .bar-row {
+      display: grid;
+      grid-template-columns: 92px minmax(0, 1fr) 70px;
+      gap: 10px;
+      align-items: center;
+      font-size: 13px;
+    }
+    .track {
+      height: 12px;
+      border-radius: 999px;
+      background: #edf1f4;
+      overflow: hidden;
+    }
+    .fill { height: 100%; border-radius: inherit; }
+
+    .history-chart {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 10px;
+      align-items: end;
+      min-height: 190px;
+      padding-top: 10px;
+    }
+    .day {
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: end;
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .stackbar {
+      height: 150px;
+      display: grid;
+      align-items: end;
+      border-radius: 6px;
+      overflow: hidden;
+      background: #edf1f4;
+    }
+    .seg { width: 100%; }
+
+    .events { display: grid; gap: 0; }
+    .event {
+      display: grid;
+      grid-template-columns: 64px 28px minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: start;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
+    }
+    .event:last-child { border-bottom: 0; }
+    .event-time { color: var(--muted); white-space: nowrap; }
+    .event-title { font-weight: 650; }
+    .event-note { margin-top: 3px; color: var(--muted); line-height: 1.35; }
+    .badge {
+      display: inline-flex;
+      min-height: 24px;
+      align-items: center;
+      border-radius: 999px;
+      padding: 3px 9px;
+      background: #eef8f1;
+      color: #167342;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .badge.off { background: #fff4e6; color: #9a5a00; }
+
+    .savings {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+      align-items: center;
+    }
+    .savings .big { font-size: 34px; font-weight: 760; line-height: 1; }
+    .ring {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: conic-gradient(var(--battery) 0 72%, #e7ecef 72% 100%);
+      display: grid;
+      place-items: center;
+    }
+    .ring-inner {
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      background: #fff;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .compare {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .compare-item {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: color-mix(in srgb, var(--card), var(--bg) 35%);
+    }
+    .compare-item strong { display: block; margin-top: 5px; font-size: 18px; }
+
+    @media (max-width: 1180px) {
+      .layout, .flow-wrap { grid-template-columns: 1fr; }
+      .center-flow { min-height: 260px; }
+      .path { display: none; }
+    }
+    @media (max-width: 760px) {
+      .page { width: min(100vw - 20px, 100%); padding-top: 16px; }
+      .topbar, .status-strip, .control-strip, .today-grid, .compare { grid-template-columns: 1fr; }
+      .links { justify-content: start; }
+      .mode-card { align-items: stretch; flex-direction: column; }
+      .segmented { grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+      .bar-row { grid-template-columns: 78px minmax(0, 1fr) 58px; }
+      .event { grid-template-columns: 54px 24px minmax(0, 1fr); }
+      .event .badge { grid-column: 3; justify-self: start; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="topbar">
+      <div>
+        <h1>BB HEMS Energie</h1>
+        <p class="sub">Live-Flüsse, Tagesbilanz, HEMS-Schaltungen und geschätzter Nutzen</p>
+      </div>
+      <nav class="links" aria-label="Dashboard links">
+        <a class="link" href="#">Konfiguration</a>
+        <a class="link" href="#">Entitäten</a>
+        <a class="link" href="#">Einstellungen</a>
+      </nav>
+    </header>
+
+    <section class="control-strip" aria-label="HEMS Steuerung">
+      <div class="mode-card">
+        <div class="mode-summary">
+          <span class="mode-title">HEMS Steuerung</span>
+          <span class="mode-note">Schnell umstellen, ohne die Konfiguration zu öffnen</span>
+        </div>
+        <div class="segmented" role="group" aria-label="Betriebsmodus">
+          <button class="segment active">Auto</button>
+          <button class="segment">Nur beobachten</button>
+          <button class="segment">PV bevorzugt</button>
+          <button class="segment">Manuell</button>
+        </div>
+      </div>
+      <button class="power-toggle" aria-pressed="true"><span class="switch-dot"></span>HEMS aktiv</button>
+    </section>
+
+    <section class="status-strip" aria-label="HEMS Status">
+      <article class="tile">
+        <div class="label"><span>HEMS Modus</span><span>live</span></div>
+        <div class="value">Überschuss</div>
+        <div class="note">Flexible Verbraucher sind freigegeben</div>
+      </article>
+      <article class="tile">
+        <div class="label"><span>PV jetzt</span><span>15 min: 3,8 kW</span></div>
+        <div class="value">4,2 kW</div>
+        <div class="note">Süd + Garage Ost + Balkonkraftwerk</div>
+      </article>
+      <article class="tile">
+        <div class="label"><span>Netz</span><span>Export</span></div>
+        <div class="value">-0,6 kW</div>
+        <div class="note">Nach HEMS-Lasten noch Einspeisung</div>
+      </article>
+      <article class="tile">
+        <div class="label"><span>Batterie</span><span>Schutz OK</span></div>
+        <div class="value">78%</div>
+        <div class="note">Lädt mit 1,1 kW</div>
+      </article>
+    </section>
+
+    <section class="layout">
+      <div class="stack">
+        <section class="card">
+          <div class="card-head">
+            <h2>Energiefluss jetzt</h2>
+            <span class="muted">Aktualisiert 14:11</span>
+          </div>
+          <div class="card-body">
+            <div class="flow-wrap">
+              <div class="source-column">
+                <div class="energy-node">
+                  <div class="icon pv">PV</div>
+                  <div><div class="node-title">PV-Erzeugung</div><div class="node-value">4,2 kW</div><div class="node-note">Forecast nächste Stunde: stabil</div></div>
+                </div>
+                <div class="energy-node">
+                  <div class="icon battery">BAT</div>
+                  <div><div class="node-title">Batterie</div><div class="node-value">+1,1 kW</div><div class="node-note">78% SoC, Mindestwert 40%</div></div>
+                </div>
+              </div>
+
+              <div class="center-flow">
+                <div class="path pv-home"></div>
+                <div class="path batt-home"></div>
+                <div class="path home-load"></div>
+                <div class="path home-grid"></div>
+                <div class="home-core">
+                  <div>
+                    <strong>2,5 kW</strong>
+                    <span>Haus + HEMS-Lasten</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="target-column">
+                <div class="energy-node">
+                  <div class="icon load">HEMS</div>
+                  <div><div class="node-title">Gesteuerte Lasten</div><div class="node-value">1,8 kW</div><div class="node-note">Heizstab aktiv, Wallbox wartet</div></div>
+                </div>
+                <div class="energy-node">
+                  <div class="icon grid">NETZ</div>
+                  <div><div class="node-title">Netzanschluss</div><div class="node-value">-0,6 kW</div><div class="node-note">Export trotz aktiver Lasten</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2>Heute</h2>
+            <span class="muted">Vergleich zu gestern und 7-Tage-Schnitt</span>
+          </div>
+          <div class="card-body">
+            <div class="today-grid">
+              <div class="mini"><h3>PV erzeugt</h3><div class="kpi">18,4 kWh</div><div class="delta">+12% ggü. gestern</div></div>
+              <div class="mini"><h3>Direkt verbraucht</h3><div class="kpi">9,7 kWh</div><div class="delta">Eigenverbrauch 53%</div></div>
+              <div class="mini"><h3>Netzbezug</h3><div class="kpi">2,1 kWh</div><div class="delta bad">-0,8 kWh Zielabweichung</div></div>
+              <div class="mini"><h3>HEMS verschoben</h3><div class="kpi">4,6 kWh</div><div class="delta">3 Schaltfenster genutzt</div></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2>7-Tage-Energievergleich</h2>
+            <span class="muted">PV, Verbrauch, Netzbezug</span>
+          </div>
+          <div class="card-body">
+            <div class="history-chart" aria-label="7-Tage Balkendiagramm">
+              <div class="day"><div class="stackbar"><div class="seg" style="height: 25%; background: var(--grid);"></div><div class="seg" style="height: 35%; background: var(--load);"></div><div class="seg" style="height: 40%; background: var(--pv);"></div></div><span>Do</span></div>
+              <div class="day"><div class="stackbar"><div class="seg" style="height: 18%; background: var(--grid);"></div><div class="seg" style="height: 38%; background: var(--load);"></div><div class="seg" style="height: 44%; background: var(--pv);"></div></div><span>Fr</span></div>
+              <div class="day"><div class="stackbar"><div class="seg" style="height: 10%; background: var(--grid);"></div><div class="seg" style="height: 36%; background: var(--load);"></div><div class="seg" style="height: 54%; background: var(--pv);"></div></div><span>Sa</span></div>
+              <div class="day"><div class="stackbar"><div class="seg" style="height: 16%; background: var(--grid);"></div><div class="seg" style="height: 34%; background: var(--load);"></div><div class="seg" style="height: 50%; background: var(--pv);"></div></div><span>So</span></div>
+              <div class="day"><div class="stackbar"><div class="seg" style="height: 34%; background: var(--grid);"></div><div class="seg" style="height: 38%; background: var(--load);"></div><div class="seg" style="height: 28%; background: var(--pv);"></div></div><span>Mo</span></div>
+              <div class="day"><div class="stackbar"><div class="seg" style="height: 19%; background: var(--grid);"></div><div class="seg" style="height: 35%; background: var(--load);"></div><div class="seg" style="height: 46%; background: var(--pv);"></div></div><span>Di</span></div>
+              <div class="day"><div class="stackbar"><div class="seg" style="height: 12%; background: var(--grid);"></div><div class="seg" style="height: 41%; background: var(--load);"></div><div class="seg" style="height: 47%; background: var(--pv);"></div></div><span>Heute</span></div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <aside class="stack">
+        <section class="card">
+          <div class="card-head">
+            <h2>HEMS Nutzen</h2>
+            <span class="muted">Schätzung</span>
+          </div>
+          <div class="card-body">
+            <div class="savings">
+              <div>
+                <div class="big">4,6 kWh</div>
+                <p class="sub">heute in PV-Zeit verschoben</p>
+                <p class="sub">ca. 1,47 EUR Vorteil gegenüber Netzbezug</p>
+              </div>
+              <div class="ring"><div class="ring-inner">72%<br>PV genutzt</div></div>
+            </div>
+            <div class="compare">
+              <div class="compare-item"><h3>Monat</h3><strong>68 kWh</strong><span class="muted">21,76 EUR</span></div>
+              <div class="compare-item"><h3>CO2</h3><strong>18 kg</strong><span class="muted">vermieden</span></div>
+              <div class="compare-item"><h3>Autarkie</h3><strong>81%</strong><span class="muted">+9 Punkte</span></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2>Leistungsanteile jetzt</h2>
+            <span class="muted">kW</span>
+          </div>
+          <div class="card-body">
+            <div class="bars">
+              <div class="bar-row"><span>PV</span><div class="track"><div class="fill" style="width: 84%; background: var(--pv);"></div></div><strong>4,2</strong></div>
+              <div class="bar-row"><span>Haus</span><div class="track"><div class="fill" style="width: 50%; background: #6b7280;"></div></div><strong>2,5</strong></div>
+              <div class="bar-row"><span>HEMS</span><div class="track"><div class="fill" style="width: 36%; background: var(--load);"></div></div><strong>1,8</strong></div>
+              <div class="bar-row"><span>Batterie</span><div class="track"><div class="fill" style="width: 22%; background: var(--battery);"></div></div><strong>1,1</strong></div>
+              <div class="bar-row"><span>Netz</span><div class="track"><div class="fill" style="width: 12%; background: var(--grid);"></div></div><strong>-0,6</strong></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2>HEMS Schalthistorie</h2>
+            <span class="muted">heute</span>
+          </div>
+          <div class="card-body">
+            <div class="events">
+              <div class="event"><div class="event-time">13:48</div><div class="icon load" style="width:28px;height:28px;font-size:10px;">ON</div><div><div class="event-title">Heizstab eingeschaltet</div><div class="event-note">PV 4,1 kW, Netz -0,9 kW, Batterie 77%</div></div><span class="badge">+1,8 kW</span></div>
+              <div class="event"><div class="event-time">12:16</div><div class="icon warn" style="width:28px;height:28px;font-size:10px;">PA</div><div><div class="event-title">Wallbox weiter gesperrt</div><div class="event-note">PV-Fenster gut, aber Batterie unter Ziel-SoC</div></div><span class="badge off">wartet</span></div>
+              <div class="event"><div class="event-time">10:42</div><div class="icon battery" style="width:28px;height:28px;font-size:10px;">OK</div><div><div class="event-title">Batterieschutz aufgehoben</div><div class="event-note">SoC wieder über 60%, Entladung unter Grenze</div></div><span class="badge">frei</span></div>
+              <div class="event"><div class="event-time">09:31</div><div class="icon load" style="width:28px;height:28px;font-size:10px;">OFF</div><div><div class="event-title">Flexible Lasten gesperrt</div><div class="event-note">Netzbezug 0,7 kW und schwacher PV-Forecast</div></div><span class="badge off">aus</span></div>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </section>
+  </main>
+</body>
+</html>

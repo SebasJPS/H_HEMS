@@ -12,7 +12,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE, UnitOfPower, UnitOfTime
+from homeassistant.const import PERCENTAGE, UnitOfEnergy, UnitOfPower, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -193,6 +193,22 @@ SENSORS: tuple[HemsSensorDescription, ...] = (
         value_fn=lambda data: round(data.scheduled_surplus_power, 1),
     ),
     HemsSensorDescription(
+        key="shifted_energy_today",
+        translation_key="shifted_energy_today",
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL,
+        value_fn=lambda data: round(data.shifted_energy_today, 3),
+    ),
+    HemsSensorDescription(
+        key="estimated_savings_today",
+        translation_key="estimated_savings_today",
+        native_unit_of_measurement="EUR",
+        icon="mdi:cash",
+        state_class=SensorStateClass.TOTAL,
+        value_fn=lambda data: round(data.estimated_savings_today, 2),
+    ),
+    HemsSensorDescription(
         key="configured_assets",
         translation_key="configured_assets",
         icon="mdi:counter",
@@ -279,6 +295,8 @@ class HemsSensor(HemsEntity, SensorEntity):
             "available_surplus_budget": data.available_surplus_budget,
             "scheduled_surplus_loads": data.scheduled_surplus_loads,
             "scheduled_surplus_power": data.scheduled_surplus_power,
+            "shifted_energy_today": data.shifted_energy_today,
+            "estimated_savings_today": data.estimated_savings_today,
             "scheduler_reason": data.scheduler_reason,
             "grid_power_sensor": config.get(CONF_GRID_POWER_SENSOR),
             "grid_average_sensor": config.get(CONF_GRID_AVERAGE_SENSOR),

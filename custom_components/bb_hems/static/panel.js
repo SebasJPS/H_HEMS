@@ -16,7 +16,7 @@ const ALIASES = {
   mode_select: ["select.bb_hems_mode", "betriebsart", "operating mode"],
 };
 
-const BB_HEMS_VERSION = "0.2.2";
+const BB_HEMS_VERSION = "0.2.3";
 const MODE_LABELS = {
   auto: "Auto",
   eco: "Eco",
@@ -71,40 +71,6 @@ class BbHemsPanel extends HTMLElement {
         * { box-sizing: border-box; }
         h1, h2, h3, p { margin: 0; letter-spacing: 0; }
         button { font: inherit; }
-        .top {
-          position: sticky;
-          top: 0;
-          z-index: 3;
-          min-height: 68px;
-          display: flex;
-          justify-content: space-between;
-          align-items: stretch;
-          gap: 16px;
-          padding: 0 28px;
-          border-bottom: 1px solid var(--line);
-          background: var(--card);
-        }
-        .tabs { display: flex; gap: 24px; }
-        .tab {
-          display: inline-flex;
-          align-items: center;
-          border-bottom: 3px solid transparent;
-          color: var(--muted);
-          font-weight: 650;
-          text-decoration: none;
-        }
-        .tab.active { color: var(--text); border-bottom-color: var(--text); }
-        .actions { display: flex; align-items: center; gap: 10px; }
-        .icon-button {
-          width: 38px;
-          height: 38px;
-          display: grid;
-          place-items: center;
-          border-radius: 50%;
-          color: var(--text);
-          text-decoration: none;
-          font-size: 23px;
-        }
         .page { width: min(1480px, calc(100vw - 32px)); margin: 0 auto; padding: 24px 0 40px; }
         .headline {
           display: grid;
@@ -317,8 +283,6 @@ class BbHemsPanel extends HTMLElement {
           .tile-grid, .tile-grid.wide, .tile-grid.loads { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
         @media (max-width: 680px) {
-          .top { padding: 0 12px; overflow-x: auto; }
-          .actions { display: none; }
           .page { width: min(100vw - 20px, 100%); padding-top: 16px; }
           .tile-grid, .tile-grid.wide, .tile-grid.loads, .segmented { grid-template-columns: 1fr; }
           .event { grid-template-columns: 54px minmax(0, 1fr); }
@@ -326,19 +290,6 @@ class BbHemsPanel extends HTMLElement {
           h1 { font-size: 26px; }
         }
       </style>
-
-      <header class="top">
-        <nav class="tabs">
-          <a class="tab active" href="/bb-hems">HEMS</a>
-          <a class="tab" href="/bb-hems">Entscheidung</a>
-          <a class="tab" href="/bb-hems">Historie</a>
-        </nav>
-        <div class="actions">
-          <a class="icon-button" href="/config/integrations/integration/bb_hems" title="Konfiguration">+</a>
-          <a class="icon-button" href="/config/entities" title="Entitäten">▣</a>
-          <a class="icon-button" href="/config/devices/dashboard" title="Geräte">✎</a>
-        </div>
-      </header>
 
       <main class="page">
         <section class="headline">

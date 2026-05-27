@@ -23,6 +23,7 @@ from .const import (
     CONF_HEAT_PUMP_SWITCHES,
     CONF_HEATING_ROD_POWER_SENSORS,
     CONF_HEATING_ROD_SWITCHES,
+    CONF_PV_ARRAY_SPECS,
     CONF_PV_AVERAGE_SENSOR,
     CONF_PV_FORECAST_NEXT_3H_SENSOR,
     CONF_PV_FORECAST_NEXT_HOUR_SENSOR,
@@ -66,6 +67,14 @@ def _optional_entity(defaults: dict[str, Any], key: str) -> vol.Optional:
     return vol.Optional(key)
 
 
+def _optional_text(defaults: dict[str, Any], key: str) -> vol.Optional:
+    """Return an optional text schema key without forcing a null default."""
+    value = defaults.get(key)
+    if value:
+        return vol.Optional(key, default=value)
+    return vol.Optional(key)
+
+
 class BbHemsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for BB HEMS."""
 
@@ -98,6 +107,7 @@ class BbHemsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_PV_FORECAST_NEXT_3H_SENSOR: user_input.get(
                     CONF_PV_FORECAST_NEXT_3H_SENSOR
                 ),
+                CONF_PV_ARRAY_SPECS: user_input.get(CONF_PV_ARRAY_SPECS),
                 CONF_BATTERY_SOC_SENSORS: _entity_list(
                     user_input.get(CONF_BATTERY_SOC_SENSORS)
                 ),
@@ -159,9 +169,16 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
+        return self.async_show_menu(
+            step_id="init",
+            menu_options=["energy_sources", "weather_sources", "load_sources"],
+        )
+
+    async def async_step_energy_sources(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
         if user_input is not None:
-            data = dict(self._entry.data)
-            data.update(
+            self._update_data(
                 {
                     CONF_GRID_POWER_SENSOR: user_input.get(CONF_GRID_POWER_SENSOR),
                     CONF_GRID_AVERAGE_SENSOR: user_input.get(CONF_GRID_AVERAGE_SENSOR),
@@ -178,6 +195,7 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
                     CONF_PV_FORECAST_NEXT_3H_SENSOR: user_input.get(
                         CONF_PV_FORECAST_NEXT_3H_SENSOR
                     ),
+                    CONF_PV_ARRAY_SPECS: user_input.get(CONF_PV_ARRAY_SPECS),
                     CONF_BATTERY_SOC_SENSORS: _entity_list(
                         user_input.get(CONF_BATTERY_SOC_SENSORS)
                     ),
@@ -187,12 +205,42 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
                     CONF_BATTERY_CHARGE_SENSORS: _entity_list(
                         user_input.get(CONF_BATTERY_CHARGE_SENSORS)
                     ),
+                }
+            )
+            return self.async_create_entry(title="", data=dict(self._entry.options))
+
+        return self.async_show_form(
+            step_id="energy_sources",
+            data_schema=_energy_sources_schema(self._defaults()),
+        )
+
+    async def async_step_weather_sources(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        if user_input is not None:
+            self._update_data(
+                {
                     CONF_WEATHER_STATE_SENSOR: user_input.get(
                         CONF_WEATHER_STATE_SENSOR
                     ),
                     CONF_CLOUD_SENSOR: user_input.get(CONF_CLOUD_SENSOR),
                     CONF_SUNSHINE_SENSOR: user_input.get(CONF_SUNSHINE_SENSOR),
                     CONF_SUN_ENTITY: user_input.get(CONF_SUN_ENTITY),
+                }
+            )
+            return self.async_create_entry(title="", data=dict(self._entry.options))
+
+        return self.async_show_form(
+            step_id="weather_sources",
+            data_schema=_weather_sources_schema(self._defaults()),
+        )
+
+    async def async_step_load_sources(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        if user_input is not None:
+            self._update_data(
+                {
                     CONF_FLEXIBLE_LOAD_SWITCHES: _entity_list(
                         user_input.get(CONF_FLEXIBLE_LOAD_SWITCHES)
                     ),
@@ -213,11 +261,21 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
                     ),
                 }
             )
-            self.hass.config_entries.async_update_entry(self._entry, data=data)
             return self.async_create_entry(title="", data=dict(self._entry.options))
 
+        return self.async_show_form(
+            step_id="load_sources",
+            data_schema=_load_sources_schema(self._defaults()),
+        )
+
+    def _update_data(self, updates: dict[str, Any]) -> None:
+        data = dict(self._entry.data)
+        data.update(updates)
+        self.hass.config_entries.async_update_entry(self._entry, data=data)
+
+    def _defaults(self) -> dict[str, Any]:
         data = self._entry.data
-        defaults = {
+        return {
             CONF_GRID_POWER_SENSOR: data.get(CONF_GRID_POWER_SENSOR),
             CONF_GRID_AVERAGE_SENSOR: data.get(CONF_GRID_AVERAGE_SENSOR),
             CONF_PV_POWER_SENSORS: _entity_list(data.get(CONF_PV_POWER_SENSORS)),
@@ -227,6 +285,7 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
                 CONF_PV_FORECAST_NEXT_HOUR_SENSOR
             ),
             CONF_PV_FORECAST_NEXT_3H_SENSOR: data.get(CONF_PV_FORECAST_NEXT_3H_SENSOR),
+            CONF_PV_ARRAY_SPECS: data.get(CONF_PV_ARRAY_SPECS),
             CONF_BATTERY_SOC_SENSORS: _entity_list(data.get(CONF_BATTERY_SOC_SENSORS)),
             CONF_BATTERY_DISCHARGE_SENSORS: _entity_list(
                 data.get(CONF_BATTERY_DISCHARGE_SENSORS)
@@ -253,7 +312,6 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
                 data.get(CONF_HEATING_ROD_POWER_SENSORS)
             ),
         }
-        return self.async_show_form(step_id="init", data_schema=_schema(defaults))
 
 
 def _schema(defaults: dict[str, Any]) -> vol.Schema:
@@ -299,6 +357,9 @@ def _schema(defaults: dict[str, Any]) -> vol.Schema:
             ): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
             ),
+            _optional_text(defaults, CONF_PV_ARRAY_SPECS): selector.TextSelector(
+                selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT)
+            ),
             vol.Optional(
                 CONF_BATTERY_SOC_SENSORS,
                 default=defaults.get(CONF_BATTERY_SOC_SENSORS, []),
@@ -341,6 +402,147 @@ def _schema(defaults: dict[str, Any]) -> vol.Schema:
             ): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain=["sun"])
             ),
+            vol.Optional(
+                CONF_FLEXIBLE_LOAD_SWITCHES,
+                default=defaults.get(CONF_FLEXIBLE_LOAD_SWITCHES, []),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=SWITCHABLE_DOMAINS, multiple=True)
+            ),
+            vol.Optional(
+                CONF_FLEXIBLE_LOAD_POWER_SENSORS,
+                default=defaults.get(CONF_FLEXIBLE_LOAD_POWER_SENSORS, []),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+            ),
+            vol.Optional(
+                CONF_WALLBOX_SWITCHES,
+                default=defaults.get(CONF_WALLBOX_SWITCHES, []),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=SWITCHABLE_DOMAINS, multiple=True)
+            ),
+            vol.Optional(
+                CONF_HEAT_PUMP_SWITCHES,
+                default=defaults.get(CONF_HEAT_PUMP_SWITCHES, []),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=SWITCHABLE_DOMAINS, multiple=True)
+            ),
+            vol.Optional(
+                CONF_HEATING_ROD_SWITCHES,
+                default=defaults.get(CONF_HEATING_ROD_SWITCHES, []),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=SWITCHABLE_DOMAINS, multiple=True)
+            ),
+            vol.Optional(
+                CONF_HEATING_ROD_POWER_SENSORS,
+                default=defaults.get(CONF_HEATING_ROD_POWER_SENSORS, []),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+            ),
+        }
+    )
+
+
+def _energy_sources_schema(defaults: dict[str, Any]) -> vol.Schema:
+    return vol.Schema(
+        {
+            vol.Required(
+                CONF_GRID_POWER_SENSOR,
+                default=defaults.get(CONF_GRID_POWER_SENSOR),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
+            ),
+            vol.Optional(
+                CONF_GRID_AVERAGE_SENSOR,
+                default=defaults.get(CONF_GRID_AVERAGE_SENSOR),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
+            ),
+            vol.Optional(
+                CONF_PV_POWER_SENSORS,
+                default=defaults.get(CONF_PV_POWER_SENSORS, []),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+            ),
+            vol.Optional(
+                CONF_PV_AVERAGE_SENSOR,
+                default=defaults.get(CONF_PV_AVERAGE_SENSOR),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
+            ),
+            _optional_entity(
+                defaults, CONF_PV_FORECAST_TODAY_SENSOR
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
+            ),
+            _optional_entity(
+                defaults, CONF_PV_FORECAST_NEXT_HOUR_SENSOR
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
+            ),
+            _optional_entity(
+                defaults, CONF_PV_FORECAST_NEXT_3H_SENSOR
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
+            ),
+            _optional_text(defaults, CONF_PV_ARRAY_SPECS): selector.TextSelector(
+                selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT)
+            ),
+            vol.Optional(
+                CONF_BATTERY_SOC_SENSORS,
+                default=defaults.get(CONF_BATTERY_SOC_SENSORS, []),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+            ),
+            vol.Optional(
+                CONF_BATTERY_DISCHARGE_SENSORS,
+                default=defaults.get(CONF_BATTERY_DISCHARGE_SENSORS, []),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+            ),
+            vol.Optional(
+                CONF_BATTERY_CHARGE_SENSORS,
+                default=defaults.get(CONF_BATTERY_CHARGE_SENSORS, []),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+            ),
+        }
+    )
+
+
+def _weather_sources_schema(defaults: dict[str, Any]) -> vol.Schema:
+    return vol.Schema(
+        {
+            vol.Optional(
+                CONF_WEATHER_STATE_SENSOR,
+                default=defaults.get(CONF_WEATHER_STATE_SENSOR),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=["sensor", "weather"])
+            ),
+            vol.Optional(
+                CONF_CLOUD_SENSOR,
+                default=defaults.get(CONF_CLOUD_SENSOR),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
+            ),
+            vol.Optional(
+                CONF_SUNSHINE_SENSOR,
+                default=defaults.get(CONF_SUNSHINE_SENSOR),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
+            ),
+            vol.Optional(
+                CONF_SUN_ENTITY,
+                default=defaults.get(CONF_SUN_ENTITY),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=["sun"])
+            ),
+        }
+    )
+
+
+def _load_sources_schema(defaults: dict[str, Any]) -> vol.Schema:
+    return vol.Schema(
+        {
             vol.Optional(
                 CONF_FLEXIBLE_LOAD_SWITCHES,
                 default=defaults.get(CONF_FLEXIBLE_LOAD_SWITCHES, []),

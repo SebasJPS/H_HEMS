@@ -14,6 +14,7 @@
           "pv_forecast_today_sensor": "PV-Forecast heute",
           "pv_forecast_next_hour_sensor": "PV-Forecast nächste Stunde",
           "pv_forecast_next_3h_sensor": "PV-Forecast nächste 3 Stunden",
+          "pv_array_specs": "PV-Flächen",
           "battery_soc_sensors": "Batterie-SoC-Sensoren",
           "battery_discharge_sensors": "Batterie-Entladungssensoren",
           "battery_charge_sensors": "Batterie-Ladungssensoren",
@@ -37,6 +38,7 @@
           "pv_forecast_today_sensor": "Optionaler PV-Forecast für den restlichen Tag oder Tagesertrag. Hilft, schwache Tage zu erkennen.",
           "pv_forecast_next_hour_sensor": "Optionaler PV-Leistungsforecast für die nächste Stunde. Hilft zu erkennen, ob PV gleich steigt.",
           "pv_forecast_next_3h_sensor": "Optionaler PV-Leistungsforecast für die nächsten 3 Stunden. Hilft zu entscheiden, ob später ein besseres PV-Fenster kommt.",
+          "pv_array_specs": "Optionale PV-Flächen als Liste. Beispiele: Süd=180:30:4x430, Garage Ost=90:10:2x400 oder 180:30:800. Format: Name=Azimut:Neigung:Module x Wp oder Azimut:Neigung:Wp.",
           "battery_soc_sensors": "SoC-Sensoren deiner Batterien in Prozent. Bei mehreren Batterien nutzt BB HEMS den niedrigsten SoC als Schutzwert.",
           "battery_discharge_sensors": "Aktuelle Entladeleistung der Batterien in Watt. BB HEMS summiert diese Werte und stoppt flexible Lasten bei zu hoher Entladung.",
           "battery_charge_sensors": "Aktuelle Ladeleistung der Batterien in Watt. Ab 60% SoC kann BB HEMS einen konservativen Teil davon als nutzbaren Überschuss einplanen.",
@@ -58,6 +60,16 @@
     "step": {
       "init": {
         "title": "BB HEMS Quellen ändern",
+        "description": "Wähle, welche Quellgruppe du bearbeiten möchtest.",
+        "menu_options": {
+          "energy_sources": "Netz, PV und Batterie",
+          "weather_sources": "Wetter und Sonne",
+          "load_sources": "Verbraucher und Leistungssensoren"
+        }
+      },
+      "energy_sources": {
+        "title": "Netz, PV und Batterie",
+        "description": "Hier werden die Sensoren eingetragen, die BB HEMS für Netzleistung, PV, Batteriestand, Batterie-Entladung und Batterie-Ladung nutzt.",
         "data": {
           "name": "Name",
           "grid_power_sensor": "Netzleistung aktuell",
@@ -67,6 +79,7 @@
           "pv_forecast_today_sensor": "PV-Forecast heute",
           "pv_forecast_next_hour_sensor": "PV-Forecast nächste Stunde",
           "pv_forecast_next_3h_sensor": "PV-Forecast nächste 3 Stunden",
+          "pv_array_specs": "PV-Flächen",
           "battery_soc_sensors": "Batterie-SoC-Sensoren",
           "battery_discharge_sensors": "Batterie-Entladungssensoren",
           "battery_charge_sensors": "Batterie-Ladungssensoren",
@@ -90,6 +103,7 @@
           "pv_forecast_today_sensor": "Optionaler PV-Forecast für den restlichen Tag oder Tagesertrag. Hilft, schwache Tage zu erkennen.",
           "pv_forecast_next_hour_sensor": "Optionaler PV-Leistungsforecast für die nächste Stunde. Hilft zu erkennen, ob PV gleich steigt.",
           "pv_forecast_next_3h_sensor": "Optionaler PV-Leistungsforecast für die nächsten 3 Stunden. Hilft zu entscheiden, ob später ein besseres PV-Fenster kommt.",
+          "pv_array_specs": "Optionale PV-Flächen als Liste. Beispiele: Süd=180:30:4x430, Garage Ost=90:10:2x400 oder 180:30:800. Format: Name=Azimut:Neigung:Module x Wp oder Azimut:Neigung:Wp.",
           "battery_soc_sensors": "SoC-Sensoren deiner Batterien in Prozent. Bei mehreren Batterien nutzt BB HEMS den niedrigsten SoC als Schutzwert.",
           "battery_discharge_sensors": "Aktuelle Entladeleistung der Batterien in Watt. BB HEMS summiert diese Werte und stoppt flexible Lasten bei zu hoher Entladung.",
           "battery_charge_sensors": "Aktuelle Ladeleistung der Batterien in Watt. Ab 60% SoC kann BB HEMS einen konservativen Teil davon als nutzbaren Überschuss einplanen.",
@@ -97,6 +111,42 @@
           "cloud_sensor": "Bewölkung in Prozent. Niedrige Werte machen PV-Überschuss wahrscheinlicher.",
           "sunshine_sensor": "Sonnenscheindauer oder Sonnenindikator. Der Wert sollte größer werden, wenn aktuell Sonne verfügbar ist.",
           "sun_entity": "Home-Assistant-Sonne, meist sun.sun. BB HEMS nutzt Elevation und Azimut für das PV-Fenster.",
+          "flexible_load_switches": "Schaltbare Verbraucher, die bei Überschuss freigegeben werden dürfen, z.B. Luftentfeuchter.",
+          "flexible_load_power_sensors": "Optionale Leistungssensoren der flexiblen Verbraucher in gleicher Reihenfolge wie die Schalter. Wenn ein Verbraucher läuft, nutzt BB HEMS diesen echten Verbrauch statt des pauschalen Schätzwerts.",
+          "wallbox_switches": "Schaltbare Wallboxen oder Ladefreigaben. Wird aktuell als Gerätegruppe erfasst und später priorisiert.",
+          "heat_pump_switches": "Schaltbare Wärmepumpen oder SG-Ready-Freigaben. Wird aktuell als Gerätegruppe erfasst und später priorisiert.",
+          "heating_rod_switches": "Schaltbare Heizstäbe oder Boiler-Freigaben. BB HEMS behandelt sie als Überschussverbraucher.",
+          "heating_rod_power_sensors": "Optionale Leistungssensoren der Heizstäbe in gleicher Reihenfolge wie die Schalter."
+        }
+      },
+      "weather_sources": {
+        "title": "Wetter und Sonne",
+        "description": "Diese Sensoren helfen BB HEMS, PV-Überschuss nach Wetter, Bewölkung, Sonnenschein und Sonnenstand besser einzuschätzen.",
+        "data": {
+          "weather_state_sensor": "Wetterzustand",
+          "cloud_sensor": "Bewölkungsgrad",
+          "sunshine_sensor": "Sonnenscheindauer",
+          "sun_entity": "Sonnenstand"
+        },
+        "data_description": {
+          "weather_state_sensor": "Wetterzustand als Sensor oder Weather-Entität, z.B. sunny, partlycloudy, rainy oder deutsche Zustände.",
+          "cloud_sensor": "Bewölkung in Prozent. Niedrige Werte machen PV-Überschuss wahrscheinlicher.",
+          "sunshine_sensor": "Sonnenscheindauer oder Sonnenindikator. Der Wert sollte größer werden, wenn aktuell Sonne verfügbar ist.",
+          "sun_entity": "Home-Assistant-Sonne, meist sun.sun. BB HEMS nutzt Elevation und Azimut für das PV-Fenster."
+        }
+      },
+      "load_sources": {
+        "title": "Verbraucher und Leistungssensoren",
+        "description": "Hier werden schaltbare Verbraucher und ihre echten Leistungssensoren eingetragen. Die Leistungssensoren müssen in gleicher Reihenfolge wie die Schalter stehen.",
+        "data": {
+          "flexible_load_switches": "Flexible Verbraucher",
+          "flexible_load_power_sensors": "Leistungssensoren flexible Verbraucher",
+          "wallbox_switches": "Wallboxen",
+          "heat_pump_switches": "Wärmepumpen",
+          "heating_rod_switches": "Heizstäbe",
+          "heating_rod_power_sensors": "Leistungssensoren Heizstäbe"
+        },
+        "data_description": {
           "flexible_load_switches": "Schaltbare Verbraucher, die bei Überschuss freigegeben werden dürfen, z.B. Luftentfeuchter.",
           "flexible_load_power_sensors": "Optionale Leistungssensoren der flexiblen Verbraucher in gleicher Reihenfolge wie die Schalter. Wenn ein Verbraucher läuft, nutzt BB HEMS diesen echten Verbrauch statt des pauschalen Schätzwerts.",
           "wallbox_switches": "Schaltbare Wallboxen oder Ladefreigaben. Wird aktuell als Gerätegruppe erfasst und später priorisiert.",
@@ -140,8 +190,8 @@
       "protect_battery_soc": { "name": "Batterieschutz-SoC" },
       "pv_threshold": { "name": "PV-Schwellwert aktuell" },
       "pv_avg_threshold": { "name": "PV-Schwellwert 15 min" },
-      "pv_azimuth": { "name": "PV-Ausrichtung" },
-      "pv_tilt": { "name": "PV-Neigung" },
+      "pv_azimuth": { "name": "Fallback PV-Ausrichtung" },
+      "pv_tilt": { "name": "Fallback PV-Neigung" },
       "grid_import_limit": { "name": "Netzbezug-Toleranz" },
       "grid_hard_import_limit": { "name": "Netzbezug hart" },
       "battery_discharge_limit": { "name": "Entladegrenze Batterie" },

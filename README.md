@@ -63,6 +63,7 @@ Suggested mapping from the original automation:
 | PV forecast today | `sensor.pv_forecast_today` |
 | PV forecast next hour | `sensor.pv_forecast_next_hour` |
 | PV forecast next 3 hours | `sensor.pv_forecast_next_3h` |
+| PV arrays | `Sued=180:30:4x430, Garage Ost=90:10:2x400` |
 | Battery SoC | `sensor.batterie_geschatzt_soc` |
 | Battery discharge | `sensor.batterie_discharge` |
 | Battery charge | `sensor.batterie_charge` |
@@ -115,8 +116,8 @@ Suggested mapping from the original automation:
 - `number.bb_hems_protect_battery_soc`
 - `number.bb_hems_pv_threshold`
 - `number.bb_hems_pv_avg_threshold`
-- `number.bb_hems_pv_azimuth`
-- `number.bb_hems_pv_tilt`
+- `number.bb_hems_pv_azimuth` fallback when no PV arrays are configured
+- `number.bb_hems_pv_tilt` fallback when no PV arrays are configured
 - `number.bb_hems_grid_import_limit`
 - `number.bb_hems_grid_hard_import_limit`
 - `number.bb_hems_battery_discharge_limit`
@@ -157,13 +158,20 @@ The first controller version evaluates:
   conservatively treat part of active battery charging as usable surplus.
 - Weather state, cloud coverage and sunshine.
 - PV forecast for today and PV power forecast for the next hour / next 3 hours when configured.
-- Sun elevation/azimuth from `sun.sun` and configured PV azimuth/tilt.
+- Sun elevation/azimuth from `sun.sun` and configured PV arrays. Each PV surface
+  can have its own name, azimuth, tilt and module size, for example
+  `Sued=180:30:4x430, Garage Ost=90:10:2x400`. `180:30:800` remains valid as a
+  simple 800 Wp surface. The old global azimuth/tilt numbers are kept as fallback
+  for simple setups.
 - Configured thresholds and operating mode.
 
 BB HEMS classifies the current PV window as `night`, `low_today`,
 `weak_now`, `rising`, `good_later`, `usable_now`, `peak_now` or `falling`.
 This gives dashboards and automations a stable signal for whether a better PV
 window is likely later or whether the current moment is already suitable.
+For multiple PV arrays, the sun-position score is calculated per configured
+surface and weighted by installed module power. BB HEMS uses the currently best
+matching surface instead of assuming one global roof direction.
 
 After the central surplus decision, the smart scheduler estimates the real
 surplus budget and selects only the configured loads that fit. It uses current

@@ -28,6 +28,7 @@ from .const import (
     CONF_HEAT_PUMP_SWITCHES,
     CONF_HEATING_ROD_POWER_SENSORS,
     CONF_HEATING_ROD_SWITCHES,
+    CONF_PV_ARRAY_SPECS,
     CONF_PV_AVERAGE_SENSOR,
     CONF_PV_FORECAST_NEXT_3H_SENSOR,
     CONF_PV_FORECAST_NEXT_HOUR_SENSOR,
@@ -254,6 +255,9 @@ class HemsSensor(HemsEntity, SensorEntity):
             "pv_forecast_next_3h": data.pv_forecast_next_3h,
             "sun_elevation": data.sun_elevation,
             "sun_azimuth": data.sun_azimuth,
+            "pv_array_count": data.pv_array_count,
+            "pv_best_array": data.pv_best_array,
+            "pv_orientation_score": data.pv_orientation_score,
             "pv_window": data.pv_window,
             "pv_window_reason": data.pv_window_reason,
             "weather_reason": data.weather_reason,
@@ -285,6 +289,7 @@ class HemsSensor(HemsEntity, SensorEntity):
                 CONF_PV_FORECAST_NEXT_HOUR_SENSOR
             ),
             "pv_forecast_next_3h_sensor": config.get(CONF_PV_FORECAST_NEXT_3H_SENSOR),
+            "pv_array_specs": config.get(CONF_PV_ARRAY_SPECS),
             "battery_soc_sensors": config.get(CONF_BATTERY_SOC_SENSORS, []),
             "battery_discharge_sensors": config.get(
                 CONF_BATTERY_DISCHARGE_SENSORS, []

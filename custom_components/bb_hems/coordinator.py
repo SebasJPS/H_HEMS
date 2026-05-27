@@ -25,6 +25,7 @@ from .const import (
     CONF_HEAT_PUMP_SWITCHES,
     CONF_HEATING_ROD_POWER_SENSORS,
     CONF_HEATING_ROD_SWITCHES,
+    CONF_PV_ARRAY_SPECS,
     CONF_PV_AVERAGE_SENSOR,
     CONF_PV_FORECAST_NEXT_3H_SENSOR,
     CONF_PV_FORECAST_NEXT_HOUR_SENSOR,
@@ -88,6 +89,18 @@ class LoadProfile:
 
 
 @dataclass(frozen=True)
+class PvArrayProfile:
+    """A PV surface with its own orientation and installed module size."""
+
+    azimuth: float
+    tilt: float
+    peak_power: float
+    module_count: float | None = None
+    module_power: float | None = None
+    name: str | None = None
+
+
+@dataclass(frozen=True)
 class HemsData:
     """Computed HEMS state."""
 
@@ -100,6 +113,9 @@ class HemsData:
     pv_forecast_next_3h: float | None
     sun_elevation: float | None
     sun_azimuth: float | None
+    pv_array_count: int
+    pv_best_array: str | None
+    pv_orientation_score: float | None
     pv_window: str
     pv_window_reason: str
     battery_soc_min: float | None
@@ -209,9 +225,11 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         pv_forecast_next_3h = self._float_state(
             data.get(CONF_PV_FORECAST_NEXT_3H_SENSOR), None
         )
+        pv_arrays = self._pv_arrays(data.get(CONF_PV_ARRAY_SPECS))
         sun_entity = data.get(CONF_SUN_ENTITY) or "sun.sun"
         sun_elevation = self._float_attr(sun_entity, "elevation", None)
         sun_azimuth = self._float_attr(sun_entity, "azimuth", None)
+        pv_orientation = self._pv_orientation(pv_arrays, sun_elevation, sun_azimuth)
         pv_window, pv_window_reason = self._pv_window(
             pv_power,
             pv_average,
@@ -220,6 +238,8 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             pv_forecast_next_3h,
             sun_elevation,
             sun_azimuth,
+            pv_arrays,
+            pv_orientation,
         )
         battery_socs = [
             self._float_state(entity_id, None) for entity_id in battery_soc_sources
@@ -369,6 +389,9 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             pv_forecast_next_3h=pv_forecast_next_3h,
             sun_elevation=sun_elevation,
             sun_azimuth=sun_azimuth,
+            pv_array_count=len(pv_arrays),
+            pv_best_array=pv_orientation["best_array"],
+            pv_orientation_score=pv_orientation["score"],
             pv_window=pv_window,
             pv_window_reason=pv_window_reason,
             battery_soc_min=battery_soc_min,
@@ -718,6 +741,118 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             return None
         return max(0.0, value)
 
+    def _pv_arrays(self, specs: str | None) -> list[PvArrayProfile]:
+        """Parse PV surfaces from azimuth:tilt[:Wp|modules x Wp] items."""
+        arrays: list[PvArrayProfile] = []
+        if specs:
+            normalized = specs.replace(";", ",").replace("\n", ",")
+            for raw_item in normalized.split(","):
+                item = raw_item.strip()
+                if not item:
+                    continue
+                name = None
+                if "=" in item:
+                    name, item = [part.strip() for part in item.split("=", 1)]
+                    name = name or None
+                parts = [
+                    part.strip()
+                    for part in item.replace("/", ":").split(":")
+                    if part.strip()
+                ]
+                if len(parts) < 2:
+                    continue
+                try:
+                    azimuth = float(parts[0].replace(",", "."))
+                    tilt = float(parts[1].replace(",", "."))
+                    peak_power, module_count, module_power = self._pv_array_size(parts)
+                except (TypeError, ValueError):
+                    continue
+                arrays.append(
+                    PvArrayProfile(
+                        azimuth=azimuth % 360,
+                        tilt=max(0.0, min(90.0, tilt)),
+                        peak_power=max(0.1, peak_power),
+                        module_count=module_count,
+                        module_power=module_power,
+                        name=name,
+                    )
+                )
+
+        if arrays:
+            return arrays
+        return [
+            PvArrayProfile(
+                azimuth=float(self.opts[OPT_PV_AZIMUTH]) % 360,
+                tilt=max(0.0, min(90.0, float(self.opts[OPT_PV_TILT]))),
+                peak_power=1.0,
+            )
+        ]
+
+    def _pv_array_size(self, parts: list[str]) -> tuple[float, float | None, float | None]:
+        """Return peak power, module count and module power from a PV spec."""
+        if len(parts) >= 4:
+            module_count = float(parts[2].replace(",", "."))
+            module_power = float(parts[3].replace(",", "."))
+            return module_count * module_power, module_count, module_power
+        if len(parts) >= 3:
+            raw_size = parts[2].lower().replace(" ", "").replace(",", ".")
+            for separator in ("x", "*"):
+                if separator in raw_size:
+                    module_count_raw, module_power_raw = raw_size.split(separator, 1)
+                    module_count = float(module_count_raw)
+                    module_power = float(module_power_raw)
+                    return module_count * module_power, module_count, module_power
+            peak_power = float(raw_size)
+            return peak_power, None, None
+        return 1.0, None, None
+
+    def _pv_orientation(
+        self,
+        arrays: list[PvArrayProfile],
+        sun_elevation: float | None,
+        sun_azimuth: float | None,
+    ) -> dict[str, Any]:
+        """Return the best matching PV surface for current sun position."""
+        if sun_elevation is None or sun_azimuth is None or sun_elevation <= 0:
+            return {"score": None, "best_array": None, "best_delta": None}
+
+        best_score = -1.0
+        best_array: PvArrayProfile | None = None
+        best_delta: float | None = None
+        total_peak_power = sum(array.peak_power for array in arrays) or 1.0
+
+        for array in arrays:
+            azimuth_delta = self._angle_delta(sun_azimuth, array.azimuth)
+            azimuth_score = max(0.0, 1.0 - azimuth_delta / 90.0)
+            ideal_elevation = max(10.0, 90.0 - array.tilt)
+            elevation_delta = abs(sun_elevation - ideal_elevation)
+            elevation_score = max(0.0, 1.0 - elevation_delta / 75.0)
+            size_score = array.peak_power / total_peak_power
+            score = (azimuth_score * 0.7 + elevation_score * 0.3) * (
+                0.7 + size_score * 0.3
+            )
+            if score > best_score:
+                best_score = score
+                best_array = array
+                best_delta = azimuth_delta
+
+        if best_array is None:
+            return {"score": None, "best_array": None, "best_delta": None}
+        best_label = (
+            f"{best_array.name} " if best_array.name else ""
+        ) + f"{best_array.azimuth:.0f}°/{best_array.tilt:.0f}°"
+        if best_array.module_count is not None and best_array.module_power is not None:
+            best_label += (
+                f"/{best_array.module_count:g}x{best_array.module_power:g} Wp"
+            )
+        elif best_array.peak_power > 1.0:
+            best_label += f"/{best_array.peak_power:.0f} Wp"
+        return {
+            "score": round(max(0.0, min(1.0, best_score)), 3),
+            "best_array": best_label,
+            "best_delta": best_delta,
+        }
+
     def _pv_window(
         self,
         pv_power: float,
@@ -727,11 +862,11 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         forecast_next_3h: float | None,
         sun_elevation: float | None,
         sun_azimuth: float | None,
+        pv_arrays: list[PvArrayProfile],
+        pv_orientation: dict[str, Any],
     ) -> tuple[str, str]:
         """Classify the current PV production window."""
         pv_threshold = float(self.opts[OPT_PV_THRESHOLD])
-        pv_azimuth = float(self.opts[OPT_PV_AZIMUTH])
-        pv_tilt = float(self.opts[OPT_PV_TILT])
         next_hour = forecast_next_hour
         next_3h = forecast_next_3h
 
@@ -755,11 +890,13 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             return "rising", f"PV steigt voraussichtlich: nächste Stunde {next_hour:.1f}, aktuell {pv_power:.1f} W."
 
         if sun_azimuth is not None and sun_elevation is not None:
-            azimuth_delta = self._angle_delta(sun_azimuth, pv_azimuth)
-            if azimuth_delta <= 35 and sun_elevation >= max(10.0, pv_tilt * 0.4):
-                return "peak_now", f"Sonne steht günstig zur PV-Ausrichtung: Azimut-Differenz {azimuth_delta:.1f}°, Elevation {sun_elevation:.1f}°."
-            if sun_azimuth > pv_azimuth + 45 or sun_elevation < 12:
-                return "falling", f"PV-Fenster fällt: Sonne Azimut {sun_azimuth:.1f}° zur PV-Ausrichtung {pv_azimuth:.1f}°, Elevation {sun_elevation:.1f}°."
+            score = pv_orientation["score"]
+            best_array = pv_orientation["best_array"]
+            best_delta = pv_orientation["best_delta"]
+            if score is not None and score >= 0.62:
+                return "peak_now", f"Sonne steht günstig zu einer PV-Fläche: beste Fläche {best_array}, Azimut-Differenz {best_delta:.1f}°, Score {score:.2f}, Elevation {sun_elevation:.1f}°."
+            if score is not None and (score <= 0.22 or sun_elevation < 12):
+                return "falling", f"PV-Fenster wird schwach: {len(pv_arrays)} PV-Flächen, beste Fläche {best_array}, Score {score:.2f}, Elevation {sun_elevation:.1f}°."
 
         if pv_power > pv_average * 1.1 and pv_power >= pv_threshold:
             return "rising", f"PV-Leistung liegt über dem 15-Minuten-Mittel: aktuell {pv_power:.1f} W, Mittel {pv_average:.1f} W."

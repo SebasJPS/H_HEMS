@@ -15,7 +15,7 @@ const ALIASES = {
   flexible_loads_allowed: ["flexible_loads_allowed", "flexible verbraucher erlaubt"],
 };
 
-const BB_HEMS_VERSION = "0.1.17";
+const BB_HEMS_VERSION = "0.1.18";
 
 class BbHemsPanel extends HTMLElement {
   set hass(hass) {
@@ -148,7 +148,7 @@ class BbHemsPanel extends HTMLElement {
                 ${decision("Batterieschutz", protect, attrs.battery_reason || "Aktiv bei niedrigem SoC, hoher Batterieentladung oder sehr schlechtem Wetter.", true)}
                 ${decision("Wetterfreigabe", weather, attrs.weather_reason || "Bewertet Wetterzustand, Bewölkung, Sonne und Batterie-SoC.")}
                 ${decision("Flexible Verbraucher", allowed, attrs.scheduler_reason || attrs.load_reason || "Nur aktiv, wenn Überschuss, Wetterfreigabe und Batterieschutz zusammen passen.")}
-                ${decision("PV-Fenster", !["night", "low_today", "weak_now"].includes(attrs.pv_window), attrs.pv_window_reason || "Bewertet PV-Forecast, Sonnenstand und PV-Ausrichtung.")}
+                ${decision("PV-Fenster", !["night", "low_today", "weak_now"].includes(attrs.pv_window), attrs.pv_window_reason || "Bewertet PV-Forecast, Sonnenstand und mehrere PV-Flächen.")}
               </div></div>
             </section>
             <section class="card">
@@ -304,6 +304,7 @@ function shouldShowSetting(entity, attrs) {
   const entityId = entity.entity_id || "";
   if (entityId.includes("flexible_load_power") && hasItems(attrs.flexible_load_power_sensors)) return false;
   if (entityId.includes("heating_rod_power") && hasItems(attrs.heating_rod_power_sensors)) return false;
+  if ((entityId.includes("pv_azimuth") || entityId.includes("pv_tilt")) && attrs.pv_array_specs) return false;
   return true;
 }
 
@@ -344,6 +345,9 @@ function config(attrs) {
     ["PV Forecast heute", attrs.pv_forecast_today_sensor],
     ["PV Forecast nächste Stunde", attrs.pv_forecast_next_hour_sensor],
     ["PV Forecast nächste 3 h", attrs.pv_forecast_next_3h_sensor],
+    ["PV-Flächen", attrs.pv_array_specs],
+    ["Beste PV-Fläche jetzt", attrs.pv_best_array],
+    ["PV-Ausrichtungs-Score", attrs.pv_orientation_score],
     ["Sonne", attrs.sun_entity],
     ["Batterie-SoC", attrs.battery_soc_sensors],
     ["Batterie-Entladung", attrs.battery_discharge_sensors],

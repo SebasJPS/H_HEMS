@@ -15,11 +15,15 @@ CONF_GRID_POWER_SENSOR = "grid_power_sensor"
 CONF_GRID_AVERAGE_SENSOR = "grid_average_sensor"
 CONF_PV_POWER_SENSORS = "pv_power_sensors"
 CONF_PV_AVERAGE_SENSOR = "pv_average_sensor"
+CONF_PV_FORECAST_TODAY_SENSOR = "pv_forecast_today_sensor"
+CONF_PV_FORECAST_NEXT_HOUR_SENSOR = "pv_forecast_next_hour_sensor"
+CONF_PV_FORECAST_NEXT_3H_SENSOR = "pv_forecast_next_3h_sensor"
 CONF_BATTERY_SOC_SENSORS = "battery_soc_sensors"
 CONF_BATTERY_DISCHARGE_SENSORS = "battery_discharge_sensors"
 CONF_WEATHER_STATE_SENSOR = "weather_state_sensor"
 CONF_CLOUD_SENSOR = "cloud_sensor"
 CONF_SUNSHINE_SENSOR = "sunshine_sensor"
+CONF_SUN_ENTITY = "sun_entity"
 CONF_FLEXIBLE_LOAD_SWITCHES = "flexible_load_switches"
 CONF_FLEXIBLE_LOAD_POWER_SENSORS = "flexible_load_power_sensors"
 CONF_WALLBOX_SWITCHES = "wallbox_switches"
@@ -40,6 +44,8 @@ OPT_GRID_HARD_IMPORT_LIMIT = "grid_hard_import_limit"
 OPT_BATTERY_DISCHARGE_LIMIT = "battery_discharge_limit"
 OPT_FLEXIBLE_LOAD_POWER = "flexible_load_power"
 OPT_HEATING_ROD_POWER = "heating_rod_power"
+OPT_PV_AZIMUTH = "pv_azimuth"
+OPT_PV_TILT = "pv_tilt"
 
 MODE_AUTO = "auto"
 MODE_ECO = "eco"
@@ -73,6 +79,8 @@ DEFAULTS = {
     OPT_BATTERY_DISCHARGE_LIMIT: 250.0,
     OPT_FLEXIBLE_LOAD_POWER: 250.0,
     OPT_HEATING_ROD_POWER: 1000.0,
+    OPT_PV_AZIMUTH: 180.0,
+    OPT_PV_TILT: 30.0,
 }
 
 GOOD_WEATHER = {

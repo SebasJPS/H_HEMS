@@ -14,6 +14,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
     BAD_WEATHER,
+    CONF_BATTERY_CHARGE_SENSORS,
     CONF_BATTERY_DISCHARGE_SENSORS,
     CONF_BATTERY_SOC_SENSORS,
     CONF_CLOUD_SENSOR,
@@ -103,6 +104,8 @@ class HemsData:
     pv_window_reason: str
     battery_soc_min: float | None
     battery_discharge: float
+    battery_charge: float
+    usable_battery_charge: float
     cloud_coverage: float | None
     sunshine_minutes: float | None
     weather_state: str | None
@@ -188,6 +191,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         pv_sources = data.get(CONF_PV_POWER_SENSORS, [])
         battery_soc_sources = data.get(CONF_BATTERY_SOC_SENSORS, [])
         battery_discharge_sources = data.get(CONF_BATTERY_DISCHARGE_SENSORS, [])
+        battery_charge_sources = data.get(CONF_BATTERY_CHARGE_SENSORS, [])
         flexible_loads = data.get(CONF_FLEXIBLE_LOAD_SWITCHES, [])
         wallboxes = data.get(CONF_WALLBOX_SWITCHES, [])
         heat_pumps = data.get(CONF_HEAT_PUMP_SWITCHES, [])
@@ -226,6 +230,10 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             self._float_state(entity_id, 0.0)
             for entity_id in battery_discharge_sources
         )
+        battery_charge = sum(
+            self._float_state(entity_id, 0.0)
+            for entity_id in battery_charge_sources
+        )
 
         weather_state = self._state(data.get(CONF_WEATHER_STATE_SENSOR))
         weather_normalized = weather_state.lower() if weather_state else None
@@ -240,6 +248,9 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         )
         bad_weather = self._bad_weather(weather_normalized, cloud_coverage)
         grid_tolerance = self._grid_tolerance(battery_soc_min, good_weather)
+        usable_battery_charge = self._usable_battery_charge(
+            battery_soc_min, battery_charge, good_weather, bad_weather
+        )
 
         auto_enabled = bool(opts[OPT_AUTO_ENABLED])
         mode = opts[OPT_MODE]
@@ -268,9 +279,18 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             pv_avg_threshold = float(opts[OPT_PV_AVG_THRESHOLD])
             grid_limit = self._mode_grid_limit(mode, grid_tolerance)
             surplus_available = (
-                pv_power >= pv_threshold
-                and pv_average >= pv_avg_threshold
-                and (grid_power <= grid_limit or (grid_average < 50 and good_weather))
+                (
+                    pv_power >= pv_threshold
+                    and pv_average >= pv_avg_threshold
+                    and (
+                        grid_power <= grid_limit
+                        or (grid_average < 50 and good_weather)
+                    )
+                )
+                or (
+                    usable_battery_charge >= float(opts[OPT_FLEXIBLE_LOAD_POWER])
+                    and grid_power <= grid_limit
+                )
             )
             surplus_reason = self._surplus_reason(
                 pv_power,
@@ -280,6 +300,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                 grid_limit,
                 pv_threshold,
                 pv_avg_threshold,
+                usable_battery_charge,
                 good_weather,
                 surplus_available,
             )
@@ -321,6 +342,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                 flexible_loads_allowed,
                 grid_power,
                 battery_discharge,
+                usable_battery_charge,
             )
         )
         switch_on_delay, switch_off_delay = self._response_delays(
@@ -351,6 +373,8 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             pv_window_reason=pv_window_reason,
             battery_soc_min=battery_soc_min,
             battery_discharge=battery_discharge,
+            battery_charge=battery_charge,
+            usable_battery_charge=usable_battery_charge,
             cloud_coverage=cloud_coverage,
             sunshine_minutes=sunshine_minutes,
             weather_state=weather_state,
@@ -363,7 +387,11 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             grid_tolerance=grid_tolerance,
             active_flexible_loads=active_flexible_loads,
             configured_pv_sources=len(pv_sources),
-            configured_batteries=len(battery_soc_sources),
+            configured_batteries=max(
+                len(battery_soc_sources),
+                len(battery_discharge_sources),
+                len(battery_charge_sources),
+            ),
             configured_flexible_loads=len(flexible_loads),
             configured_wallboxes=len(wallboxes),
             configured_heat_pumps=len(heat_pumps),
@@ -480,11 +508,18 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         allowed: bool,
         grid_power: float,
         battery_discharge: float,
+        usable_battery_charge: float,
     ) -> tuple[tuple[str, ...], float, float, str]:
         """Select the loads that fit into the current surplus budget."""
         active_power = sum(load.scheduling_power for load in loads if load.is_on)
         current_export = max(0.0, -grid_power)
-        budget = max(0.0, current_export + active_power - max(0.0, battery_discharge))
+        budget = max(
+            0.0,
+            current_export
+            + active_power
+            + usable_battery_charge
+            - max(0.0, battery_discharge),
+        )
         if not allowed:
             return (), 0.0, budget, "Smart Scheduler blockiert alle Überschussverbraucher, weil die zentrale HEMS-Freigabe fehlt."
         if not loads:
@@ -499,14 +534,14 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                 used_power += load_power
 
         if not selected:
-            return (), 0.0, budget, f"Smart Scheduler wartet: echtes Überschussbudget {budget:.0f} W reicht für keinen konfigurierten Verbraucher. Export {current_export:.0f} W, laufende Lasten {active_power:.0f} W, Batterieentladung {battery_discharge:.0f} W."
+            return (), 0.0, budget, f"Smart Scheduler wartet: echtes Überschussbudget {budget:.0f} W reicht für keinen konfigurierten Verbraucher. Export {current_export:.0f} W, laufende Lasten {active_power:.0f} W, nutzbare Batterieladung {usable_battery_charge:.0f} W, Batterieentladung {battery_discharge:.0f} W."
 
         names = ", ".join(load.entity_id for load in selected)
         return (
             tuple(load.entity_id for load in selected),
             used_power,
             budget,
-            f"Smart Scheduler plant {len(selected)} Verbraucher mit ca. {used_power:.0f} W: {names}. Echtes Überschussbudget: {budget:.0f} W (Export {current_export:.0f} W + laufende Lasten {active_power:.0f} W - Batterieentladung {battery_discharge:.0f} W).",
+            f"Smart Scheduler plant {len(selected)} Verbraucher mit ca. {used_power:.0f} W: {names}. Echtes Überschussbudget: {budget:.0f} W (Export {current_export:.0f} W + laufende Lasten {active_power:.0f} W + nutzbare Batterieladung {usable_battery_charge:.0f} W - Batterieentladung {battery_discharge:.0f} W).",
         )
 
     def _flexible_load_decision_is_stable(
@@ -811,6 +846,19 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             return True
         return bool(bad_weather and battery_soc is not None and battery_soc < 70)
 
+    def _usable_battery_charge(
+        self,
+        battery_soc: float | None,
+        battery_charge: float,
+        good_weather: bool,
+        bad_weather: bool,
+    ) -> float:
+        """Return battery charge power that may be shifted to flexible loads."""
+        if battery_soc is None or battery_soc < 60 or not good_weather or bad_weather:
+            return 0.0
+        reserve = 100.0 if battery_soc < 75 else 50.0
+        return max(0.0, battery_charge - reserve)
+
     def _battery_reason(
         self,
         battery_soc: float | None,
@@ -847,10 +895,13 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         grid_limit: float,
         pv_threshold: float,
         pv_avg_threshold: float,
+        usable_battery_charge: float,
         good_weather: bool,
         surplus_available: bool,
     ) -> str:
         if surplus_available:
+            if usable_battery_charge > 0:
+                return f"Überschuss erfüllt: zusätzlich zur PV ist nutzbare Batterieladung {usable_battery_charge:.1f} W verfügbar; Netz {grid_power:.1f} W <= {grid_limit:.1f} W."
             return f"Überschuss erfüllt: PV {pv_power:.1f} W >= {pv_threshold:.1f} W, PV 15 min {pv_average:.1f} W >= {pv_avg_threshold:.1f} W und Netz {grid_power:.1f} W <= {grid_limit:.1f} W oder Netzmittel {grid_average:.1f} W < 50 W bei Wetterfreigabe."
         missing: list[str] = []
         if pv_power < pv_threshold:
@@ -859,6 +910,8 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             missing.append(f"PV 15 min {pv_average:.1f} W unter {pv_avg_threshold:.1f} W")
         if not (grid_power <= grid_limit or (grid_average < 50 and good_weather)):
             missing.append(f"Netz {grid_power:.1f} W über Limit {grid_limit:.1f} W und Netzmittel {grid_average:.1f} W nicht als Ausgleich nutzbar")
+        if usable_battery_charge <= 0:
+            missing.append("keine nutzbare Batterieladung")
         return "Überschuss fehlt: " + "; ".join(missing)
 
     def _load_reason(

@@ -16,7 +16,7 @@ const ALIASES = {
   mode_select: ["select.bb_hems_mode", "betriebsart", "operating mode"],
 };
 
-const BB_HEMS_VERSION = "0.2.3";
+const BB_HEMS_VERSION = "0.2.4";
 const MODE_LABELS = {
   auto: "Auto",
   eco: "Eco",
@@ -177,7 +177,7 @@ class BbHemsPanel extends HTMLElement {
         .pill.bad { background: #ffe5e1; color: #a9332f; }
         .control-panel {
           display: grid;
-          grid-template-columns: minmax(0, 1fr) auto;
+          grid-template-columns: minmax(0, 1fr) auto auto;
           gap: 12px;
           align-items: center;
           padding: 14px;
@@ -211,12 +211,12 @@ class BbHemsPanel extends HTMLElement {
           box-shadow: var(--shadow);
         }
         .power {
-          min-height: 46px;
+          min-height: 38px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
           gap: 8px;
-          padding: 8px 14px;
+          padding: 7px 12px;
           border: 1px solid #b9e2c9;
           border-radius: 10px;
           background: #eef9f2;
@@ -227,8 +227,8 @@ class BbHemsPanel extends HTMLElement {
         }
         .power.off { color: var(--bad); border-color: #f2c2bd; background: #fff2f0; }
         .dot {
-          width: 18px;
-          height: 18px;
+          width: 16px;
+          height: 16px;
           border-radius: 50%;
           background: var(--good);
           box-shadow: inset 0 0 0 5px #fff;

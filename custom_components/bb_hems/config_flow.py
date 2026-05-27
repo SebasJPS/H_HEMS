@@ -43,6 +43,26 @@ NUMERIC_DOMAINS = ["sensor", "number", "input_number"]
 SWITCHABLE_DOMAINS = ["switch", "input_boolean"]
 
 
+def _is_german(language: str | None) -> bool:
+    """Return whether the Home Assistant UI language should use German text."""
+    return bool(language and language.lower().startswith("de"))
+
+
+def _options_menu_labels(language: str | None) -> dict[str, str]:
+    """Return robust labels for the options menu."""
+    if _is_german(language):
+        return {
+            "energy_sources": "Netz, PV und Batterie - Messwerte und Forecasts",
+            "weather_sources": "Wetter und Sonne - Wetterzustand, Bewölkung, Sonnenstand",
+            "load_sources": "Verbraucher - Schalter und Leistungssensoren",
+        }
+    return {
+        "energy_sources": "Grid, PV and battery - meters and forecasts",
+        "weather_sources": "Weather and sun - state, clouds and sun position",
+        "load_sources": "Loads - switches and power sensors",
+    }
+
+
 def _csv(value: str | None) -> list[str]:
     """Convert a comma separated entity list to clean ids."""
     if not value:
@@ -171,7 +191,7 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
     ) -> config_entries.ConfigFlowResult:
         return self.async_show_menu(
             step_id="init",
-            menu_options=["energy_sources", "weather_sources", "load_sources"],
+            menu_options=_options_menu_labels(self.hass.config.language),
         )
 
     async def async_step_energy_sources(

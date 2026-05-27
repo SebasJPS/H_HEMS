@@ -65,6 +65,11 @@
           "energy_sources": "Grid, PV and battery",
           "weather_sources": "Weather and sun",
           "load_sources": "Loads and power sensors"
+        },
+        "menu_option_descriptions": {
+          "energy_sources": "Edit grid power, PV power, PV forecasts, PV arrays, battery SoC, battery discharge and battery charging.",
+          "weather_sources": "Edit weather state, cloud coverage, sunshine and sun position so BB HEMS can evaluate PV windows better.",
+          "load_sources": "Edit switchable loads, wallboxes, heat pumps, heating rods and matching power sensors."
         }
       },
       "energy_sources": {

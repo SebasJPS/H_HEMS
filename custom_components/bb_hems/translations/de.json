@@ -65,6 +65,11 @@
           "energy_sources": "Netz, PV und Batterie",
           "weather_sources": "Wetter und Sonne",
           "load_sources": "Verbraucher und Leistungssensoren"
+        },
+        "menu_option_descriptions": {
+          "energy_sources": "Netzleistung, PV-Leistung, PV-Forecast, PV-Flächen, Batterie-SoC, Batterie-Entladung und Batterie-Ladung bearbeiten.",
+          "weather_sources": "Wetterzustand, Bewölkung, Sonnenschein und Sonnenstand bearbeiten, damit BB HEMS PV-Fenster besser einschätzen kann.",
+          "load_sources": "Schaltbare Verbraucher, Wallboxen, Wärmepumpen, Heizstäbe und passende Leistungssensoren bearbeiten."
         }
       },
       "energy_sources": {

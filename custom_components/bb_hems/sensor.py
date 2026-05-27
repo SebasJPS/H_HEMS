@@ -17,6 +17,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
+    CONF_BATTERY_CHARGE_SENSORS,
     CONF_BATTERY_DISCHARGE_SENSORS,
     CONF_BATTERY_SOC_SENSORS,
     CONF_CLOUD_SENSOR,
@@ -126,6 +127,22 @@ SENSORS: tuple[HemsSensorDescription, ...] = (
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda data: round(data.battery_discharge, 1),
+    ),
+    HemsSensorDescription(
+        key="battery_charge_total",
+        translation_key="battery_charge_total",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: round(data.battery_charge, 1),
+    ),
+    HemsSensorDescription(
+        key="usable_battery_charge",
+        translation_key="usable_battery_charge",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: round(data.usable_battery_charge, 1),
     ),
     HemsSensorDescription(
         key="grid_tolerance",
@@ -242,6 +259,8 @@ class HemsSensor(HemsEntity, SensorEntity):
             "weather_reason": data.weather_reason,
             "surplus_reason": data.surplus_reason,
             "battery_reason": data.battery_reason,
+            "battery_charge": data.battery_charge,
+            "usable_battery_charge": data.usable_battery_charge,
             "load_reason": data.load_reason,
             "action_history": data.action_history,
             "configured_pv_sources": data.configured_pv_sources,
@@ -270,6 +289,7 @@ class HemsSensor(HemsEntity, SensorEntity):
             "battery_discharge_sensors": config.get(
                 CONF_BATTERY_DISCHARGE_SENSORS, []
             ),
+            "battery_charge_sensors": config.get(CONF_BATTERY_CHARGE_SENSORS, []),
             "weather_state_sensor": config.get(CONF_WEATHER_STATE_SENSOR),
             "cloud_sensor": config.get(CONF_CLOUD_SENSOR),
             "sunshine_sensor": config.get(CONF_SUNSHINE_SENSOR),

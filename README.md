@@ -65,6 +65,7 @@ Suggested mapping from the original automation:
 | PV forecast next 3 hours | `sensor.pv_forecast_next_3h` |
 | Battery SoC | `sensor.batterie_geschatzt_soc` |
 | Battery discharge | `sensor.batterie_discharge` |
+| Battery charge | `sensor.batterie_charge` |
 | Weather state | `sensor.berlin_tempelhof_wetterzustand` |
 | Cloud coverage | `sensor.berlin_tempelhof_bewolkungsgrad` |
 | Sunshine duration | `sensor.berlin_tempelhof_sonnenscheindauer` |
@@ -88,6 +89,8 @@ Suggested mapping from the original automation:
 - `sensor.bb_hems_sun_elevation`
 - `sensor.bb_hems_battery_soc_min`
 - `sensor.bb_hems_battery_discharge_total`
+- `sensor.bb_hems_battery_charge_total`
+- `sensor.bb_hems_usable_battery_charge`
 - `sensor.bb_hems_grid_tolerance`
 - `sensor.bb_hems_cloud_coverage`
 - `sensor.bb_hems_sunshine_minutes`
@@ -150,6 +153,8 @@ The first controller version evaluates:
 - Optional 15-minute PV average.
 - Minimum battery SoC across all configured batteries.
 - Total battery discharge.
+- Total battery charge. From 60% SoC and with suitable weather, BB HEMS can
+  conservatively treat part of active battery charging as usable surplus.
 - Weather state, cloud coverage and sunshine.
 - PV forecast for today and PV power forecast for the next hour / next 3 hours when configured.
 - Sun elevation/azimuth from `sun.sun` and configured PV azimuth/tilt.
@@ -172,6 +177,11 @@ dashboard these fallback settings are hidden when matching real power sensors
 are configured, but the entities remain available for custom dashboards. This
 avoids switching all surplus consumers at once and also turns running loads off
 when their actual power is no longer covered by real surplus.
+
+If battery charge sensors are configured, BB HEMS can also use active battery
+charging as a smart surplus signal. This is intentionally conservative: the
+lowest battery SoC must be at least 60%, weather must be approved and BB HEMS
+keeps a small charging reserve before flexible loads are planned.
 
 The main output is still exposed for dashboards and optional automations:
 

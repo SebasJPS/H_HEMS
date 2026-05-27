@@ -12,6 +12,7 @@ from homeassistant.core import callback
 from homeassistant.helpers import selector
 
 from .const import (
+    CONF_BATTERY_CHARGE_SENSORS,
     CONF_BATTERY_DISCHARGE_SENSORS,
     CONF_BATTERY_SOC_SENSORS,
     CONF_CLOUD_SENSOR,
@@ -103,6 +104,9 @@ class BbHemsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_BATTERY_DISCHARGE_SENSORS: _entity_list(
                     user_input.get(CONF_BATTERY_DISCHARGE_SENSORS)
                 ),
+                CONF_BATTERY_CHARGE_SENSORS: _entity_list(
+                    user_input.get(CONF_BATTERY_CHARGE_SENSORS)
+                ),
                 CONF_WEATHER_STATE_SENSOR: user_input.get(CONF_WEATHER_STATE_SENSOR),
                 CONF_CLOUD_SENSOR: user_input.get(CONF_CLOUD_SENSOR),
                 CONF_SUNSHINE_SENSOR: user_input.get(CONF_SUNSHINE_SENSOR),
@@ -180,6 +184,9 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
                     CONF_BATTERY_DISCHARGE_SENSORS: _entity_list(
                         user_input.get(CONF_BATTERY_DISCHARGE_SENSORS)
                     ),
+                    CONF_BATTERY_CHARGE_SENSORS: _entity_list(
+                        user_input.get(CONF_BATTERY_CHARGE_SENSORS)
+                    ),
                     CONF_WEATHER_STATE_SENSOR: user_input.get(
                         CONF_WEATHER_STATE_SENSOR
                     ),
@@ -223,6 +230,9 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
             CONF_BATTERY_SOC_SENSORS: _entity_list(data.get(CONF_BATTERY_SOC_SENSORS)),
             CONF_BATTERY_DISCHARGE_SENSORS: _entity_list(
                 data.get(CONF_BATTERY_DISCHARGE_SENSORS)
+            ),
+            CONF_BATTERY_CHARGE_SENSORS: _entity_list(
+                data.get(CONF_BATTERY_CHARGE_SENSORS)
             ),
             CONF_WEATHER_STATE_SENSOR: data.get(CONF_WEATHER_STATE_SENSOR),
             CONF_CLOUD_SENSOR: data.get(CONF_CLOUD_SENSOR),
@@ -298,6 +308,12 @@ def _schema(defaults: dict[str, Any]) -> vol.Schema:
             vol.Optional(
                 CONF_BATTERY_DISCHARGE_SENSORS,
                 default=defaults.get(CONF_BATTERY_DISCHARGE_SENSORS, []),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+            ),
+            vol.Optional(
+                CONF_BATTERY_CHARGE_SENSORS,
+                default=defaults.get(CONF_BATTERY_CHARGE_SENSORS, []),
             ): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
             ),

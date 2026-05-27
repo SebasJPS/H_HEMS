@@ -7,6 +7,7 @@ const ALIASES = {
   pv_window: ["pv_window", "pv fenster"],
   battery_soc_min: ["battery_soc_min", "batterie soc minimum", "batterie min"],
   battery_discharge_total: ["battery_discharge_total", "batterie entladung gesamt", "batterie entladung"],
+  battery_charge_total: ["battery_charge_total", "batterie ladung gesamt", "batterie ladung"],
   grid_tolerance: ["grid_tolerance", "netztoleranz"],
   surplus_available: ["surplus_available", "uberschuss verfugbar", "ueberschuss verfuegbar"],
   battery_protect: ["battery_protect", "batterieschutz"],
@@ -14,7 +15,7 @@ const ALIASES = {
   flexible_loads_allowed: ["flexible_loads_allowed", "flexible verbraucher erlaubt"],
 };
 
-const BB_HEMS_VERSION = "0.1.16";
+const BB_HEMS_VERSION = "0.1.17";
 
 class BbHemsPanel extends HTMLElement {
   set hass(hass) {
@@ -255,7 +256,7 @@ function metric(states, key, label, note, primary = false) {
 function flow(states) {
   const items = [
     ["pv_power_total", "PV-Erzeugung", "Aus allen PV- und Balkonkraftwerk-Sensoren"],
-    ["battery_discharge_total", "Batterie", "Entladung und SoC-Schutz"],
+    ["battery_charge_total", "Batterie", "Ladung, Entladung und SoC-Schutz"],
     ["grid_power", "Netzanschluss", "Bezug oder Einspeisung"],
   ];
   return items.map(([key, title, note], index) => {
@@ -346,6 +347,7 @@ function config(attrs) {
     ["Sonne", attrs.sun_entity],
     ["Batterie-SoC", attrs.battery_soc_sensors],
     ["Batterie-Entladung", attrs.battery_discharge_sensors],
+    ["Batterie-Ladung", attrs.battery_charge_sensors],
     ["Wetter", attrs.weather_state_sensor],
     ["Flexible Verbraucher", attrs.flexible_load_switches],
     ["Leistung flexible Verbraucher", attrs.flexible_load_power_sensors],

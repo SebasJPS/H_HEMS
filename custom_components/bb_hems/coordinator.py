@@ -10,6 +10,7 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
@@ -67,6 +68,10 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 ESTIMATED_GRID_PRICE_EUR_PER_KWH = 0.32
+LEARNING_STORE_VERSION = 1
+LEARNING_SAVE_INTERVAL = timedelta(minutes=5)
+LEARNING_MIN_SAMPLES = 12
+LEARNING_DECISION_MIN_SAMPLES = 72
 
 
 @dataclass(frozen=True)
@@ -148,6 +153,14 @@ class HemsData:
     scheduled_surplus_power: float
     shifted_energy_today: float
     estimated_savings_today: float
+    shifted_energy_total: float
+    learning_bucket: str
+    learning_samples: int
+    seasonal_success_rate: float | None
+    seasonal_average_shifted_energy: float | None
+    seasonal_average_budget: float | None
+    seasonal_grid_adjustment: float
+    seasonal_recommendation: str
     scheduler_reason: str
     weather_reason: str
     surplus_reason: str
@@ -178,10 +191,61 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         self._energy_estimate_last_power: float = 0.0
         self._shifted_energy_today: float = 0.0
         self._shifted_energy_total: float = 0.0
+        self._learning_store = Store(
+            hass, LEARNING_STORE_VERSION, f"{DOMAIN}_{entry.entry_id}_learning"
+        )
+        self._learning_buckets: dict[str, dict[str, Any]] = {}
+        self._learning_last_save: datetime | None = None
+
+    async def async_load_learning(self) -> None:
+        """Load persisted HEMS learning data."""
+        stored = await self._learning_store.async_load()
+        if not isinstance(stored, dict):
+            return
+
+        self._action_history = self._safe_action_history(
+            stored.get("action_history")
+        )
+        self._energy_estimate_day = (
+            str(stored["energy_estimate_day"])
+            if stored.get("energy_estimate_day")
+            else None
+        )
+        self._shifted_energy_today = self._safe_float(
+            stored.get("shifted_energy_today"), 0.0
+        )
+        self._shifted_energy_total = self._safe_float(
+            stored.get("shifted_energy_total"), 0.0
+        )
+        self._learning_buckets = self._safe_learning_buckets(
+            stored.get("learning_buckets")
+        )
+
+    async def async_save_learning(self, *, force: bool = False) -> None:
+        """Persist learned HEMS data with a small write throttle."""
+        now = datetime.now()
+        if (
+            not force
+            and self._learning_last_save is not None
+            and now - self._learning_last_save < LEARNING_SAVE_INTERVAL
+        ):
+            return
+
+        self._learning_last_save = now
+        await self._learning_store.async_save(
+            {
+                "energy_estimate_day": self._energy_estimate_day,
+                "shifted_energy_today": self._shifted_energy_today,
+                "shifted_energy_total": self._shifted_energy_total,
+                "learning_buckets": self._learning_buckets,
+                "action_history": self._action_history,
+            }
+        )
 
     async def _async_update_data(self) -> HemsData:
         data = self._calculate()
         action_added = await self._async_apply_flexible_load_control(data)
+        await self.async_save_learning(force=action_added)
         if action_added:
             return replace(data, action_history=list(self._action_history))
         return data
@@ -275,13 +339,15 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             battery_soc_min, weather_normalized, cloud_coverage, sunshine_minutes
         )
         bad_weather = self._bad_weather(weather_normalized, cloud_coverage)
+        mode = opts[OPT_MODE]
         grid_tolerance = self._grid_tolerance(battery_soc_min, good_weather)
+        seasonal_grid_adjustment = self._learning_grid_tolerance_adjustment(mode)
+        grid_tolerance += seasonal_grid_adjustment
         usable_battery_charge = self._usable_battery_charge(
             battery_soc_min, battery_charge, good_weather, bad_weather
         )
 
         auto_enabled = bool(opts[OPT_AUTO_ENABLED])
-        mode = opts[OPT_MODE]
         battery_protect = self._battery_protect(
             battery_soc_min, battery_discharge, bad_weather
         )
@@ -383,6 +449,14 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         estimated_savings_today = (
             shifted_energy_today * ESTIMATED_GRID_PRICE_EUR_PER_KWH
         )
+        learning = self._update_learning_bucket(
+            flexible_loads_allowed=flexible_loads_allowed,
+            scheduled_power=scheduled_power,
+            available_budget=available_budget,
+            shifted_energy_today=shifted_energy_today,
+            pv_power=pv_power,
+            grid_power=grid_power,
+        )
         self._update_action_history(
             energy_mode,
             surplus_available,
@@ -441,6 +515,14 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             scheduled_surplus_power=scheduled_power,
             shifted_energy_today=shifted_energy_today,
             estimated_savings_today=estimated_savings_today,
+            shifted_energy_total=self._shifted_energy_total,
+            learning_bucket=learning["label"],
+            learning_samples=learning["samples"],
+            seasonal_success_rate=learning["success_rate"],
+            seasonal_average_shifted_energy=learning["average_shifted_energy"],
+            seasonal_average_budget=learning["average_budget"],
+            seasonal_grid_adjustment=seasonal_grid_adjustment,
+            seasonal_recommendation=learning["recommendation"],
             scheduler_reason=scheduler_reason,
             weather_reason=weather_reason,
             surplus_reason=surplus_reason,
@@ -473,6 +555,206 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         self._energy_estimate_last_update = now
         self._energy_estimate_last_power = max(0.0, current_power)
         return self._shifted_energy_today
+
+    def _update_learning_bucket(
+        self,
+        *,
+        flexible_loads_allowed: bool,
+        scheduled_power: float,
+        available_budget: float,
+        shifted_energy_today: float,
+        pv_power: float,
+        grid_power: float,
+    ) -> dict[str, Any]:
+        """Update seasonal/time-of-day experience and return current summary."""
+        now = datetime.now()
+        key, label = self._learning_bucket(now)
+        bucket = self._learning_buckets.setdefault(
+            key,
+            {
+                "label": label,
+                "samples": 0,
+                "allowed_samples": 0,
+                "scheduled_power_total": 0.0,
+                "budget_total": 0.0,
+                "pv_power_total": 0.0,
+                "grid_power_total": 0.0,
+                "shifted_energy_total": 0.0,
+                "last_shifted_energy_today": shifted_energy_today,
+                "last_seen": now.isoformat(timespec="seconds"),
+            },
+        )
+
+        previous_shifted = self._safe_float(
+            bucket.get("last_shifted_energy_today"), shifted_energy_today
+        )
+        shifted_delta = max(0.0, shifted_energy_today - previous_shifted)
+        if shifted_energy_today < previous_shifted:
+            shifted_delta = shifted_energy_today
+
+        bucket["label"] = label
+        bucket["samples"] = int(bucket.get("samples", 0)) + 1
+        bucket["allowed_samples"] = int(bucket.get("allowed_samples", 0)) + (
+            1 if flexible_loads_allowed else 0
+        )
+        bucket["scheduled_power_total"] = self._safe_float(
+            bucket.get("scheduled_power_total"), 0.0
+        ) + max(0.0, scheduled_power)
+        bucket["budget_total"] = self._safe_float(
+            bucket.get("budget_total"), 0.0
+        ) + max(0.0, available_budget)
+        bucket["pv_power_total"] = self._safe_float(
+            bucket.get("pv_power_total"), 0.0
+        ) + max(0.0, pv_power)
+        bucket["grid_power_total"] = self._safe_float(
+            bucket.get("grid_power_total"), 0.0
+        ) + grid_power
+        bucket["shifted_energy_total"] = self._safe_float(
+            bucket.get("shifted_energy_total"), 0.0
+        ) + shifted_delta
+        bucket["last_shifted_energy_today"] = shifted_energy_today
+        bucket["last_seen"] = now.isoformat(timespec="seconds")
+
+        return self._learning_summary(key)
+
+    def _learning_summary(self, key: str) -> dict[str, Any]:
+        bucket = self._learning_buckets.get(key, {})
+        samples = int(bucket.get("samples", 0))
+        allowed = int(bucket.get("allowed_samples", 0))
+        success_rate = round(allowed / samples * 100, 1) if samples else None
+        average_shifted = (
+            self._safe_float(bucket.get("shifted_energy_total"), 0.0) / samples
+            if samples
+            else None
+        )
+        average_budget = (
+            self._safe_float(bucket.get("budget_total"), 0.0) / samples
+            if samples
+            else None
+        )
+        return {
+            "label": bucket.get("label", key),
+            "samples": samples,
+            "success_rate": success_rate,
+            "average_shifted_energy": round(average_shifted, 4)
+            if average_shifted is not None
+            else None,
+            "average_budget": round(average_budget, 1)
+            if average_budget is not None
+            else None,
+            "recommendation": self._learning_recommendation(
+                str(bucket.get("label", key)), samples, success_rate, average_budget
+            ),
+        }
+
+    def _learning_recommendation(
+        self,
+        label: str,
+        samples: int,
+        success_rate: float | None,
+        average_budget: float | None,
+    ) -> str:
+        if samples < LEARNING_MIN_SAMPLES:
+            return f"HEMS lernt {label} noch. Nach mehr Messpunkten wird diese Jahreszeit/Tageszeit besser bewertet."
+        if success_rate is not None and success_rate >= 60:
+            return f"{label} war bisher oft geeignet: {success_rate:.0f}% Freigaben, durchschnittlich {average_budget or 0:.0f} W Budget."
+        if success_rate is not None and success_rate >= 30:
+            return f"{label} ist wechselhaft: {success_rate:.0f}% Freigaben. HEMS bleibt vorsichtig und wartet auf klares Budget."
+        return f"{label} war bisher selten geeignet. HEMS bewertet diese Phase konservativer und wartet eher auf echte Überschüsse."
+
+    def _learning_grid_tolerance_adjustment(self, mode: str) -> float:
+        """Return a conservative learned grid-tolerance adjustment."""
+        if mode in {MODE_ECO, MODE_FORCE_SURPLUS, MODE_OFF}:
+            return 0.0
+
+        key, _label = self._learning_bucket(datetime.now())
+        summary = self._learning_summary(key)
+        samples = int(summary["samples"])
+        success_rate = summary["success_rate"]
+        average_budget = summary["average_budget"]
+        if samples < LEARNING_DECISION_MIN_SAMPLES or success_rate is None:
+            return 0.0
+
+        flexible_power = float(self.opts[OPT_FLEXIBLE_LOAD_POWER])
+        if success_rate >= 70 and (average_budget or 0.0) >= flexible_power:
+            return 100.0 if mode == MODE_COMFORT else 50.0
+        if success_rate <= 15:
+            return -50.0
+        return 0.0
+
+    def _learning_bucket(self, now: datetime) -> tuple[str, str]:
+        season = self._season(now.month)
+        day_part = self._day_part(now.hour)
+        return f"{season}:{day_part}", f"{self._season_label(season)}, {self._day_part_label(day_part)}"
+
+    def _season(self, month: int) -> str:
+        if month in {12, 1, 2}:
+            return "winter"
+        if month in {3, 4, 5}:
+            return "spring"
+        if month in {6, 7, 8}:
+            return "summer"
+        return "autumn"
+
+    def _season_label(self, season: str) -> str:
+        return {
+            "winter": "Winter",
+            "spring": "Frühjahr",
+            "summer": "Sommer",
+            "autumn": "Herbst",
+        }.get(season, season)
+
+    def _day_part(self, hour: int) -> str:
+        if hour < 6:
+            return "night"
+        if hour < 10:
+            return "morning"
+        if hour < 14:
+            return "midday"
+        if hour < 18:
+            return "afternoon"
+        return "evening"
+
+    def _day_part_label(self, day_part: str) -> str:
+        return {
+            "night": "Nacht",
+            "morning": "Morgen",
+            "midday": "Mittag",
+            "afternoon": "Nachmittag",
+            "evening": "Abend",
+        }.get(day_part, day_part)
+
+    def _safe_learning_buckets(self, value: Any) -> dict[str, dict[str, Any]]:
+        if not isinstance(value, dict):
+            return {}
+        buckets: dict[str, dict[str, Any]] = {}
+        for key, bucket in value.items():
+            if isinstance(key, str) and isinstance(bucket, dict):
+                buckets[key] = dict(bucket)
+        return buckets
+
+    def _safe_action_history(self, value: Any) -> list[dict[str, str]]:
+        if not isinstance(value, list):
+            return []
+        rows: list[dict[str, str]] = []
+        for item in value[:10]:
+            if not isinstance(item, dict):
+                continue
+            rows.append(
+                {
+                    "time": str(item.get("time", "")),
+                    "title": str(item.get("title", "")),
+                    "reason": str(item.get("reason", "")),
+                    "kind": str(item.get("kind", "")),
+                }
+            )
+        return rows
+
+    def _safe_float(self, value: Any, default: float) -> float:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return default
 
     async def _async_apply_flexible_load_control(self, data: HemsData) -> bool:
         """Switch configured flexible loads according to the current HEMS decision."""

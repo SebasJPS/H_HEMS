@@ -31,12 +31,14 @@ This repository contains an initial custom integration scaffold:
 - Switch entity for enabling or disabling automatic HEMS decisions.
 - Direct control of configured flexible loads and heating rods when the HEMS decision allows or blocks them.
 - Energy-style sidebar dashboard served by the integration.
+- Persistent HEMS learning values that survive Home Assistant restarts and
+  group experience by season and time of day.
 
 The current version calculates central decisions, directly switches configured
 flexible loads and heating rods, estimates the energy shifted into surplus
-periods today, and shows the result in an energy-dashboard style sidebar.
-Full long-term energy statistics and device-level cost accounting are still
-planned.
+periods today, remembers seasonal/time-of-day HEMS experience across restarts,
+and shows the result in an energy-dashboard style sidebar. Full device-level
+cost accounting is still planned.
 
 ## Sidebar HEMS Dashboard
 
@@ -49,7 +51,7 @@ It shows:
 - Home Assistant-style tiles focused on HEMS decisions and benefit.
 - Quick controls for `select.bb_hems_mode` and `switch.bb_hems_auto_enabled`.
 - Today's HEMS benefit: shifted energy, estimated savings, planned HEMS load and
-  active HEMS loads.
+  current seasonal HEMS experience.
 - The current decision: surplus status, usable budget, next candidate and the
   relevant reason text.
 - Managed consumer groups such as flexible loads, heating rods, wallboxes and
@@ -131,6 +133,9 @@ Suggested mapping from the original automation:
 - `sensor.bb_hems_scheduled_surplus_power`
 - `sensor.bb_hems_shifted_energy_today`
 - `sensor.bb_hems_estimated_savings_today`
+- `sensor.bb_hems_shifted_energy_total`
+- `sensor.bb_hems_learning_samples`
+- `sensor.bb_hems_seasonal_success_rate`
 - `sensor.bb_hems_configured_assets`
 
 ### Binary Sensors
@@ -225,6 +230,19 @@ loads are allowed. `sensor.bb_hems_shifted_energy_today` exposes this value in
 kWh. `sensor.bb_hems_estimated_savings_today` multiplies it by a conservative
 default grid-price estimate of 0.32 EUR/kWh. These values are estimates for the
 dashboard, not a replacement for metered utility billing.
+
+BB HEMS now persists its own learning data in Home Assistant storage. It records
+HEMS experience by season and time of day, including how often flexible loads
+were allowed, the typical available budget and the estimated energy shifted in
+that phase. This data survives Home Assistant restarts and is exposed through
+`sensor.bb_hems_learning_samples`,
+`sensor.bb_hems_seasonal_success_rate` and attributes on
+`sensor.bb_hems_energy_mode`. The dashboard uses this to show whether the
+current season/time window has historically been useful for HEMS decisions.
+The learning layer is intentionally conservative. After enough samples in the
+current season/time window, it may slightly relax or tighten the grid tolerance
+for `auto` and `comfort`. Hard protection rules such as battery protection,
+`eco`, `force_surplus`, `off` and real surplus checks still take priority.
 
 If battery charge sensors are configured, BB HEMS can also use active battery
 charging as a smart surplus signal. This is intentionally conservative: the

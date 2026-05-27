@@ -31,6 +31,7 @@ def _frontend_version() -> str:
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up BB HEMS from a config entry."""
     coordinator = HemsCoordinator(hass, entry)
+    await coordinator.async_load_learning()
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
 
@@ -44,6 +45,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
+    coordinator: HemsCoordinator = entry.runtime_data
+    await coordinator.async_save_learning(force=True)
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         frontend.async_remove_panel(hass, PANEL_URL)

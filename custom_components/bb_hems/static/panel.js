@@ -7,6 +7,9 @@ const ALIASES = {
   scheduled_surplus_power: ["scheduled_surplus_power", "geplante uberschussleistung", "geplante ueberschussleistung"],
   shifted_energy_today: ["shifted_energy_today", "hems verschobene energie heute"],
   estimated_savings_today: ["estimated_savings_today", "hems ersparnis heute"],
+  shifted_energy_total: ["shifted_energy_total", "hems verschobene energie gesamt"],
+  learning_samples: ["learning_samples", "hems erfahrungswerte"],
+  seasonal_success_rate: ["seasonal_success_rate", "hems jahreszeit trefferquote"],
   active_flexible_loads: ["active_flexible_loads", "aktive flexible verbraucher"],
   surplus_available: ["surplus_available", "uberschuss verfugbar", "ueberschuss verfuegbar"],
   battery_protect: ["battery_protect", "batterieschutz"],
@@ -16,7 +19,7 @@ const ALIASES = {
   mode_select: ["select.bb_hems_mode", "betriebsart", "operating mode"],
 };
 
-const BB_HEMS_VERSION = "0.2.4";
+const BB_HEMS_VERSION = "0.3.0";
 const MODE_LABELS = {
   auto: "Auto",
   eco: "Eco",
@@ -315,7 +318,7 @@ class BbHemsPanel extends HTMLElement {
             ${benefitTile("HEMS verschoben", energy(byKey(states, "shifted_energy_today")), "Energie wurde in PV-/Überschusszeit gelegt.", "↗", "good")}
             ${benefitTile("geschätzte Ersparnis", money(byKey(states, "estimated_savings_today")), "Berechnet mit 0,32 EUR/kWh als konservativer Schätzwert.", "€", "good")}
             ${benefitTile("geplante Leistung", power(byKey(states, "scheduled_surplus_power")), "Aktuell für HEMS-Verbraucher eingeplant.", "⚡", "info")}
-            ${benefitTile("aktive HEMS-Lasten", val(byKey(states, "active_flexible_loads")), "Aktuell durch HEMS freigegebene oder laufende Verbraucher.", "✓", activeLoadClass(byKey(states, "active_flexible_loads")))}
+            ${benefitTile("HEMS Erfahrung", learningValue(states, attrs), attrs.seasonal_recommendation || "HEMS sammelt Jahreszeit- und Tageszeit-Erfahrung.", "↻", learningClass(attrs))}
           </div>
         </section>
 
@@ -449,6 +452,7 @@ function blockerCard(states, attrs) {
     ${blockerItem(weather, "Wetterfreigabe", attrs.weather_reason || "Wetter- und Sonnenwerte werden bewertet.")}
     ${blockerItem(Boolean(pvWindow && !["night", "low_today", "weak_now"].includes(pvWindow)), "PV-Fenster", attrs.pv_window_reason || `PV-Fenster: ${pvWindow || "unbekannt"}.`)}
     ${blockerItem(budget > 0, "Überschussbudget", budget > 0 ? `${Math.round(budget)} W verfügbar.` : "Kein nutzbares Budget verfügbar.")}
+    ${blockerItem(Number(attrs.learning_samples || 0) >= 12, "Jahreszeit-Erfahrung", learningReason(attrs))}
   </section>`;
 }
 
@@ -517,6 +521,31 @@ function money(entity) {
 
 function activeLoadClass(entity) {
   return numericState(entity) > 0 ? "good" : "warn";
+}
+
+function learningValue(states, attrs) {
+  const rate = attrs.seasonal_success_rate ?? numericState(byKey(states, "seasonal_success_rate"));
+  const samples = attrs.learning_samples ?? numericState(byKey(states, "learning_samples"));
+  if (!samples) return "lernt";
+  if (rate === null || rate === undefined || Number.isNaN(Number(rate))) return `${samples} Werte`;
+  return `${Number(rate).toLocaleString("de-DE", { maximumFractionDigits: 0 })} %`;
+}
+
+function learningClass(attrs) {
+  const samples = Number(attrs.learning_samples || 0);
+  const rate = Number(attrs.seasonal_success_rate || 0);
+  if (samples < 12) return "info";
+  if (rate >= 60) return "good";
+  if (rate >= 30) return "warn";
+  return "bad";
+}
+
+function learningReason(attrs) {
+  const adjustment = Number(attrs.seasonal_grid_adjustment || 0);
+  const recommendation = attrs.seasonal_recommendation || "HEMS sammelt dauerhafte Erfahrungswerte.";
+  if (!adjustment) return recommendation;
+  const sign = adjustment > 0 ? "+" : "";
+  return `${recommendation} Gelernte Netztoleranz: ${sign}${Math.round(adjustment)} W.`;
 }
 
 function asArray(value) {

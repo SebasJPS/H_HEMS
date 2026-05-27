@@ -184,6 +184,9 @@
       "scheduled_surplus_power": { "name": "Geplante Überschussleistung" },
       "shifted_energy_today": { "name": "HEMS verschobene Energie heute" },
       "estimated_savings_today": { "name": "HEMS Ersparnis heute" },
+      "shifted_energy_total": { "name": "HEMS verschobene Energie gesamt" },
+      "learning_samples": { "name": "HEMS Erfahrungswerte" },
+      "seasonal_success_rate": { "name": "HEMS Jahreszeit-Trefferquote" },
       "configured_assets": { "name": "Konfigurierte Anlagen" }
     },
     "binary_sensor": {

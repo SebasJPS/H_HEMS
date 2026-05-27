@@ -172,7 +172,10 @@
       "available_surplus_budget": { "name": "Available surplus budget" },
       "scheduled_surplus_power": { "name": "Scheduled surplus power" },
       "shifted_energy_today": { "name": "HEMS shifted energy today" },
-      "estimated_savings_today": { "name": "HEMS savings today" }
+      "estimated_savings_today": { "name": "HEMS savings today" },
+      "shifted_energy_total": { "name": "HEMS shifted energy total" },
+      "learning_samples": { "name": "HEMS learning samples" },
+      "seasonal_success_rate": { "name": "HEMS seasonal success rate" }
     },
     "number": {
       "flexible_load_power": { "name": "Fallback flexible load power" },

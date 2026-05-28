@@ -366,26 +366,3 @@ Home Health Overview ist kostenlos und bleibt kostenlos.
 Home Health Overview is free and will remain free.
 
 [Buy me a coffee](https://buymeacoffee.com/sebasbe)
-
-## Roadmap
-
-- Per-device registry with name, category, switch entity, power estimate, priority, minimum runtime and cooldown.
-- Priority scheduler for many flexible loads.
-- Dedicated wallbox strategy with charge-current control.
-- Heat-pump strategy with comfort bands and thermal buffer support.
-- Persistent device-level history beyond Home Assistant restarts.
-- Forecast-aware planning for PV windows.
-- Import/export cost awareness.
-- Configurable energy price and savings model.
-- Native Lovelace cards.
-
-## Development
-
-Basic local checks:
-
-```bash
-PYTHONPYCACHEPREFIX=/tmp/bb_hems_pycache python3 -m py_compile custom_components/bb_hems/*.py
-python3 -m json.tool custom_components/bb_hems/manifest.json >/dev/null
-python3 -m json.tool custom_components/bb_hems/translations/de.json >/dev/null
-python3 -m json.tool custom_components/bb_hems/translations/en.json >/dev/null
-```

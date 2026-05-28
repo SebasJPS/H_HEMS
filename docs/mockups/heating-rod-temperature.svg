@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="720" viewBox="0 0 1180 720" role="img" aria-labelledby="title desc">
+  <title id="title">BB HEMS Heizstab Temperatur Mockup</title>
+  <desc id="desc">Home Assistant style mockup for heating rod temperature limits in BB HEMS.</desc>
+  <style>
+    text{font-family:Arial,Helvetica,sans-serif;fill:#1f1f1f}
+    .bg{fill:#f7f8fa}.card{fill:#fff;stroke:#dfe3e8}.line{stroke:#e6e9ed}.muted{fill:#66727d}.h1{font-size:30px;font-weight:700}.h2{font-size:18px;font-weight:700}.label{font-size:13px;font-weight:700}.small{font-size:13px}.big{font-size:32px;font-weight:760}.good{fill:#2e9f50}.warn{fill:#d97904}.bad{fill:#c93c37}.softgood{fill:#edf8f0}.softwarn{fill:#fff6e8}.softinfo{fill:#eef7fb}.btn{fill:#fff;stroke:#dfe3e8}.pill{fill:#eef2f4}
+  </style>
+  <rect width="1180" height="720" class="bg"/>
+  <text x="48" y="58" class="h1">BB HEMS</text>
+  <text x="48" y="84" class="small muted">Version 0.5.0 · Heizstäbe mit Temperaturgrenze</text>
+  <rect x="875" y="38" width="92" height="34" rx="8" class="btn"/><text x="895" y="60" font-size="14" fill="#007fa3">Entitäten</text>
+  <rect x="978" y="38" width="132" height="34" rx="8" class="btn"/><text x="997" y="60" font-size="14" fill="#007fa3">Konfiguration</text>
+
+  <rect x="48" y="116" width="1062" height="102" rx="12" class="card"/>
+  <text x="70" y="148" class="h2">Steuerung</text>
+  <text x="70" y="170" class="small muted">Schnell umstellen, ohne die Integration zu öffnen</text>
+  <rect x="603" y="136" width="420" height="46" rx="10" fill="#f0f2f4" stroke="#dfe3e8"/>
+  <text x="642" y="164" class="small">Auto</text><text x="720" y="164" class="small">Eco</text><text x="800" y="164" class="small">Comfort</text>
+  <rect x="871" y="142" width="100" height="34" rx="8" fill="#fff"/><text x="889" y="164" font-size="13" font-weight="700" fill="#007fa3">PV erzwingen</text>
+  <text x="998" y="164" class="small">Aus</text>
+  <rect x="1038" y="140" width="52" height="38" rx="10" class="softgood" stroke="#b9e2c9"/><circle cx="1060" cy="159" r="7" class="good"/><text x="1072" y="164" class="label" fill="#17713a">An</text>
+
+  <text x="48" y="268" class="h2">HEMS Nutzen heute</text>
+  <rect x="48" y="292" width="248" height="124" rx="12" class="card"/><rect x="48" y="292" width="6" height="124" rx="3" class="good"/><text x="70" y="322" class="small muted">HEMS verschoben</text><text x="70" y="365" class="big">3,42 kWh</text><text x="70" y="390" class="small muted">In PV-/Überschusszeit gelegt.</text>
+  <rect x="318" y="292" width="248" height="124" rx="12" class="card"/><rect x="318" y="292" width="6" height="124" rx="3" class="good"/><text x="340" y="322" class="small muted">geschätzte Ersparnis</text><text x="340" y="365" class="big">1,09 €</text><text x="340" y="390" class="small muted">Konservativ gerechnet.</text>
+  <rect x="588" y="292" width="248" height="124" rx="12" class="card"/><rect x="588" y="292" width="6" height="124" rx="3" fill="#03a9c7"/><text x="610" y="322" class="small muted">geplante Leistung</text><text x="610" y="365" class="big">1,0 kW</text><text x="610" y="390" class="small muted">Nur passende HEMS-Lasten.</text>
+  <rect x="858" y="292" width="252" height="124" rx="12" class="card"/><rect x="858" y="292" width="6" height="124" rx="3" class="warn"/><text x="880" y="322" class="small muted">Heizstab Temperatur</text><text x="880" y="365" class="big">1 blockiert</text><text x="880" y="390" class="small muted">Zieltemperatur erreicht.</text>
+
+  <text x="48" y="468" class="h2">Verbraucher</text>
+  <rect x="48" y="492" width="332" height="146" rx="12" class="card"/>
+  <rect x="48" y="492" width="6" height="146" rx="3" class="warn"/>
+  <text x="70" y="522" class="small muted">Heizstäbe</text><rect x="292" y="506" width="66" height="24" rx="12" class="softwarn"/><text x="307" y="523" font-size="12" fill="#9a5a00">Temperatur</text>
+  <text x="70" y="566" class="big">1 blockiert</text>
+  <text x="70" y="593" class="small muted">Pool-Heizstab: 28,1 °C von 28,0 °C.</text>
+  <text x="70" y="615" class="small muted">Wird ausgeschaltet, egal ob Überschuss da ist.</text>
+
+  <rect x="410" y="492" width="332" height="146" rx="12" class="card"/>
+  <rect x="410" y="492" width="6" height="146" rx="3" class="good"/>
+  <text x="432" y="522" class="small muted">Boiler-Heizstab</text><rect x="650" y="506" width="70" height="24" rx="12" class="softgood"/><text x="668" y="523" font-size="12" fill="#17713a">bereit</text>
+  <text x="432" y="566" class="big">52,0 °C</text>
+  <text x="432" y="593" class="small muted">Ziel: 55,0 °C · Hysterese: 2,0 °C.</text>
+  <text x="432" y="615" class="small muted">Darf starten, wenn Überschuss passt.</text>
+
+  <rect x="778" y="492" width="332" height="146" rx="12" class="card"/>
+  <text x="800" y="522" class="h2">Blocker &amp; Freigaben</text>
+  <circle cx="812" cy="560" r="5" class="good"/><text x="830" y="565" class="label">Batterieschutz frei</text>
+  <circle cx="812" cy="596" r="5" class="warn"/><text x="830" y="601" class="label">Pool-Zieltemperatur erreicht</text>
+  <text x="830" y="623" class="small muted">switch.pool_heating_rod wurde gestoppt.</text>
+</svg>

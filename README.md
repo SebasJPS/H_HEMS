@@ -6,6 +6,10 @@ BB HEMS turns existing Home Assistant sensors and switches into one central ener
 
 [BB HEMS energy dashboard mockup](docs/mockups/energy-dashboard.html)
 
+![BB HEMS heating rod temperature mockup](docs/mockups/heating-rod-temperature.svg)
+
+![BB HEMS virtual battery mockup](docs/mockups/virtual-battery.svg)
+
 ## Goals
 
 - Use the sensors you already have in Home Assistant.
@@ -68,6 +72,34 @@ It shows:
 
 Configuration is intentionally reduced to links from the dashboard. Detailed
 setup remains in Home Assistant's integration options and entity settings.
+
+## Feature Mockups
+
+### Heating rod target temperature
+
+![BB HEMS heating rod temperature mockup](docs/mockups/heating-rod-temperature.svg)
+
+This mockup shows how a heating rod can be treated as a normal HEMS surplus
+load while still respecting a target temperature. A pool or boiler heating rod
+is stopped when the configured temperature is reached, independent of current
+surplus.
+
+### Virtual battery
+
+![BB HEMS virtual battery mockup](docs/mockups/virtual-battery.svg)
+
+This mockup shows the virtual battery helper for DIY batteries without a native
+SoC sensor. BB HEMS calculates SoC from charge/discharge power and lets the user
+calibrate the value manually. The virtual battery can be displayed only or
+explicitly enabled for HEMS decisions.
+
+Useful real screenshots for replacing these mockups later:
+
+- BB HEMS dashboard with at least one heating rod blocked by temperature.
+- Integration options page showing heating rod switch, temperature sensor and
+  target temperature.
+- BB HEMS dashboard with virtual battery enabled.
+- Entity list showing the virtual battery sensors, numbers and switches.
 
 ## System Model
 

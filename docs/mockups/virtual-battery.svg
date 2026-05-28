@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="760" viewBox="0 0 1180 760" role="img" aria-labelledby="title desc">
+  <title id="title">BB HEMS Virtuelle Batterie Mockup</title>
+  <desc id="desc">Home Assistant style mockup for the BB HEMS virtual battery helper.</desc>
+  <style>
+    text{font-family:Arial,Helvetica,sans-serif;fill:#1f1f1f}
+    .bg{fill:#f7f8fa}.card{fill:#fff;stroke:#dfe3e8}.line{stroke:#e6e9ed}.muted{fill:#66727d}.h1{font-size:30px;font-weight:700}.h2{font-size:18px;font-weight:700}.label{font-size:13px;font-weight:700}.small{font-size:13px}.big{font-size:32px;font-weight:760}.good{fill:#2e9f50}.warn{fill:#d97904}.info{fill:#03a9c7}.softgood{fill:#edf8f0}.softwarn{fill:#fff6e8}.softinfo{fill:#eef7fb}.btn{fill:#fff;stroke:#dfe3e8}.field{fill:#fff;stroke:#dfe3e8}
+  </style>
+  <rect width="1180" height="760" class="bg"/>
+  <text x="48" y="58" class="h1">BB HEMS</text>
+  <text x="48" y="84" class="small muted">Version 0.5.0 · Virtuelle Batterie für DIY-Speicher</text>
+  <rect x="843" y="38" width="124" height="34" rx="8" class="btn"/><text x="864" y="60" font-size="14" fill="#007fa3">Einstellungen</text>
+  <rect x="978" y="38" width="132" height="34" rx="8" class="btn"/><text x="997" y="60" font-size="14" fill="#007fa3">Konfiguration</text>
+
+  <rect x="48" y="116" width="1062" height="104" rx="12" class="card"/>
+  <text x="70" y="150" class="h2">Virtuelle Batterie</text>
+  <text x="70" y="174" class="small muted">Berechnet SoC aus Ladeleistung, Entladeleistung, Kapazität und manueller Korrektur</text>
+  <rect x="743" y="136" width="158" height="44" rx="10" class="softgood" stroke="#b9e2c9"/><circle cx="768" cy="158" r="7" class="good"/><text x="785" y="163" class="label" fill="#17713a">Berechnung aktiv</text>
+  <rect x="918" y="136" width="154" height="44" rx="10" class="softinfo" stroke="#b7ddeb"/><circle cx="943" cy="158" r="7" class="info"/><text x="960" y="163" class="label" fill="#007fa3">im HEMS nutzen</text>
+
+  <text x="48" y="270" class="h2">Berechneter Speicherstand</text>
+  <rect x="48" y="294" width="248" height="128" rx="12" class="card"/><rect x="48" y="294" width="6" height="128" rx="3" class="good"/><text x="70" y="324" class="small muted">Virtueller SoC</text><text x="70" y="368" class="big">63,4 %</text><text x="70" y="394" class="small muted">Aus Energiezähler berechnet.</text>
+  <rect x="318" y="294" width="248" height="128" rx="12" class="card"/><rect x="318" y="294" width="6" height="128" rx="3" class="info"/><text x="340" y="324" class="small muted">Energie im Speicher</text><text x="340" y="368" class="big">3,17 kWh</text><text x="340" y="394" class="small muted">Kapazität: 5,0 kWh.</text>
+  <rect x="588" y="294" width="248" height="128" rx="12" class="card"/><rect x="588" y="294" width="6" height="128" rx="3" class="good"/><text x="610" y="324" class="small muted">Nutzbare Energie</text><text x="610" y="368" class="big">2,67 kWh</text><text x="610" y="394" class="small muted">Bereich 10 % bis 90 %.</text>
+  <rect x="858" y="294" width="252" height="128" rx="12" class="card"/><rect x="858" y="294" width="6" height="128" rx="3" class="warn"/><text x="880" y="324" class="small muted">Vertrauen</text><text x="880" y="368" class="big">66 %</text><text x="880" y="394" class="small muted">Steigt mit manuellen Korrekturen.</text>
+
+  <rect x="48" y="474" width="518" height="198" rx="12" class="card"/>
+  <text x="70" y="508" class="h2">Eingänge</text>
+  <line x1="70" y1="532" x2="544" y2="532" class="line"/>
+  <text x="70" y="564" class="label">Ladeleistung</text><text x="286" y="564" class="small muted">sensor.diy_battery_charge_power</text><text x="482" y="564" class="label">820 W</text>
+  <line x1="70" y1="584" x2="544" y2="584" class="line"/>
+  <text x="70" y="616" class="label">Entladeleistung</text><text x="286" y="616" class="small muted">sensor.diy_battery_discharge_power</text><text x="482" y="616" class="label">120 W</text>
+  <line x1="70" y1="636" x2="544" y2="636" class="line"/>
+  <text x="70" y="658" class="small muted">Netto wird über Zeit in kWh integriert.</text>
+
+  <rect x="592" y="474" width="518" height="198" rx="12" class="card"/>
+  <text x="614" y="508" class="h2">Kalibrierung</text>
+  <line x1="614" y1="532" x2="1088" y2="532" class="line"/>
+  <text x="614" y="564" class="label">Manueller SoC</text><rect x="940" y="542" width="76" height="34" rx="8" class="field"/><text x="958" y="564" class="label">64 %</text>
+  <line x1="614" y1="584" x2="1088" y2="584" class="line"/>
+  <text x="614" y="616" class="label">Wirkungsgrad</text><text x="940" y="616" class="label">95 / 95 %</text>
+  <line x1="614" y1="636" x2="1088" y2="636" class="line"/>
+  <text x="614" y="658" class="small muted">Jede Korrektur kalibriert den internen Energiezustand.</text>
+
+  <rect x="48" y="692" width="1062" height="44" rx="12" class="softinfo" stroke="#b7ddeb"/>
+  <text x="70" y="720" class="label" fill="#007fa3">HEMS-Nutzung:</text>
+  <text x="180" y="720" class="small">Wenn aktiviert, fließt der virtuelle SoC in Batterieschutz, nutzbare Ladung und Entladeleistung ein.</text>
+</svg>

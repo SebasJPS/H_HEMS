@@ -66,9 +66,7 @@ from .const import (
     OPT_MIN_BATTERY_SOC,
     OPT_MODE,
     OPT_PROTECT_BATTERY_SOC,
-    OPT_PV_AZIMUTH,
     OPT_PV_AVG_THRESHOLD,
-    OPT_PV_TILT,
     OPT_PV_THRESHOLD,
     OPT_RESPONSE_PROFILE,
     OPT_USE_VIRTUAL_BATTERY,
@@ -1452,9 +1450,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             OPT_MODE: "Betriebsart",
             OPT_RESPONSE_PROFILE: "Reaktionsmodus",
             OPT_PROTECT_BATTERY_SOC: "Batterieschutz-SoC",
-            OPT_PV_AZIMUTH: "PV-Ausrichtung",
             OPT_PV_AVG_THRESHOLD: "PV-Schwellwert 15 min",
-            OPT_PV_TILT: "PV-Neigung",
             OPT_PV_THRESHOLD: "PV-Schwellwert aktuell",
             OPT_USE_VIRTUAL_BATTERY: "Virtuelle Batterie im HEMS nutzen",
             OPT_VIRTUAL_BATTERY_ENABLED: "Virtuelle Batterie",
@@ -1555,8 +1551,8 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             return arrays
         return [
             PvArrayProfile(
-                azimuth=float(self.opts[OPT_PV_AZIMUTH]) % 360,
-                tilt=max(0.0, min(90.0, float(self.opts[OPT_PV_TILT]))),
+                azimuth=180.0,
+                tilt=30.0,
                 peak_power=1.0,
             )
         ]

@@ -229,8 +229,6 @@
       "protect_battery_soc": { "name": "Batterieschutz-SoC" },
       "pv_threshold": { "name": "PV-Schwellwert aktuell" },
       "pv_avg_threshold": { "name": "PV-Schwellwert 15 min" },
-      "pv_azimuth": { "name": "Fallback PV-Ausrichtung" },
-      "pv_tilt": { "name": "Fallback PV-Neigung" },
       "grid_import_limit": { "name": "Netzbezug-Toleranz" },
       "grid_hard_import_limit": { "name": "Netzbezug hart" },
       "battery_discharge_limit": { "name": "Entladegrenze Batterie" },

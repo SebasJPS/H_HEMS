@@ -211,8 +211,6 @@ Suggested mapping from the original automation:
 - `number.bb_hems_protect_battery_soc`
 - `number.bb_hems_pv_threshold`
 - `number.bb_hems_pv_avg_threshold`
-- `number.bb_hems_pv_azimuth` fallback when no PV arrays are configured
-- `number.bb_hems_pv_tilt` fallback when no PV arrays are configured
 - `number.bb_hems_grid_import_limit`
 - `number.bb_hems_grid_hard_import_limit`
 - `number.bb_hems_battery_discharge_limit`
@@ -267,8 +265,7 @@ The first controller version evaluates:
 - Sun elevation/azimuth from `sun.sun` and configured PV arrays. Each PV surface
   can have its own name, azimuth, tilt and module size, for example
   `Sued=180:30:4x430, Garage Ost=90:10:2x400`. `180:30:800` remains valid as a
-  simple 800 Wp surface. The old global azimuth/tilt numbers are kept as fallback
-  for simple setups.
+  simple 800 Wp surface.
 - Configured thresholds and operating mode.
 
 BB HEMS classifies the current PV window as `night`, `low_today`,

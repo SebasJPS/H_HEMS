@@ -65,8 +65,6 @@ OPT_GRID_HARD_IMPORT_LIMIT = "grid_hard_import_limit"
 OPT_BATTERY_DISCHARGE_LIMIT = "battery_discharge_limit"
 OPT_FLEXIBLE_LOAD_POWER = "flexible_load_power"
 OPT_HEATING_ROD_POWER = "heating_rod_power"
-OPT_PV_AZIMUTH = "pv_azimuth"
-OPT_PV_TILT = "pv_tilt"
 
 MODE_AUTO = "auto"
 MODE_ECO = "eco"
@@ -112,8 +110,6 @@ DEFAULTS = {
     OPT_BATTERY_DISCHARGE_LIMIT: 250.0,
     OPT_FLEXIBLE_LOAD_POWER: 250.0,
     OPT_HEATING_ROD_POWER: 1000.0,
-    OPT_PV_AZIMUTH: 180.0,
-    OPT_PV_TILT: 30.0,
 }
 
 GOOD_WEATHER = {

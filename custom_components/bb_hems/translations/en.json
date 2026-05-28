@@ -217,9 +217,7 @@
       "virtual_battery_max_soc": { "name": "Virtual battery max SoC" },
       "virtual_battery_manual_soc": { "name": "Virtual battery manual SoC" },
       "virtual_battery_charge_efficiency": { "name": "Virtual battery charge efficiency" },
-      "virtual_battery_discharge_efficiency": { "name": "Virtual battery discharge efficiency" },
-      "pv_azimuth": { "name": "Fallback PV azimuth" },
-      "pv_tilt": { "name": "Fallback PV tilt" }
+      "virtual_battery_discharge_efficiency": { "name": "Virtual battery discharge efficiency" }
     },
     "select": {
       "mode": { "name": "Operating mode" },

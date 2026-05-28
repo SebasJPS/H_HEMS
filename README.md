@@ -293,10 +293,27 @@ when their actual power is no longer covered by real surplus.
 Advanced device profiles can be configured as JSON in the load options. They
 are optional and exist alongside the simple switch lists. A profile can define
 `name`, `switch`, `category`, `power`, `power_sensor`, `priority`,
-`min_runtime`, `cooldown`, `allow_battery`, `temperature_sensor` and
-`target_temperature`. `min_runtime` and `cooldown` are minutes. Lower priority
-numbers are scheduled first. If `allow_battery` is `false`, BB HEMS only plans
-that device from real export/laufende Lasten and not from usable battery charge.
+`min_runtime`, `cooldown`, `allow_battery`, `control_mode`,
+`start_power_threshold`, `start_timeout`, `temperature_sensor` and
+`target_temperature`. `min_runtime`, `cooldown` and `start_timeout` are minutes.
+Lower priority numbers are scheduled first. If `allow_battery` is `false`, BB
+HEMS only plans that device from real export/running loads and not from usable
+battery charge.
+
+`control_mode` defaults to `managed`, which means BB HEMS may turn the device on
+and off according to the current surplus decision. Use `start_only` for
+appliances such as washing machines, dishwashers or dryers. In `start_only`
+mode, BB HEMS may start the device when surplus is available, but it will not
+turn the device off after a program has started. If a `power_sensor` reaches
+`start_power_threshold`, the appliance is treated as running. If no run is
+detected within `start_timeout`, BB HEMS can release the start switch again and
+then respects `cooldown` before another start. Without a `power_sensor`, BB HEMS
+cannot safely detect a running program and therefore does not use the timeout
+turn-off path. For `start_only`, `switch` may also point to a Home Assistant
+`button` entity; BB HEMS then calls `button.press`.
+
+Example start-only appliance:
+`[{"name":"Dishwasher","switch":"switch.dishwasher_start","category":"appliance","power":1200,"power_sensor":"sensor.dishwasher_power","priority":40,"control_mode":"start_only","start_power_threshold":20,"start_timeout":30,"cooldown":720,"allow_battery":false}]`
 
 Heating rods can additionally use optional temperature sensors and target
 temperatures. Both lists must follow the same order as the heating rod switches.

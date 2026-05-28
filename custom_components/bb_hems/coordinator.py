@@ -105,6 +105,9 @@ class LoadProfile:
     min_runtime: timedelta
     cooldown: timedelta
     allow_battery: bool
+    control_mode: str
+    start_power_threshold: float
+    start_timeout: timedelta
     is_on: bool
     blocked: bool = False
     blocked_reason: str | None = None
@@ -955,7 +958,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             result[entity_id] = {
                 key: str(raw)
                 for key, raw in state.items()
-                if key in {"last_on", "last_off"} and raw
+                if key in {"last_on", "last_off", "start_pending_at", "started_at"} and raw
             }
         return result
 
@@ -964,6 +967,15 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             return float(value)
         except (TypeError, ValueError):
             return default
+
+    def _safe_bool(self, value: Any, default: bool) -> bool:
+        if value is None:
+            return default
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.strip().lower() not in {"0", "false", "no", "off", "nein"}
+        return bool(value)
 
     async def _async_apply_flexible_load_control(self, data: HemsData) -> bool:
         """Switch configured flexible loads according to the current HEMS decision."""
@@ -982,6 +994,10 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         for load in flexible_loads:
             entity_id = load.entity_id
             should_be_on = entity_id in desired_on
+            if load.control_mode == "start_only" and not should_be_on:
+                if await self._async_apply_start_only_timeout(load):
+                    action_added = True
+                continue
             blocked_reason = self._device_switch_block_reason(load, should_be_on)
             if blocked_reason is not None:
                 self._add_action("Geräteprofil wartet", blocked_reason, "device")
@@ -990,15 +1006,15 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             service = "turn_on" if should_be_on else "turn_off"
             desired_state = STATE_ON if should_be_on else STATE_OFF
             state = self.hass.states.get(load.entity_id)
-            if state is None or state.state in {
-                desired_state,
-                STATE_UNAVAILABLE,
-                STATE_UNKNOWN,
-            }:
-                continue
-
             domain = entity_id.split(".", 1)[0]
-            if domain not in {"switch", "input_boolean"}:
+            is_start_button = load.control_mode == "start_only" and domain == "button"
+            if state is None or state.state in {STATE_UNAVAILABLE, STATE_UNKNOWN}:
+                continue
+            if not is_start_button and state.state == desired_state:
+                continue
+            if is_start_button:
+                service = "press"
+            elif domain not in {"switch", "input_boolean"}:
                 continue
 
             await self.hass.services.async_call(
@@ -1017,11 +1033,60 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
 
         return action_added
 
+    async def _async_apply_start_only_timeout(self, load: LoadProfile) -> bool:
+        """Turn a start-only release off only when no program started in time."""
+        state = self.hass.states.get(load.entity_id)
+        if state is None or state.state != STATE_ON:
+            return False
+        runtime_state = self._device_runtime_state.get(load.entity_id, {})
+        pending_at = self._parse_datetime(runtime_state.get("start_pending_at"))
+        if (
+            pending_at is None
+            or load.power_sensor is None
+            or load.start_timeout <= timedelta(seconds=0)
+            or datetime.now() - pending_at < load.start_timeout
+            or self._start_only_is_running(load)
+        ):
+            return False
+
+        domain = load.entity_id.split(".", 1)[0]
+        if domain not in {"switch", "input_boolean"}:
+            return False
+        await self.hass.services.async_call(
+            domain,
+            "turn_off",
+            {"entity_id": load.entity_id},
+            blocking=False,
+        )
+        self._add_action(
+            "Startfreigabe beendet",
+            f"{load.name} wurde nach {self._duration_text(load.start_timeout)} ohne Lauf-Erkennung wieder freigegeben.",
+            "device",
+        )
+        self._record_device_switch(load, False)
+        runtime_state.pop("start_pending_at", None)
+        return True
+
     def _device_switch_block_reason(
         self, load: LoadProfile, should_be_on: bool
     ) -> str | None:
         now = datetime.now()
-        state = self._device_runtime_state.get(load.entity_id, {})
+        state = self._device_runtime_state.setdefault(load.entity_id, {})
+        if load.control_mode == "start_only":
+            if should_be_on:
+                if self._start_only_is_running(load):
+                    state["started_at"] = state.get(
+                        "started_at"
+                    ) or now.isoformat(timespec="seconds")
+                    state.pop("start_pending_at", None)
+                    return f"{load.name} läuft bereits und wird nicht erneut gestartet."
+                pending_at = self._parse_datetime(state.get("start_pending_at"))
+                if pending_at is not None and now - pending_at < load.start_timeout:
+                    remaining = load.start_timeout - (now - pending_at)
+                    return f"{load.name} wartet noch {self._duration_text(remaining)} auf Lauf-Erkennung."
+            else:
+                return f"{load.name} ist Start-only und wird nach dem Start nicht ausgeschaltet."
+
         if should_be_on:
             last_off = self._parse_datetime(state.get("last_off"))
             if last_off is not None and now - last_off < load.cooldown:
@@ -1039,6 +1104,19 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         state = self._device_runtime_state.setdefault(load.entity_id, {})
         key = "last_on" if switched_on else "last_off"
         state[key] = datetime.now().isoformat(timespec="seconds")
+        if load.control_mode == "start_only":
+            if switched_on:
+                state["start_pending_at"] = state[key]
+                state.pop("started_at", None)
+            else:
+                state.pop("start_pending_at", None)
+
+    def _start_only_is_running(self, load: LoadProfile) -> bool:
+        return (
+            load.control_mode == "start_only"
+            and load.actual_power is not None
+            and load.actual_power >= load.start_power_threshold
+        )
 
     def _parse_datetime(self, value: str | None) -> datetime | None:
         if not value:
@@ -1114,6 +1192,9 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                     min_runtime=timedelta(seconds=0),
                     cooldown=timedelta(seconds=0),
                     allow_battery=True,
+                    control_mode="managed",
+                    start_power_threshold=20.0,
+                    start_timeout=timedelta(seconds=0),
                     is_on=self.hass.states.is_state(entity_id, STATE_ON),
                 )
             )
@@ -1140,6 +1221,9 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                     min_runtime=timedelta(seconds=0),
                     cooldown=timedelta(seconds=0),
                     allow_battery=True,
+                    control_mode="managed",
+                    start_power_threshold=20.0,
+                    start_timeout=timedelta(seconds=0),
                     is_on=is_on,
                     blocked=blocked,
                     blocked_reason=blocked_reason,
@@ -1183,32 +1267,84 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                 float(self.opts[OPT_HEATING_ROD_TEMPERATURE_HYSTERESIS]),
                 is_on,
             )
-            profiles.append(
-                LoadProfile(
-                    entity_id=entity_id,
-                    name=str(item.get("name") or entity_id),
-                    category=category,
-                    estimated_power=max(0.0, estimated_power),
-                    actual_power=self._positive_float_state(str(power_sensor))
-                    if power_sensor
-                    else None,
-                    power_sensor=str(power_sensor) if power_sensor else None,
-                    priority=int(self._safe_float(item.get("priority"), 50 + index)),
-                    min_runtime=timedelta(
-                        minutes=max(0.0, self._safe_float(item.get("min_runtime"), 0.0))
-                    ),
-                    cooldown=timedelta(
-                        minutes=max(0.0, self._safe_float(item.get("cooldown"), 0.0))
-                    ),
-                    allow_battery=bool(item.get("allow_battery", True)),
-                    is_on=is_on,
-                    blocked=blocked,
-                    blocked_reason=blocked_reason,
-                    temperature=temperature,
-                    target_temperature=target_temperature,
-                )
+            control_mode = str(item.get("control_mode") or "managed").strip().lower()
+            if control_mode not in {"managed", "start_only"}:
+                control_mode = "managed"
+            actual_power = (
+                self._positive_float_state(str(power_sensor)) if power_sensor else None
             )
+            profile = LoadProfile(
+                entity_id=entity_id,
+                name=str(item.get("name") or entity_id),
+                category=category,
+                estimated_power=max(0.0, estimated_power),
+                actual_power=actual_power,
+                power_sensor=str(power_sensor) if power_sensor else None,
+                priority=int(self._safe_float(item.get("priority"), 50 + index)),
+                min_runtime=timedelta(
+                    minutes=max(0.0, self._safe_float(item.get("min_runtime"), 0.0))
+                ),
+                cooldown=timedelta(
+                    minutes=max(0.0, self._safe_float(item.get("cooldown"), 0.0))
+                ),
+                allow_battery=self._safe_bool(item.get("allow_battery"), True),
+                control_mode=control_mode,
+                start_power_threshold=max(
+                    0.0, self._safe_float(item.get("start_power_threshold"), 20.0)
+                ),
+                start_timeout=timedelta(
+                    minutes=max(0.0, self._safe_float(item.get("start_timeout"), 30.0))
+                ),
+                is_on=is_on,
+                blocked=blocked,
+                blocked_reason=blocked_reason,
+                temperature=temperature,
+                target_temperature=target_temperature,
+            )
+            profiles.append(self._with_start_only_block(profile))
         return profiles
+
+    def _with_start_only_block(self, load: LoadProfile) -> LoadProfile:
+        if load.control_mode != "start_only":
+            return load
+        now = datetime.now()
+        state = self._device_runtime_state.get(load.entity_id, {})
+        if self._start_only_is_running(load):
+            runtime_state = self._device_runtime_state.setdefault(load.entity_id, {})
+            runtime_state["started_at"] = runtime_state.get(
+                "started_at"
+            ) or now.isoformat(timespec="seconds")
+            runtime_state.pop("start_pending_at", None)
+            return replace(load, blocked=True, blocked_reason=f"{load.name} läuft bereits.")
+        pending_at = self._parse_datetime(state.get("start_pending_at"))
+        if pending_at is not None and now - pending_at < load.start_timeout:
+            remaining = load.start_timeout - (now - pending_at)
+            return replace(
+                load,
+                blocked=True,
+                blocked_reason=f"{load.name} wartet noch {self._duration_text(remaining)} auf Lauf-Erkennung.",
+            )
+        if pending_at is not None and load.is_on:
+            if load.power_sensor is None:
+                return replace(
+                    load,
+                    blocked=True,
+                    blocked_reason=f"{load.name} wurde gestartet und hat keinen Leistungssensor für Lauf-Erkennung.",
+                )
+            return replace(
+                load,
+                blocked=True,
+                blocked_reason=f"{load.name} hat innerhalb des Start-Timeouts keinen Lauf erkannt.",
+            )
+        last_on = self._parse_datetime(state.get("last_on"))
+        if last_on is not None and now - last_on < load.cooldown:
+            remaining = load.cooldown - (now - last_on)
+            return replace(
+                load,
+                blocked=True,
+                blocked_reason=f"{load.name} bleibt wegen Cooldown noch {self._duration_text(remaining)} gesperrt.",
+            )
+        return load
 
     def _device_profile_items(self, value: Any) -> list[dict[str, Any]]:
         if not value:

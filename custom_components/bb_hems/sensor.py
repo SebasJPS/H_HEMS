@@ -39,6 +39,8 @@ from .const import (
     CONF_PV_FORECAST_NEXT_HOUR_SENSOR,
     CONF_PV_FORECAST_TODAY_SENSOR,
     CONF_PV_POWER_SENSORS,
+    CONF_START_ONLY_APPLIANCE_POWER_SENSORS,
+    CONF_START_ONLY_APPLIANCE_SWITCHES,
     CONF_SUN_ENTITY,
     CONF_SUNSHINE_SENSOR,
     CONF_WALLBOX_SWITCHES,
@@ -305,6 +307,7 @@ SENSORS: tuple[HemsSensorDescription, ...] = (
             data.configured_pv_sources
             + data.configured_batteries
             + data.configured_flexible_loads
+            + data.configured_start_only_appliances
             + data.configured_wallboxes
             + data.configured_heat_pumps
             + data.configured_heating_rods
@@ -387,6 +390,7 @@ class HemsSensor(HemsEntity, SensorEntity):
             "configured_pv_sources": data.configured_pv_sources,
             "configured_batteries": data.configured_batteries,
             "configured_flexible_loads": data.configured_flexible_loads,
+            "configured_start_only_appliances": data.configured_start_only_appliances,
             "configured_wallboxes": data.configured_wallboxes,
             "configured_heat_pumps": data.configured_heat_pumps,
             "configured_heating_rods": data.configured_heating_rods,
@@ -440,6 +444,12 @@ class HemsSensor(HemsEntity, SensorEntity):
             "flexible_load_switches": config.get(CONF_FLEXIBLE_LOAD_SWITCHES, []),
             "flexible_load_power_sensors": config.get(
                 CONF_FLEXIBLE_LOAD_POWER_SENSORS, []
+            ),
+            "start_only_appliance_switches": config.get(
+                CONF_START_ONLY_APPLIANCE_SWITCHES, []
+            ),
+            "start_only_appliance_power_sensors": config.get(
+                CONF_START_ONLY_APPLIANCE_POWER_SENSORS, []
             ),
             "device_profiles": config.get(CONF_DEVICE_PROFILES),
             "wallbox_switches": config.get(CONF_WALLBOX_SWITCHES, []),

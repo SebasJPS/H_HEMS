@@ -38,6 +38,8 @@ from .const import (
     CONF_PV_FORECAST_NEXT_HOUR_SENSOR,
     CONF_PV_FORECAST_TODAY_SENSOR,
     CONF_PV_POWER_SENSORS,
+    CONF_START_ONLY_APPLIANCE_POWER_SENSORS,
+    CONF_START_ONLY_APPLIANCE_SWITCHES,
     CONF_SUN_ENTITY,
     CONF_SUNSHINE_SENSOR,
     CONF_WALLBOX_SWITCHES,
@@ -69,6 +71,7 @@ from .const import (
     OPT_PV_AVG_THRESHOLD,
     OPT_PV_THRESHOLD,
     OPT_RESPONSE_PROFILE,
+    OPT_START_ONLY_APPLIANCE_POWER,
     OPT_USE_VIRTUAL_BATTERY,
     OPT_VIRTUAL_BATTERY_CAPACITY,
     OPT_VIRTUAL_BATTERY_CHARGE_EFFICIENCY,
@@ -181,6 +184,7 @@ class HemsData:
     configured_pv_sources: int
     configured_batteries: int
     configured_flexible_loads: int
+    configured_start_only_appliances: int
     configured_wallboxes: int
     configured_heat_pumps: int
     configured_heating_rods: int
@@ -606,6 +610,9 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                 len(battery_charge_sources),
             ),
             configured_flexible_loads=len(flexible_loads),
+            configured_start_only_appliances=len(
+                data.get(CONF_START_ONLY_APPLIANCE_SWITCHES, [])
+            ),
             configured_wallboxes=len(wallboxes),
             configured_heat_pumps=len(heat_pumps),
             configured_heating_rods=len(heating_rods),
@@ -1166,8 +1173,12 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         data = self.config_entry.data
         opts = self.opts
         flexible_power = float(opts[OPT_FLEXIBLE_LOAD_POWER])
+        start_only_power = float(opts[OPT_START_ONLY_APPLIANCE_POWER])
         heating_rod_power = float(opts[OPT_HEATING_ROD_POWER])
         flexible_power_sensors = data.get(CONF_FLEXIBLE_LOAD_POWER_SENSORS, [])
+        start_only_power_sensors = data.get(
+            CONF_START_ONLY_APPLIANCE_POWER_SENSORS, []
+        )
         heating_rod_power_sensors = data.get(CONF_HEATING_ROD_POWER_SENSORS, [])
         heating_rod_temperature_sensors = data.get(
             CONF_HEATING_ROD_TEMPERATURE_SENSORS, []
@@ -1198,6 +1209,27 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                     is_on=self.hass.states.is_state(entity_id, STATE_ON),
                 )
             )
+        for index, entity_id in enumerate(
+            data.get(CONF_START_ONLY_APPLIANCE_SWITCHES, [])
+        ):
+            power_sensor = self._matching_entity(start_only_power_sensors, index)
+            profile = LoadProfile(
+                entity_id=entity_id,
+                name=entity_id,
+                category="appliance",
+                estimated_power=start_only_power,
+                actual_power=self._positive_float_state(power_sensor),
+                power_sensor=power_sensor,
+                priority=40,
+                min_runtime=timedelta(seconds=0),
+                cooldown=timedelta(hours=12),
+                allow_battery=False,
+                control_mode="start_only",
+                start_power_threshold=20.0,
+                start_timeout=timedelta(minutes=30),
+                is_on=self.hass.states.is_state(entity_id, STATE_ON),
+            )
+            profiles.append(self._with_start_only_block(profile))
         for index, entity_id in enumerate(data.get(CONF_HEATING_ROD_SWITCHES, [])):
             power_sensor = self._matching_entity(heating_rod_power_sensors, index)
             temperature_sensor = self._matching_entity(
@@ -1631,6 +1663,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             OPT_PROTECT_BATTERY_SOC: "Batterieschutz-SoC",
             OPT_PV_AVG_THRESHOLD: "PV-Schwellwert 15 min",
             OPT_PV_THRESHOLD: "PV-Schwellwert aktuell",
+            OPT_START_ONLY_APPLIANCE_POWER: "Fallback-Leistung Nur-starten-Geräte",
             OPT_USE_VIRTUAL_BATTERY: "Virtuelle Batterie im HEMS nutzen",
             OPT_VIRTUAL_BATTERY_ENABLED: "Virtuelle Batterie",
             OPT_VIRTUAL_BATTERY_CAPACITY: "Virtuelle Batterie Kapazität",

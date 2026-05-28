@@ -217,6 +217,7 @@ Suggested mapping from the original automation:
 - `number.bb_hems_grid_import_price`
 - `number.bb_hems_grid_export_price`
 - `number.bb_hems_flexible_load_power` fallback/start estimate
+- `number.bb_hems_start_only_appliance_power` fallback/start estimate
 - `number.bb_hems_heating_rod_power` fallback/start estimate
 - `number.bb_hems_heating_rod_temperature_hysteresis`
 - `number.bb_hems_virtual_battery_capacity`
@@ -289,6 +290,20 @@ dashboard these fallback settings are hidden when matching real power sensors
 are configured, but the entities remain available for custom dashboards. This
 avoids switching all surplus consumers at once and also turns running loads off
 when their actual power is no longer covered by real surplus.
+
+The setup separates load categories so common devices can be configured without
+JSON:
+
+- Flexible loads: BB HEMS may turn them on and off according to surplus.
+- Start-only appliances: washing machines, dishwashers or dryers. BB HEMS may
+  start them via switch/input_boolean/button, but does not turn them off after a
+  start. Optional power sensors in the same order detect whether the program is
+  running. The start estimate comes from
+  `number.bb_hems_start_only_appliance_power`.
+- Heating rods: surplus consumers with optional temperature sensor and target
+  temperature.
+- Wallboxes and heat pumps: currently stored as their own groups for dedicated
+  strategies in later releases.
 
 Advanced device profiles can be configured as JSON in the load options. They
 are optional and exist alongside the simple switch lists. A profile can define

@@ -34,6 +34,8 @@ from .const import (
     CONF_PV_FORECAST_NEXT_HOUR_SENSOR,
     CONF_PV_FORECAST_TODAY_SENSOR,
     CONF_PV_POWER_SENSORS,
+    CONF_START_ONLY_APPLIANCE_POWER_SENSORS,
+    CONF_START_ONLY_APPLIANCE_SWITCHES,
     CONF_SUN_ENTITY,
     CONF_SUNSHINE_SENSOR,
     CONF_WALLBOX_SWITCHES,
@@ -48,6 +50,7 @@ from .const import (
 
 NUMERIC_DOMAINS = ["sensor", "number", "input_number"]
 SWITCHABLE_DOMAINS = ["switch", "input_boolean"]
+STARTABLE_DOMAINS = ["switch", "input_boolean", "button"]
 
 
 def _is_german(language: str | None) -> bool:
@@ -165,6 +168,12 @@ class BbHemsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 ),
                 CONF_FLEXIBLE_LOAD_POWER_SENSORS: _entity_list(
                     user_input.get(CONF_FLEXIBLE_LOAD_POWER_SENSORS)
+                ),
+                CONF_START_ONLY_APPLIANCE_SWITCHES: _entity_list(
+                    user_input.get(CONF_START_ONLY_APPLIANCE_SWITCHES)
+                ),
+                CONF_START_ONLY_APPLIANCE_POWER_SENSORS: _entity_list(
+                    user_input.get(CONF_START_ONLY_APPLIANCE_POWER_SENSORS)
                 ),
                 CONF_DEVICE_PROFILES: user_input.get(CONF_DEVICE_PROFILES),
                 CONF_WALLBOX_SWITCHES: _entity_list(
@@ -305,6 +314,12 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
                     CONF_FLEXIBLE_LOAD_POWER_SENSORS: _entity_list(
                         user_input.get(CONF_FLEXIBLE_LOAD_POWER_SENSORS)
                     ),
+                    CONF_START_ONLY_APPLIANCE_SWITCHES: _entity_list(
+                        user_input.get(CONF_START_ONLY_APPLIANCE_SWITCHES)
+                    ),
+                    CONF_START_ONLY_APPLIANCE_POWER_SENSORS: _entity_list(
+                        user_input.get(CONF_START_ONLY_APPLIANCE_POWER_SENSORS)
+                    ),
                     CONF_DEVICE_PROFILES: user_input.get(CONF_DEVICE_PROFILES),
                     CONF_WALLBOX_SWITCHES: _entity_list(
                         user_input.get(CONF_WALLBOX_SWITCHES)
@@ -375,6 +390,12 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
             ),
             CONF_FLEXIBLE_LOAD_POWER_SENSORS: _entity_list(
                 data.get(CONF_FLEXIBLE_LOAD_POWER_SENSORS)
+            ),
+            CONF_START_ONLY_APPLIANCE_SWITCHES: _entity_list(
+                data.get(CONF_START_ONLY_APPLIANCE_SWITCHES)
+            ),
+            CONF_START_ONLY_APPLIANCE_POWER_SENSORS: _entity_list(
+                data.get(CONF_START_ONLY_APPLIANCE_POWER_SENSORS)
             ),
             CONF_DEVICE_PROFILES: data.get(CONF_DEVICE_PROFILES),
             CONF_WALLBOX_SWITCHES: _entity_list(data.get(CONF_WALLBOX_SWITCHES)),
@@ -511,6 +532,18 @@ def _schema(defaults: dict[str, Any]) -> vol.Schema:
             vol.Optional(
                 CONF_FLEXIBLE_LOAD_POWER_SENSORS,
                 default=defaults.get(CONF_FLEXIBLE_LOAD_POWER_SENSORS, []),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+            ),
+            vol.Optional(
+                CONF_START_ONLY_APPLIANCE_SWITCHES,
+                default=defaults.get(CONF_START_ONLY_APPLIANCE_SWITCHES, []),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=STARTABLE_DOMAINS, multiple=True)
+            ),
+            vol.Optional(
+                CONF_START_ONLY_APPLIANCE_POWER_SENSORS,
+                default=defaults.get(CONF_START_ONLY_APPLIANCE_POWER_SENSORS, []),
             ): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
             ),
@@ -686,6 +719,18 @@ def _load_sources_schema(defaults: dict[str, Any]) -> vol.Schema:
             vol.Optional(
                 CONF_FLEXIBLE_LOAD_POWER_SENSORS,
                 default=defaults.get(CONF_FLEXIBLE_LOAD_POWER_SENSORS, []),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+            ),
+            vol.Optional(
+                CONF_START_ONLY_APPLIANCE_SWITCHES,
+                default=defaults.get(CONF_START_ONLY_APPLIANCE_SWITCHES, []),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=STARTABLE_DOMAINS, multiple=True)
+            ),
+            vol.Optional(
+                CONF_START_ONLY_APPLIANCE_POWER_SENSORS,
+                default=defaults.get(CONF_START_ONLY_APPLIANCE_POWER_SENSORS, []),
             ): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
             ),

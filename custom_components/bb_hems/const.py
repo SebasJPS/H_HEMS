@@ -30,6 +30,8 @@ CONF_SUNSHINE_SENSOR = "sunshine_sensor"
 CONF_SUN_ENTITY = "sun_entity"
 CONF_FLEXIBLE_LOAD_SWITCHES = "flexible_load_switches"
 CONF_FLEXIBLE_LOAD_POWER_SENSORS = "flexible_load_power_sensors"
+CONF_START_ONLY_APPLIANCE_SWITCHES = "start_only_appliance_switches"
+CONF_START_ONLY_APPLIANCE_POWER_SENSORS = "start_only_appliance_power_sensors"
 CONF_DEVICE_PROFILES = "device_profiles"
 CONF_WALLBOX_SWITCHES = "wallbox_switches"
 CONF_HEAT_PUMP_SWITCHES = "heat_pump_switches"
@@ -64,6 +66,7 @@ OPT_GRID_IMPORT_LIMIT = "grid_import_limit"
 OPT_GRID_HARD_IMPORT_LIMIT = "grid_hard_import_limit"
 OPT_BATTERY_DISCHARGE_LIMIT = "battery_discharge_limit"
 OPT_FLEXIBLE_LOAD_POWER = "flexible_load_power"
+OPT_START_ONLY_APPLIANCE_POWER = "start_only_appliance_power"
 OPT_HEATING_ROD_POWER = "heating_rod_power"
 
 MODE_AUTO = "auto"
@@ -109,6 +112,7 @@ DEFAULTS = {
     OPT_GRID_HARD_IMPORT_LIMIT: 350.0,
     OPT_BATTERY_DISCHARGE_LIMIT: 250.0,
     OPT_FLEXIBLE_LOAD_POWER: 250.0,
+    OPT_START_ONLY_APPLIANCE_POWER: 1200.0,
     OPT_HEATING_ROD_POWER: 1000.0,
 }
 

@@ -16,6 +16,7 @@ from .const import (
     CONF_BATTERY_DISCHARGE_SENSORS,
     CONF_BATTERY_SOC_SENSORS,
     CONF_CLOUD_SENSOR,
+    CONF_DEVICE_PROFILES,
     CONF_FLEXIBLE_LOAD_POWER_SENSORS,
     CONF_FLEXIBLE_LOAD_SWITCHES,
     CONF_GRID_AVERAGE_SENSOR,
@@ -165,6 +166,7 @@ class BbHemsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_FLEXIBLE_LOAD_POWER_SENSORS: _entity_list(
                     user_input.get(CONF_FLEXIBLE_LOAD_POWER_SENSORS)
                 ),
+                CONF_DEVICE_PROFILES: user_input.get(CONF_DEVICE_PROFILES),
                 CONF_WALLBOX_SWITCHES: _entity_list(
                     user_input.get(CONF_WALLBOX_SWITCHES)
                 ),
@@ -303,6 +305,7 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
                     CONF_FLEXIBLE_LOAD_POWER_SENSORS: _entity_list(
                         user_input.get(CONF_FLEXIBLE_LOAD_POWER_SENSORS)
                     ),
+                    CONF_DEVICE_PROFILES: user_input.get(CONF_DEVICE_PROFILES),
                     CONF_WALLBOX_SWITCHES: _entity_list(
                         user_input.get(CONF_WALLBOX_SWITCHES)
                     ),
@@ -373,6 +376,7 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
             CONF_FLEXIBLE_LOAD_POWER_SENSORS: _entity_list(
                 data.get(CONF_FLEXIBLE_LOAD_POWER_SENSORS)
             ),
+            CONF_DEVICE_PROFILES: data.get(CONF_DEVICE_PROFILES),
             CONF_WALLBOX_SWITCHES: _entity_list(data.get(CONF_WALLBOX_SWITCHES)),
             CONF_HEAT_PUMP_SWITCHES: _entity_list(data.get(CONF_HEAT_PUMP_SWITCHES)),
             CONF_HEATING_ROD_SWITCHES: _entity_list(
@@ -509,6 +513,9 @@ def _schema(defaults: dict[str, Any]) -> vol.Schema:
                 default=defaults.get(CONF_FLEXIBLE_LOAD_POWER_SENSORS, []),
             ): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+            ),
+            _optional_text(defaults, CONF_DEVICE_PROFILES): selector.TextSelector(
+                selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT)
             ),
             vol.Optional(
                 CONF_WALLBOX_SWITCHES,
@@ -681,6 +688,9 @@ def _load_sources_schema(defaults: dict[str, Any]) -> vol.Schema:
                 default=defaults.get(CONF_FLEXIBLE_LOAD_POWER_SENSORS, []),
             ): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+            ),
+            _optional_text(defaults, CONF_DEVICE_PROFILES): selector.TextSelector(
+                selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT)
             ),
             vol.Optional(
                 CONF_WALLBOX_SWITCHES,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
+import json
 import logging
 from typing import Any
 
@@ -19,6 +20,7 @@ from .const import (
     CONF_BATTERY_DISCHARGE_SENSORS,
     CONF_BATTERY_SOC_SENSORS,
     CONF_CLOUD_SENSOR,
+    CONF_DEVICE_PROFILES,
     CONF_FLEXIBLE_LOAD_POWER_SENSORS,
     CONF_FLEXIBLE_LOAD_SWITCHES,
     CONF_GRID_AVERAGE_SENSOR,
@@ -96,11 +98,15 @@ class LoadProfile:
     """A controllable surplus load with a simple smart scheduling profile."""
 
     entity_id: str
+    name: str
     category: str
     estimated_power: float
     actual_power: float | None
     power_sensor: str | None
     priority: int
+    min_runtime: timedelta
+    cooldown: timedelta
+    allow_battery: bool
     is_on: bool
     blocked: bool = False
     blocked_reason: str | None = None
@@ -177,6 +183,7 @@ class HemsData:
     configured_wallboxes: int
     configured_heat_pumps: int
     configured_heating_rods: int
+    configured_profile_loads: int
     blocked_heating_rods: int
     response_profile: str
     switch_on_delay_seconds: int
@@ -229,6 +236,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         self._virtual_battery_last_update: datetime | None = None
         self._virtual_battery_manual_reference: float | None = None
         self._virtual_battery_corrections: int = 0
+        self._device_runtime_state: dict[str, dict[str, str]] = {}
         self._learning_store = Store(
             hass, LEARNING_STORE_VERSION, f"{DOMAIN}_{entry.entry_id}_learning"
         )
@@ -268,6 +276,9 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         self._virtual_battery_corrections = int(
             self._safe_float(stored.get("virtual_battery_corrections"), 0.0)
         )
+        self._device_runtime_state = self._safe_device_runtime_state(
+            stored.get("device_runtime_state")
+        )
         self._learning_buckets = self._safe_learning_buckets(
             stored.get("learning_buckets")
         )
@@ -293,6 +304,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                     self._virtual_battery_manual_reference
                 ),
                 "virtual_battery_corrections": self._virtual_battery_corrections,
+                "device_runtime_state": self._device_runtime_state,
                 "learning_buckets": self._learning_buckets,
                 "action_history": self._action_history,
             }
@@ -590,6 +602,9 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             configured_wallboxes=len(wallboxes),
             configured_heat_pumps=len(heat_pumps),
             configured_heating_rods=len(heating_rods),
+            configured_profile_loads=len(
+                self._device_profile_items(data.get(CONF_DEVICE_PROFILES))
+            ),
             blocked_heating_rods=sum(1 for load in controlled_loads if load.blocked),
             response_profile=str(opts[OPT_RESPONSE_PROFILE]),
             switch_on_delay_seconds=int(switch_on_delay.total_seconds()),
@@ -926,6 +941,20 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             )
         return rows
 
+    def _safe_device_runtime_state(self, value: Any) -> dict[str, dict[str, str]]:
+        if not isinstance(value, dict):
+            return {}
+        result: dict[str, dict[str, str]] = {}
+        for entity_id, state in value.items():
+            if not isinstance(entity_id, str) or not isinstance(state, dict):
+                continue
+            result[entity_id] = {
+                key: str(raw)
+                for key, raw in state.items()
+                if key in {"last_on", "last_off"} and raw
+            }
+        return result
+
     def _safe_float(self, value: Any, default: float) -> float:
         try:
             return float(value)
@@ -949,6 +978,11 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         for load in flexible_loads:
             entity_id = load.entity_id
             should_be_on = entity_id in desired_on
+            blocked_reason = self._device_switch_block_reason(load, should_be_on)
+            if blocked_reason is not None:
+                self._add_action("Geräteprofil wartet", blocked_reason, "device")
+                action_added = True
+                continue
             service = "turn_on" if should_be_on else "turn_off"
             desired_state = STATE_ON if should_be_on else STATE_OFF
             state = self.hass.states.get(load.entity_id)
@@ -971,12 +1005,51 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             )
             self._add_action(
                 "Verbraucher geschaltet",
-                f"{entity_id} wurde {'eingeschaltet' if should_be_on else 'ausgeschaltet'}. {data.scheduler_reason}",
+                f"{load.name} wurde {'eingeschaltet' if should_be_on else 'ausgeschaltet'}. {data.scheduler_reason}",
                 "device",
             )
+            self._record_device_switch(load, should_be_on)
             action_added = True
 
         return action_added
+
+    def _device_switch_block_reason(
+        self, load: LoadProfile, should_be_on: bool
+    ) -> str | None:
+        now = datetime.now()
+        state = self._device_runtime_state.get(load.entity_id, {})
+        if should_be_on:
+            last_off = self._parse_datetime(state.get("last_off"))
+            if last_off is not None and now - last_off < load.cooldown:
+                remaining = load.cooldown - (now - last_off)
+                return f"{load.name} bleibt wegen Cooldown noch {self._duration_text(remaining)} aus."
+            return None
+
+        last_on = self._parse_datetime(state.get("last_on"))
+        if load.is_on and last_on is not None and now - last_on < load.min_runtime:
+            remaining = load.min_runtime - (now - last_on)
+            return f"{load.name} bleibt wegen Mindestlaufzeit noch {self._duration_text(remaining)} an."
+        return None
+
+    def _record_device_switch(self, load: LoadProfile, switched_on: bool) -> None:
+        state = self._device_runtime_state.setdefault(load.entity_id, {})
+        key = "last_on" if switched_on else "last_off"
+        state[key] = datetime.now().isoformat(timespec="seconds")
+
+    def _parse_datetime(self, value: str | None) -> datetime | None:
+        if not value:
+            return None
+        try:
+            return datetime.fromisoformat(value)
+        except ValueError:
+            return None
+
+    def _duration_text(self, value: timedelta) -> str:
+        seconds = max(0, int(value.total_seconds()))
+        minutes = seconds // 60
+        if minutes:
+            return f"{minutes} min"
+        return f"{seconds} s"
 
     async def _async_turn_off_temperature_blocked_loads(self, data: HemsData) -> bool:
         """Immediately stop heating rods that reached their target temperature."""
@@ -1028,11 +1101,15 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             profiles.append(
                 LoadProfile(
                     entity_id=entity_id,
+                    name=entity_id,
                     category="flexible_load",
                     estimated_power=flexible_power,
                     actual_power=self._positive_float_state(power_sensor),
                     power_sensor=power_sensor,
                     priority=10,
+                    min_runtime=timedelta(seconds=0),
+                    cooldown=timedelta(seconds=0),
+                    allow_battery=True,
                     is_on=self.hass.states.is_state(entity_id, STATE_ON),
                 )
             )
@@ -1050,11 +1127,76 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             profiles.append(
                 LoadProfile(
                     entity_id=entity_id,
+                    name=entity_id,
                     category="heating_rod",
                     estimated_power=heating_rod_power,
                     actual_power=self._positive_float_state(power_sensor),
                     power_sensor=power_sensor,
                     priority=30,
+                    min_runtime=timedelta(seconds=0),
+                    cooldown=timedelta(seconds=0),
+                    allow_battery=True,
+                    is_on=is_on,
+                    blocked=blocked,
+                    blocked_reason=blocked_reason,
+                    temperature=temperature,
+                    target_temperature=target_temperature,
+                )
+            )
+        profiles.extend(self._configured_device_profiles())
+        deduplicated: dict[str, LoadProfile] = {}
+        for profile in profiles:
+            deduplicated[profile.entity_id] = profile
+        return list(deduplicated.values())
+
+    def _configured_device_profiles(self) -> list[LoadProfile]:
+        """Return advanced per-device profiles from JSON configuration."""
+        raw_profiles = self._device_profile_items(
+            self.config_entry.data.get(CONF_DEVICE_PROFILES)
+        )
+        profiles: list[LoadProfile] = []
+        for index, item in enumerate(raw_profiles):
+            entity_id = str(item.get("switch") or item.get("entity_id") or "").strip()
+            if not entity_id:
+                continue
+            category = str(item.get("category") or "flexible_load")
+            estimated_power = self._safe_float(
+                item.get("power") or item.get("estimated_power"),
+                float(self.opts[OPT_FLEXIBLE_LOAD_POWER]),
+            )
+            power_sensor = item.get("power_sensor")
+            temperature_sensor = item.get("temperature_sensor")
+            temperature = self._float_state(str(temperature_sensor), None) if temperature_sensor else None
+            target_temperature = (
+                self._safe_float(item.get("target_temperature"), 0.0)
+                if item.get("target_temperature") is not None
+                else None
+            )
+            is_on = self.hass.states.is_state(entity_id, STATE_ON)
+            blocked, blocked_reason = self._heating_rod_temperature_block(
+                temperature,
+                target_temperature,
+                float(self.opts[OPT_HEATING_ROD_TEMPERATURE_HYSTERESIS]),
+                is_on,
+            )
+            profiles.append(
+                LoadProfile(
+                    entity_id=entity_id,
+                    name=str(item.get("name") or entity_id),
+                    category=category,
+                    estimated_power=max(0.0, estimated_power),
+                    actual_power=self._positive_float_state(str(power_sensor))
+                    if power_sensor
+                    else None,
+                    power_sensor=str(power_sensor) if power_sensor else None,
+                    priority=int(self._safe_float(item.get("priority"), 50 + index)),
+                    min_runtime=timedelta(
+                        minutes=max(0.0, self._safe_float(item.get("min_runtime"), 0.0))
+                    ),
+                    cooldown=timedelta(
+                        minutes=max(0.0, self._safe_float(item.get("cooldown"), 0.0))
+                    ),
+                    allow_battery=bool(item.get("allow_battery", True)),
                     is_on=is_on,
                     blocked=blocked,
                     blocked_reason=blocked_reason,
@@ -1063,6 +1205,21 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                 )
             )
         return profiles
+
+    def _device_profile_items(self, value: Any) -> list[dict[str, Any]]:
+        if not value:
+            return []
+        if isinstance(value, list):
+            return [item for item in value if isinstance(item, dict)]
+        try:
+            parsed = json.loads(str(value))
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return []
+        if isinstance(parsed, list):
+            return [item for item in parsed if isinstance(item, dict)]
+        if isinstance(parsed, dict):
+            return [parsed]
+        return []
 
     def _matching_entity(self, entity_ids: list[str], index: int) -> str | None:
         """Return the same-position entity from a parallel entity list."""
@@ -1119,44 +1276,49 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         """Select the loads that fit into the current surplus budget."""
         active_power = sum(load.scheduling_power for load in loads if load.is_on)
         current_export = max(0.0, -grid_power)
-        budget = max(
+        budget_with_battery = max(
             0.0,
             current_export
             + active_power
             + usable_battery_charge
             - max(0.0, battery_discharge),
         )
+        budget_without_battery = max(
+            0.0,
+            current_export + active_power - max(0.0, battery_discharge),
+        )
         if not allowed:
-            return (), 0.0, budget, "Smart Scheduler blockiert alle Überschussverbraucher, weil die zentrale HEMS-Freigabe fehlt."
+            return (), 0.0, budget_with_battery, "Smart Scheduler blockiert alle Überschussverbraucher, weil die zentrale HEMS-Freigabe fehlt."
         available_loads = [load for load in loads if not load.blocked]
         blocked_loads = [load for load in loads if load.blocked]
         if not loads:
-            return (), 0.0, budget, "Smart Scheduler hat keine schaltbaren Überschussverbraucher konfiguriert."
+            return (), 0.0, budget_with_battery, "Smart Scheduler hat keine schaltbaren Überschussverbraucher konfiguriert."
         if not available_loads:
             reason = "Alle HEMS-Verbraucher sind blockiert."
             if blocked_loads:
                 reason = "Alle HEMS-Verbraucher sind blockiert: " + "; ".join(
                     load.blocked_reason or load.entity_id for load in blocked_loads
                 )
-            return (), 0.0, budget, reason
+            return (), 0.0, budget_with_battery, reason
 
         selected: list[LoadProfile] = []
         used_power = 0.0
         for load in sorted(available_loads, key=lambda item: (item.priority, not item.is_on, item.estimated_power)):
             load_power = load.scheduling_power
+            budget = budget_with_battery if load.allow_battery else budget_without_battery
             if load_power <= 0 or used_power + load_power <= budget:
                 selected.append(load)
                 used_power += load_power
 
         if not selected:
-            return (), 0.0, budget, f"Smart Scheduler wartet: echtes Überschussbudget {budget:.0f} W reicht für keinen konfigurierten Verbraucher. Export {current_export:.0f} W, laufende Lasten {active_power:.0f} W, nutzbare Batterieladung {usable_battery_charge:.0f} W, Batterieentladung {battery_discharge:.0f} W."
+            return (), 0.0, budget_with_battery, f"Smart Scheduler wartet: echtes Überschussbudget {budget_with_battery:.0f} W reicht für keinen konfigurierten Verbraucher. Export {current_export:.0f} W, laufende Lasten {active_power:.0f} W, nutzbare Batterieladung {usable_battery_charge:.0f} W, Batterieentladung {battery_discharge:.0f} W."
 
-        names = ", ".join(load.entity_id for load in selected)
+        names = ", ".join(load.name for load in selected)
         return (
             tuple(load.entity_id for load in selected),
             used_power,
-            budget,
-            f"Smart Scheduler plant {len(selected)} Verbraucher mit ca. {used_power:.0f} W: {names}. Echtes Überschussbudget: {budget:.0f} W (Export {current_export:.0f} W + laufende Lasten {active_power:.0f} W + nutzbare Batterieladung {usable_battery_charge:.0f} W - Batterieentladung {battery_discharge:.0f} W).",
+            budget_with_battery,
+            f"Smart Scheduler plant {len(selected)} Verbraucher mit ca. {used_power:.0f} W: {names}. Echtes Überschussbudget: {budget_with_battery:.0f} W (Export {current_export:.0f} W + laufende Lasten {active_power:.0f} W + nutzbare Batterieladung {usable_battery_charge:.0f} W - Batterieentladung {battery_discharge:.0f} W).",
         )
 
     def _flexible_load_decision_is_stable(

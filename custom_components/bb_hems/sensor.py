@@ -21,6 +21,7 @@ from .const import (
     CONF_BATTERY_DISCHARGE_SENSORS,
     CONF_BATTERY_SOC_SENSORS,
     CONF_CLOUD_SENSOR,
+    CONF_DEVICE_PROFILES,
     CONF_FLEXIBLE_LOAD_POWER_SENSORS,
     CONF_FLEXIBLE_LOAD_SWITCHES,
     CONF_GRID_AVERAGE_SENSOR,
@@ -307,6 +308,7 @@ SENSORS: tuple[HemsSensorDescription, ...] = (
             + data.configured_wallboxes
             + data.configured_heat_pumps
             + data.configured_heating_rods
+            + data.configured_profile_loads
         ),
     ),
 )
@@ -388,6 +390,7 @@ class HemsSensor(HemsEntity, SensorEntity):
             "configured_wallboxes": data.configured_wallboxes,
             "configured_heat_pumps": data.configured_heat_pumps,
             "configured_heating_rods": data.configured_heating_rods,
+            "configured_profile_loads": data.configured_profile_loads,
             "blocked_heating_rods": data.blocked_heating_rods,
             "response_profile": data.response_profile,
             "switch_on_delay_seconds": data.switch_on_delay_seconds,
@@ -438,6 +441,7 @@ class HemsSensor(HemsEntity, SensorEntity):
             "flexible_load_power_sensors": config.get(
                 CONF_FLEXIBLE_LOAD_POWER_SENSORS, []
             ),
+            "device_profiles": config.get(CONF_DEVICE_PROFILES),
             "wallbox_switches": config.get(CONF_WALLBOX_SWITCHES, []),
             "heat_pump_switches": config.get(CONF_HEAT_PUMP_SWITCHES, []),
             "heating_rod_switches": config.get(CONF_HEATING_ROD_SWITCHES, []),

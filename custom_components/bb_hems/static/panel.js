@@ -21,7 +21,7 @@ const ALIASES = {
   mode_select: ["select.bb_hems_mode", "betriebsart", "operating mode"],
 };
 
-const BB_HEMS_VERSION = "0.6.1";
+const BB_HEMS_VERSION = "0.7.0";
 const I18N = {
   de: {
     subtitle: "Was HEMS gerade entscheidet, schaltet und einspart",
@@ -489,8 +489,9 @@ function nextCandidateTile(attrs) {
 }
 
 function loadTiles(attrs, states) {
+  const flexibleCount = Number(attrs.configured_flexible_loads || 0) + Number(attrs.configured_profile_loads || 0);
   return [
-    loadTile("Flexible Lasten", attrs.flexible_load_switches, attrs.configured_flexible_loads, "info", "Dürfen bei Überschuss starten.", attrs.scheduled_surplus_loads),
+    loadTile("Flexible Lasten", attrs.flexible_load_switches, flexibleCount, "info", "Dürfen bei Überschuss starten. Geräteprofile werden mitgezählt.", attrs.scheduled_surplus_loads),
     loadTile("Heizstäbe", attrs.heating_rod_switches, attrs.configured_heating_rods, "good", "Werden als Überschussverbraucher priorisiert.", attrs.scheduled_surplus_loads, Number(attrs.blocked_heating_rods || 0)),
     loadTile("Wallboxen", attrs.wallbox_switches, attrs.configured_wallboxes, "warn", "Aktuell als Gruppe erfasst, Detailstrategie folgt.", attrs.scheduled_surplus_loads),
     loadTile("Wärmepumpen", attrs.heat_pump_switches, attrs.configured_heat_pumps, "warn", "Aktuell als Gruppe erfasst, Detailstrategie folgt.", attrs.scheduled_surplus_loads),

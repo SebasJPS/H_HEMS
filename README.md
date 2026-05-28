@@ -43,6 +43,8 @@ This repository contains an initial custom integration scaffold:
 - Optional grid import and export price sensors for more realistic HEMS savings.
 - Dashboard language follows Home Assistant and can be toggled between German
   and English.
+- Advanced per-device profiles with name, category, switch, power estimate,
+  priority, minimum runtime, cooldown and battery usage.
 
 The current version calculates central decisions, directly switches configured
 flexible loads and heating rods, estimates the energy shifted into surplus
@@ -148,6 +150,7 @@ Suggested mapping from the original automation:
 | Sun position | `sun.sun` |
 | Flexible loads | `switch.a8m` |
 | Flexible load power sensors | `sensor.a8m_power` |
+| Device profiles | `[{"name":"Pool","switch":"switch.pool","category":"heating_rod","power":1200,"priority":20,"min_runtime":10,"cooldown":15,"allow_battery":false}]` |
 | Heating rods | `switch.boiler_heating_rod` |
 | Heating rod power sensors | `sensor.boiler_heating_rod_power` |
 | Heating rod temperature sensors | `sensor.pool_temperature` |
@@ -288,6 +291,14 @@ dashboard these fallback settings are hidden when matching real power sensors
 are configured, but the entities remain available for custom dashboards. This
 avoids switching all surplus consumers at once and also turns running loads off
 when their actual power is no longer covered by real surplus.
+
+Advanced device profiles can be configured as JSON in the load options. They
+are optional and exist alongside the simple switch lists. A profile can define
+`name`, `switch`, `category`, `power`, `power_sensor`, `priority`,
+`min_runtime`, `cooldown`, `allow_battery`, `temperature_sensor` and
+`target_temperature`. `min_runtime` and `cooldown` are minutes. Lower priority
+numbers are scheduled first. If `allow_battery` is `false`, BB HEMS only plans
+that device from real export/laufende Lasten and not from usable battery charge.
 
 Heating rods can additionally use optional temperature sensors and target
 temperatures. Both lists must follow the same order as the heating rod switches.

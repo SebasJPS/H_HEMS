@@ -22,6 +22,8 @@ from .const import (
     CONF_FLEXIBLE_LOAD_POWER_SENSORS,
     CONF_FLEXIBLE_LOAD_SWITCHES,
     CONF_GRID_AVERAGE_SENSOR,
+    CONF_GRID_EXPORT_PRICE_SENSOR,
+    CONF_GRID_IMPORT_PRICE_SENSOR,
     CONF_GRID_POWER_SENSOR,
     CONF_HEAT_PUMP_SWITCHES,
     CONF_HEATING_ROD_POWER_SENSORS,
@@ -52,8 +54,10 @@ from .const import (
     OPT_BATTERY_DISCHARGE_LIMIT,
     OPT_DASHBOARD_ENABLED,
     OPT_FLEXIBLE_LOAD_POWER,
+    OPT_GRID_EXPORT_PRICE,
     OPT_GRID_HARD_IMPORT_LIMIT,
     OPT_GRID_IMPORT_LIMIT,
+    OPT_GRID_IMPORT_PRICE,
     OPT_HEATING_ROD_POWER,
     OPT_HEATING_ROD_TEMPERATURE_HYSTERESIS,
     OPT_MIN_BATTERY_SOC,
@@ -80,7 +84,6 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-ESTIMATED_GRID_PRICE_EUR_PER_KWH = 0.32
 LEARNING_STORE_VERSION = 1
 LEARNING_SAVE_INTERVAL = timedelta(minutes=5)
 LEARNING_MIN_SAMPLES = 12
@@ -129,6 +132,10 @@ class HemsData:
 
     grid_power: float
     grid_average: float
+    grid_import_price: float
+    grid_export_price: float
+    savings_price: float
+    price_reason: str
     pv_power: float
     pv_average: float
     pv_forecast_today: float | None
@@ -324,6 +331,17 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         grid_average = self._float_state(
             data.get(CONF_GRID_AVERAGE_SENSOR), grid_power
         )
+        grid_import_price = self._price_value(
+            CONF_GRID_IMPORT_PRICE_SENSOR, OPT_GRID_IMPORT_PRICE
+        )
+        grid_export_price = self._price_value(
+            CONF_GRID_EXPORT_PRICE_SENSOR, OPT_GRID_EXPORT_PRICE
+        )
+        savings_price = max(0.0, grid_import_price - grid_export_price)
+        price_reason = (
+            f"Ersparnis je verschobener kWh: Netzbezug {grid_import_price:.3f} EUR/kWh "
+            f"minus Einspeisevergütung {grid_export_price:.3f} EUR/kWh."
+        )
         pv_sources = data.get(CONF_PV_POWER_SENSORS, [])
         battery_soc_sources = data.get(CONF_BATTERY_SOC_SENSORS, [])
         battery_discharge_sources = data.get(CONF_BATTERY_DISCHARGE_SENSORS, [])
@@ -501,9 +519,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         shifted_energy_today = self._update_shifted_energy_estimate(
             scheduled_power if flexible_loads_allowed else 0.0
         )
-        estimated_savings_today = (
-            shifted_energy_today * ESTIMATED_GRID_PRICE_EUR_PER_KWH
-        )
+        estimated_savings_today = shifted_energy_today * savings_price
         learning = self._update_learning_bucket(
             flexible_loads_allowed=flexible_loads_allowed,
             scheduled_power=scheduled_power,
@@ -525,6 +541,10 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         return HemsData(
             grid_power=grid_power,
             grid_average=grid_average,
+            grid_import_price=grid_import_price,
+            grid_export_price=grid_export_price,
+            savings_price=savings_price,
+            price_reason=price_reason,
             pv_power=pv_power,
             pv_average=pv_average,
             pv_forecast_today=pv_forecast_today,
@@ -1319,6 +1339,15 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         value = self._float_state(entity_id, None)
         if value is None:
             return None
+        return max(0.0, value)
+
+    def _price_value(self, sensor_key: str, option_key: str) -> float:
+        configured = self.config_entry.data.get(sensor_key)
+        value = self._float_state(configured, None)
+        if value is None:
+            value = float(self.opts[option_key])
+        if value > 10:
+            value = value / 100
         return max(0.0, value)
 
     def _pv_arrays(self, specs: str | None) -> list[PvArrayProfile]:

@@ -19,6 +19,8 @@ from .const import (
     CONF_FLEXIBLE_LOAD_POWER_SENSORS,
     CONF_FLEXIBLE_LOAD_SWITCHES,
     CONF_GRID_AVERAGE_SENSOR,
+    CONF_GRID_EXPORT_PRICE_SENSOR,
+    CONF_GRID_IMPORT_PRICE_SENSOR,
     CONF_GRID_POWER_SENSOR,
     CONF_HEAT_PUMP_SWITCHES,
     CONF_HEATING_ROD_POWER_SENSORS,
@@ -141,6 +143,12 @@ class BbHemsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_BATTERY_CHARGE_SENSORS: _entity_list(
                     user_input.get(CONF_BATTERY_CHARGE_SENSORS)
                 ),
+                CONF_GRID_IMPORT_PRICE_SENSOR: user_input.get(
+                    CONF_GRID_IMPORT_PRICE_SENSOR
+                ),
+                CONF_GRID_EXPORT_PRICE_SENSOR: user_input.get(
+                    CONF_GRID_EXPORT_PRICE_SENSOR
+                ),
                 CONF_VIRTUAL_BATTERY_CHARGE_SENSOR: user_input.get(
                     CONF_VIRTUAL_BATTERY_CHARGE_SENSOR
                 ),
@@ -240,6 +248,12 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
                     ),
                     CONF_BATTERY_CHARGE_SENSORS: _entity_list(
                         user_input.get(CONF_BATTERY_CHARGE_SENSORS)
+                    ),
+                    CONF_GRID_IMPORT_PRICE_SENSOR: user_input.get(
+                        CONF_GRID_IMPORT_PRICE_SENSOR
+                    ),
+                    CONF_GRID_EXPORT_PRICE_SENSOR: user_input.get(
+                        CONF_GRID_EXPORT_PRICE_SENSOR
                     ),
                     CONF_VIRTUAL_BATTERY_CHARGE_SENSOR: user_input.get(
                         CONF_VIRTUAL_BATTERY_CHARGE_SENSOR
@@ -341,6 +355,8 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
             CONF_BATTERY_CHARGE_SENSORS: _entity_list(
                 data.get(CONF_BATTERY_CHARGE_SENSORS)
             ),
+            CONF_GRID_IMPORT_PRICE_SENSOR: data.get(CONF_GRID_IMPORT_PRICE_SENSOR),
+            CONF_GRID_EXPORT_PRICE_SENSOR: data.get(CONF_GRID_EXPORT_PRICE_SENSOR),
             CONF_VIRTUAL_BATTERY_CHARGE_SENSOR: data.get(
                 CONF_VIRTUAL_BATTERY_CHARGE_SENSOR
             ),
@@ -437,6 +453,16 @@ def _schema(defaults: dict[str, Any]) -> vol.Schema:
                 default=defaults.get(CONF_BATTERY_CHARGE_SENSORS, []),
             ): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+            ),
+            _optional_entity(
+                defaults, CONF_GRID_IMPORT_PRICE_SENSOR
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
+            ),
+            _optional_entity(
+                defaults, CONF_GRID_EXPORT_PRICE_SENSOR
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
             ),
             _optional_entity(
                 defaults, CONF_VIRTUAL_BATTERY_CHARGE_SENSOR
@@ -585,6 +611,16 @@ def _energy_sources_schema(defaults: dict[str, Any]) -> vol.Schema:
                 default=defaults.get(CONF_BATTERY_CHARGE_SENSORS, []),
             ): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+            ),
+            _optional_entity(
+                defaults, CONF_GRID_IMPORT_PRICE_SENSOR
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
+            ),
+            _optional_entity(
+                defaults, CONF_GRID_EXPORT_PRICE_SENSOR
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
             ),
             _optional_entity(
                 defaults, CONF_VIRTUAL_BATTERY_CHARGE_SENSOR

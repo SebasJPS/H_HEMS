@@ -40,14 +40,17 @@ This repository contains an initial custom integration scaffold:
 - Optional target temperatures for heating rods, so pool/boiler heating stops
   even when surplus is still available.
 - Optional virtual battery helper for DIY batteries without a native SoC sensor.
+- Optional grid import and export price sensors for more realistic HEMS savings.
+- Dashboard language follows Home Assistant and can be toggled between German
+  and English.
 
 The current version calculates central decisions, directly switches configured
 flexible loads and heating rods, estimates the energy shifted into surplus
 periods today, remembers seasonal/time-of-day HEMS experience across restarts,
 can stop heating rods at configured target temperatures, can estimate a virtual
 battery SoC from charge/discharge power, and shows the result in an
-energy-dashboard style sidebar. Full device-level cost accounting is still
-planned.
+energy-dashboard style sidebar. Savings are estimated from the configured grid
+import price minus export compensation.
 
 ## Sidebar HEMS Dashboard
 
@@ -137,6 +140,8 @@ Suggested mapping from the original automation:
 | Battery SoC | `sensor.batterie_geschatzt_soc` |
 | Battery discharge | `sensor.batterie_discharge` |
 | Battery charge | `sensor.batterie_charge` |
+| Grid import price | `sensor.energy_import_price` |
+| Grid export price | `sensor.energy_export_price` |
 | Weather state | `sensor.berlin_tempelhof_wetterzustand` |
 | Cloud coverage | `sensor.berlin_tempelhof_bewolkungsgrad` |
 | Sunshine duration | `sensor.berlin_tempelhof_sonnenscheindauer` |
@@ -157,6 +162,9 @@ Suggested mapping from the original automation:
 - `sensor.bb_hems_energy_mode`
 - `sensor.bb_hems_grid_power`
 - `sensor.bb_hems_grid_average`
+- `sensor.bb_hems_grid_import_price`
+- `sensor.bb_hems_grid_export_price`
+- `sensor.bb_hems_savings_price`
 - `sensor.bb_hems_pv_power_total`
 - `sensor.bb_hems_pv_average`
 - `sensor.bb_hems_pv_window`
@@ -204,6 +212,8 @@ Suggested mapping from the original automation:
 - `number.bb_hems_grid_import_limit`
 - `number.bb_hems_grid_hard_import_limit`
 - `number.bb_hems_battery_discharge_limit`
+- `number.bb_hems_grid_import_price`
+- `number.bb_hems_grid_export_price`
 - `number.bb_hems_flexible_load_power` fallback/start estimate
 - `number.bb_hems_heating_rod_power` fallback/start estimate
 - `number.bb_hems_heating_rod_temperature_hysteresis`
@@ -288,9 +298,10 @@ surplus. The hysteresis number prevents immediate restart just below the target.
 BB HEMS also estimates how much energy it has shifted into surplus periods
 today. The estimate integrates the planned HEMS surplus load while flexible
 loads are allowed. `sensor.bb_hems_shifted_energy_today` exposes this value in
-kWh. `sensor.bb_hems_estimated_savings_today` multiplies it by a conservative
-default grid-price estimate of 0.32 EUR/kWh. These values are estimates for the
-dashboard, not a replacement for metered utility billing.
+kWh. `sensor.bb_hems_estimated_savings_today` multiplies it by the configured
+net benefit: grid import price minus export compensation. If no price sensors
+are configured, BB HEMS uses the fallback number entities. These values are
+estimates for the dashboard, not a replacement for metered utility billing.
 
 BB HEMS now persists its own learning data in Home Assistant storage. It records
 HEMS experience by season and time of day, including how often flexible loads

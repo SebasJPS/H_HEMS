@@ -8,6 +8,7 @@ const ALIASES = {
   scheduled_surplus_power: ["scheduled_surplus_power", "geplante uberschussleistung", "geplante ueberschussleistung"],
   shifted_energy_today: ["shifted_energy_today", "hems verschobene energie heute"],
   estimated_savings_today: ["estimated_savings_today", "hems ersparnis heute"],
+  savings_price: ["savings_price", "hems ersparnis je kwh"],
   shifted_energy_total: ["shifted_energy_total", "hems verschobene energie gesamt"],
   learning_samples: ["learning_samples", "hems erfahrungswerte"],
   seasonal_success_rate: ["seasonal_success_rate", "hems jahreszeit trefferquote"],
@@ -20,7 +21,57 @@ const ALIASES = {
   mode_select: ["select.bb_hems_mode", "betriebsart", "operating mode"],
 };
 
-const BB_HEMS_VERSION = "0.5.0";
+const BB_HEMS_VERSION = "0.6.0";
+const I18N = {
+  de: {
+    subtitle: "Was HEMS gerade entscheidet, schaltet und einspart",
+    config: "Konfiguration",
+    entities: "Entitäten",
+    devices: "Geräte",
+    today: "Nutzen heute",
+    todayNote: "Nur HEMS-Werte, keine allgemeine Energiebilanz",
+    shifted: "HEMS verschoben",
+    shiftedNote: "Energie wurde in PV-/Überschusszeit gelegt.",
+    savings: "geschätzte Ersparnis",
+    savingsNote: "Netzbezugspreis minus Einspeisevergütung.",
+    plannedPower: "geplante Leistung",
+    plannedPowerNote: "Aktuell für HEMS-Verbraucher eingeplant.",
+    experience: "HEMS Erfahrung",
+    decisionNow: "Entscheidung jetzt",
+    decisionNote: "Warum HEMS gerade schalten darf oder wartet",
+    loads: "Verbraucher",
+    loadsNote: "Was HEMS aktiv steuert",
+    language: "Sprache",
+    control: "Steuerung",
+    controlNote: "Schnell umstellen, ohne die Integration zu öffnen",
+    active: "HEMS aktiv",
+    paused: "HEMS pausiert",
+  },
+  en: {
+    subtitle: "What HEMS decides, switches and saves right now",
+    config: "Configuration",
+    entities: "Entities",
+    devices: "Devices",
+    today: "Today's benefit",
+    todayNote: "Only HEMS values, not a general energy balance",
+    shifted: "HEMS shifted",
+    shiftedNote: "Energy moved into PV/surplus time.",
+    savings: "estimated savings",
+    savingsNote: "Grid import price minus export compensation.",
+    plannedPower: "planned power",
+    plannedPowerNote: "Currently planned for HEMS loads.",
+    experience: "HEMS experience",
+    decisionNow: "Decision now",
+    decisionNote: "Why HEMS may switch or waits right now",
+    loads: "Loads",
+    loadsNote: "What HEMS actively controls",
+    language: "Language",
+    control: "Control",
+    controlNote: "Change mode without opening the integration",
+    active: "HEMS active",
+    paused: "HEMS paused",
+  },
+};
 const MODE_LABELS = {
   auto: "Auto",
   eco: "Eco",
@@ -47,6 +98,8 @@ class BbHemsPanel extends HTMLElement {
     const attrs = mode?.attributes || {};
     const autoSwitch = byKey(states, "auto_enabled");
     const modeSelect = byKey(states, "mode_select");
+    const lang = this.language();
+    const tr = I18N[lang];
 
     this.innerHTML = `
       <style>
@@ -299,27 +352,28 @@ class BbHemsPanel extends HTMLElement {
         <section class="headline">
           <div>
             <h1>BB HEMS</h1>
-            <p class="subtitle">Version ${BB_HEMS_VERSION} · Was HEMS gerade entscheidet, schaltet und einspart</p>
+            <p class="subtitle">Version ${BB_HEMS_VERSION} · ${tr.subtitle}</p>
           </div>
           <div class="link-row">
-            <a class="link" href="/config/integrations/integration/bb_hems">Konfiguration</a>
-            <a class="link" href="/config/entities">Entitäten</a>
-            <a class="link" href="/config/devices/dashboard">Geräte</a>
+            <button class="link" data-lang-toggle>${tr.language}: ${lang.toUpperCase()}</button>
+            <a class="link" href="/config/integrations/integration/bb_hems">${tr.config}</a>
+            <a class="link" href="/config/entities">${tr.entities}</a>
+            <a class="link" href="/config/devices/dashboard">${tr.devices}</a>
           </div>
         </section>
 
-        ${controls(modeSelect, autoSwitch)}
+        ${controls(modeSelect, autoSwitch, tr)}
 
         <section class="section">
           <div class="section-head">
-            <h2>Nutzen heute</h2>
-            <span class="section-note">Nur HEMS-Werte, keine allgemeine Energiebilanz</span>
+            <h2>${tr.today}</h2>
+            <span class="section-note">${tr.todayNote}</span>
           </div>
           <div class="tile-grid">
-            ${benefitTile("HEMS verschoben", energy(byKey(states, "shifted_energy_today")), "Energie wurde in PV-/Überschusszeit gelegt.", "↗", "good")}
-            ${benefitTile("geschätzte Ersparnis", money(byKey(states, "estimated_savings_today")), "Berechnet mit 0,32 EUR/kWh als konservativer Schätzwert.", "€", "good")}
-            ${benefitTile("geplante Leistung", power(byKey(states, "scheduled_surplus_power")), "Aktuell für HEMS-Verbraucher eingeplant.", "⚡", "info")}
-            ${benefitTile("HEMS Erfahrung", learningValue(states, attrs), attrs.seasonal_recommendation || "HEMS sammelt Jahreszeit- und Tageszeit-Erfahrung.", "↻", learningClass(attrs))}
+            ${benefitTile(tr.shifted, energy(byKey(states, "shifted_energy_today")), tr.shiftedNote, "↗", "good")}
+            ${benefitTile(tr.savings, money(byKey(states, "estimated_savings_today")), attrs.price_reason || tr.savingsNote, "€", "good")}
+            ${benefitTile(tr.plannedPower, power(byKey(states, "scheduled_surplus_power")), tr.plannedPowerNote, "⚡", "info")}
+            ${benefitTile(tr.experience, learningValue(states, attrs), attrs.seasonal_recommendation || "HEMS sammelt Jahreszeit- und Tageszeit-Erfahrung.", "↻", learningClass(attrs))}
           </div>
         </section>
 
@@ -327,8 +381,8 @@ class BbHemsPanel extends HTMLElement {
           <div class="stack">
             <div>
               <div class="section-head">
-                <h2>Entscheidung jetzt</h2>
-                <span class="section-note">Warum HEMS gerade schalten darf oder wartet</span>
+                <h2>${tr.decisionNow}</h2>
+                <span class="section-note">${tr.decisionNote}</span>
               </div>
               <div class="tile-grid wide">
                 ${decisionStatusTile(states, attrs)}
@@ -339,8 +393,8 @@ class BbHemsPanel extends HTMLElement {
 
             <div>
               <div class="section-head">
-                <h2>Verbraucher</h2>
-                <span class="section-note">Was HEMS aktiv steuert</span>
+                <h2>${tr.loads}</h2>
+                <span class="section-note">${tr.loadsNote}</span>
               </div>
               <div class="tile-grid loads">
                 ${loadTiles(attrs, states)}
@@ -360,7 +414,17 @@ class BbHemsPanel extends HTMLElement {
     this.bindControls(states);
   }
 
+  language() {
+    const stored = localStorage.getItem("bb_hems_language");
+    if (stored === "de" || stored === "en") return stored;
+    return String(this._hass?.locale?.language || this._hass?.language || "de").toLowerCase().startsWith("en") ? "en" : "de";
+  }
+
   bindControls(states) {
+    this.querySelector("[data-lang-toggle]")?.addEventListener("click", () => {
+      localStorage.setItem("bb_hems_language", this.language() === "de" ? "en" : "de");
+      this.render();
+    });
     this.querySelectorAll("[data-select-option]").forEach((button) => {
       button.addEventListener("click", () => {
         if (button.disabled) return;
@@ -381,13 +445,13 @@ class BbHemsPanel extends HTMLElement {
   }
 }
 
-function controls(modeSelect, autoSwitch) {
+function controls(modeSelect, autoSwitch, tr) {
   const options = modeSelect?.attributes?.options || ["auto", "eco", "comfort", "force_surplus", "off"];
   const current = modeSelect?.state || "auto";
   return `<section class="section"><div class="control-panel">
-    <div><h2>Steuerung</h2><p class="section-note">Schnell umstellen, ohne die Integration zu öffnen</p></div>
+    <div><h2>${esc(tr.control)}</h2><p class="section-note">${esc(tr.controlNote)}</p></div>
     <div class="segmented">${options.map((option) => `<button class="segment ${option === current ? "active" : ""}" data-select-entity="${esc(modeSelect?.entity_id || "")}" data-select-option="${esc(option)}" ${!modeSelect || option === current ? "disabled" : ""}>${esc(MODE_LABELS[option] || option)}</button>`).join("")}</div>
-    <button class="power ${autoSwitch?.state === "off" ? "off" : ""}" data-switch-entity="${esc(autoSwitch?.entity_id || "")}" ${!autoSwitch ? "disabled" : ""}><span class="dot"></span>${autoSwitch?.state === "off" ? "HEMS pausiert" : "HEMS aktiv"}</button>
+    <button class="power ${autoSwitch?.state === "off" ? "off" : ""}" data-switch-entity="${esc(autoSwitch?.entity_id || "")}" ${!autoSwitch ? "disabled" : ""}><span class="dot"></span>${autoSwitch?.state === "off" ? esc(tr.paused) : esc(tr.active)}</button>
   </div></section>`;
 }
 

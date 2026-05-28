@@ -22,6 +22,8 @@ CONF_PV_ARRAY_SPECS = "pv_array_specs"
 CONF_BATTERY_SOC_SENSORS = "battery_soc_sensors"
 CONF_BATTERY_DISCHARGE_SENSORS = "battery_discharge_sensors"
 CONF_BATTERY_CHARGE_SENSORS = "battery_charge_sensors"
+CONF_GRID_IMPORT_PRICE_SENSOR = "grid_import_price_sensor"
+CONF_GRID_EXPORT_PRICE_SENSOR = "grid_export_price_sensor"
 CONF_WEATHER_STATE_SENSOR = "weather_state_sensor"
 CONF_CLOUD_SENSOR = "cloud_sensor"
 CONF_SUNSHINE_SENSOR = "sunshine_sensor"
@@ -41,6 +43,8 @@ OPT_MODE = "mode"
 OPT_RESPONSE_PROFILE = "response_profile"
 OPT_AUTO_ENABLED = "auto_enabled"
 OPT_DASHBOARD_ENABLED = "dashboard_enabled"
+OPT_GRID_IMPORT_PRICE = "grid_import_price"
+OPT_GRID_EXPORT_PRICE = "grid_export_price"
 OPT_VIRTUAL_BATTERY_ENABLED = "virtual_battery_enabled"
 OPT_USE_VIRTUAL_BATTERY = "use_virtual_battery"
 OPT_VIRTUAL_BATTERY_CAPACITY = "virtual_battery_capacity"
@@ -85,6 +89,8 @@ DEFAULTS = {
     OPT_RESPONSE_PROFILE: RESPONSE_AUTO,
     OPT_AUTO_ENABLED: True,
     OPT_DASHBOARD_ENABLED: True,
+    OPT_GRID_IMPORT_PRICE: 0.32,
+    OPT_GRID_EXPORT_PRICE: 0.08,
     OPT_VIRTUAL_BATTERY_ENABLED: False,
     OPT_USE_VIRTUAL_BATTERY: False,
     OPT_VIRTUAL_BATTERY_CAPACITY: 5.0,

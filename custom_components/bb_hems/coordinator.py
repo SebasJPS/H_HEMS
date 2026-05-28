@@ -520,7 +520,11 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                 flexible_loads_allowed,
                 grid_power,
                 battery_discharge,
+                battery_charge,
                 usable_battery_charge,
+                battery_soc_min,
+                good_weather,
+                bad_weather,
             )
         )
         switch_on_delay, switch_off_delay = self._response_delays(
@@ -1269,7 +1273,11 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         allowed: bool,
         grid_power: float,
         battery_discharge: float,
+        battery_charge: float,
         usable_battery_charge: float,
+        battery_soc: float | None,
+        good_weather: bool,
+        bad_weather: bool,
     ) -> tuple[tuple[str, ...], float, float, str]:
         """Select the loads that fit into the current surplus budget."""
         active_power = sum(load.scheduling_power for load in loads if load.is_on)
@@ -1309,7 +1317,14 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                 used_power += load_power
 
         if not selected:
-            return (), 0.0, budget_with_battery, f"Smart Scheduler wartet: echtes Überschussbudget {budget_with_battery:.0f} W reicht für keinen konfigurierten Verbraucher. Export {current_export:.0f} W, laufende Lasten {active_power:.0f} W, nutzbare Batterieladung {usable_battery_charge:.0f} W, Batterieentladung {battery_discharge:.0f} W."
+            battery_note = self._usable_battery_charge_note(
+                battery_soc,
+                battery_charge,
+                usable_battery_charge,
+                good_weather,
+                bad_weather,
+            )
+            return (), 0.0, budget_with_battery, f"Smart Scheduler wartet: echtes Überschussbudget {budget_with_battery:.0f} W reicht für keinen konfigurierten Verbraucher. Export {current_export:.0f} W, laufende Lasten {active_power:.0f} W, {battery_note}, Batterieentladung {battery_discharge:.0f} W."
 
         names = ", ".join(load.name for load in selected)
         return (
@@ -1318,6 +1333,29 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             budget_with_battery,
             f"Smart Scheduler plant {len(selected)} Verbraucher mit ca. {used_power:.0f} W: {names}. Echtes Überschussbudget: {budget_with_battery:.0f} W (Export {current_export:.0f} W + laufende Lasten {active_power:.0f} W + nutzbare Batterieladung {usable_battery_charge:.0f} W - Batterieentladung {battery_discharge:.0f} W).",
         )
+
+    def _usable_battery_charge_note(
+        self,
+        battery_soc: float | None,
+        battery_charge: float,
+        usable_battery_charge: float,
+        good_weather: bool,
+        bad_weather: bool,
+    ) -> str:
+        """Explain why measured battery charge is or is not usable."""
+        if battery_charge <= 0:
+            return "Batterie lädt nicht"
+        if battery_soc is None:
+            return f"Batterie lädt {battery_charge:.0f} W, davon nutzbar 0 W, weil kein SoC bekannt ist"
+        if battery_soc < 60:
+            return f"Batterie lädt {battery_charge:.0f} W, davon nutzbar 0 W, weil SoC {battery_soc:.1f}% unter 60% liegt"
+        if bad_weather:
+            return f"Batterie lädt {battery_charge:.0f} W, davon nutzbar 0 W, weil schlechte Wetterlage erkannt wurde"
+        if not good_weather:
+            return f"Batterie lädt {battery_charge:.0f} W, davon nutzbar 0 W, weil die Wetterfreigabe fehlt"
+        if usable_battery_charge <= 0:
+            return f"Batterie lädt {battery_charge:.0f} W, davon nutzbar 0 W nach Sicherheitsreserve"
+        return f"Batterie lädt {battery_charge:.0f} W, davon nutzbar {usable_battery_charge:.0f} W"
 
     def _flexible_load_decision_is_stable(
         self, target_on: bool, data: HemsData

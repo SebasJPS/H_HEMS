@@ -52,6 +52,7 @@ from .const import (
     MODE_OFF,
     OPT_AUTO_ENABLED,
     OPT_BATTERY_DISCHARGE_LIMIT,
+    OPT_BATTERY_PROTECTION_ENABLED,
     OPT_DASHBOARD_ENABLED,
     OPT_FLEXIBLE_LOAD_POWER,
     OPT_GRID_EXPORT_PRICE,
@@ -1278,6 +1279,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         return {
             OPT_AUTO_ENABLED: "Automatik",
             OPT_BATTERY_DISCHARGE_LIMIT: "Entladegrenze Batterie",
+            OPT_BATTERY_PROTECTION_ENABLED: "Batterieschutz",
             OPT_DASHBOARD_ENABLED: "Dashboard",
             OPT_HEATING_ROD_TEMPERATURE_HYSTERESIS: "Heizstab Temperatur-Hysterese",
             OPT_GRID_HARD_IMPORT_LIMIT: "Netzbezug hart",
@@ -1583,6 +1585,8 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         self, battery_soc: float | None, battery_discharge: float, bad_weather: bool
     ) -> bool:
         opts = self.opts
+        if not bool(opts[OPT_BATTERY_PROTECTION_ENABLED]):
+            return False
         if battery_soc is not None and battery_soc < float(opts[OPT_PROTECT_BATTERY_SOC]):
             return True
         discharge_limit = float(opts[OPT_BATTERY_DISCHARGE_LIMIT])
@@ -1613,6 +1617,8 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         battery_protect: bool,
     ) -> str:
         opts = self.opts
+        if not bool(opts[OPT_BATTERY_PROTECTION_ENABLED]):
+            return "Batterieschutz ist deaktiviert; SoC- und Batterieentladegrenzen blockieren HEMS nicht."
         protect_soc = float(opts[OPT_PROTECT_BATTERY_SOC])
         discharge_limit = float(opts[OPT_BATTERY_DISCHARGE_LIMIT])
         if battery_soc is not None and battery_soc < protect_soc:
@@ -1628,6 +1634,8 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         return f"Kein Batterieschutz: SoC {battery_soc if battery_soc is not None else 'n/a'}%, Entladung {battery_discharge:.1f} W."
 
     def _battery_soc_ok(self, battery_soc: float | None) -> bool:
+        if not bool(self.opts[OPT_BATTERY_PROTECTION_ENABLED]):
+            return True
         if battery_soc is None:
             return True
         return battery_soc >= float(self.opts[OPT_MIN_BATTERY_SOC])
@@ -1669,6 +1677,8 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         flexible_loads_allowed: bool,
     ) -> str:
         if flexible_loads_allowed:
+            if not bool(self.opts[OPT_BATTERY_PROTECTION_ENABLED]):
+                return "Flexible Verbraucher sind erlaubt, weil Überschuss und Wetterfreigabe passen; Batterieschutz ist deaktiviert."
             return "Flexible Verbraucher sind erlaubt, weil Überschuss, Wetterfreigabe, SoC und Batterieschutz passen."
         blockers: list[str] = []
         if not surplus_available:

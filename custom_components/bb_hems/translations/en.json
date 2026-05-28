@@ -220,6 +220,7 @@
       "response_profile": { "name": "Response profile" }
     },
     "switch": {
+      "battery_protection_enabled": { "name": "Battery protection enabled" },
       "dashboard_enabled": { "name": "Dashboard enabled" },
       "virtual_battery_enabled": { "name": "Virtual battery enabled" },
       "use_virtual_battery": { "name": "Use virtual battery in HEMS" }

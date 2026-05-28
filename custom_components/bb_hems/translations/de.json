@@ -246,6 +246,7 @@
     },
     "switch": {
       "auto_enabled": { "name": "Automatik aktiv" },
+      "battery_protection_enabled": { "name": "Batterieschutz aktiv" },
       "dashboard_enabled": { "name": "Dashboard aktiv" },
       "virtual_battery_enabled": { "name": "Virtuelle Batterie aktiv" },
       "use_virtual_battery": { "name": "Virtuelle Batterie im HEMS nutzen" }

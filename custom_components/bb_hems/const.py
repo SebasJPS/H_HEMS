@@ -43,6 +43,7 @@ OPT_MODE = "mode"
 OPT_RESPONSE_PROFILE = "response_profile"
 OPT_AUTO_ENABLED = "auto_enabled"
 OPT_DASHBOARD_ENABLED = "dashboard_enabled"
+OPT_BATTERY_PROTECTION_ENABLED = "battery_protection_enabled"
 OPT_GRID_IMPORT_PRICE = "grid_import_price"
 OPT_GRID_EXPORT_PRICE = "grid_export_price"
 OPT_VIRTUAL_BATTERY_ENABLED = "virtual_battery_enabled"
@@ -89,6 +90,7 @@ DEFAULTS = {
     OPT_RESPONSE_PROFILE: RESPONSE_AUTO,
     OPT_AUTO_ENABLED: True,
     OPT_DASHBOARD_ENABLED: True,
+    OPT_BATTERY_PROTECTION_ENABLED: True,
     OPT_GRID_IMPORT_PRICE: 0.32,
     OPT_GRID_EXPORT_PRICE: 0.08,
     OPT_VIRTUAL_BATTERY_ENABLED: False,

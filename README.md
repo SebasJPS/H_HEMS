@@ -202,6 +202,7 @@ Suggested mapping from the original automation:
 
 - `select.bb_hems_mode`
 - `switch.bb_hems_auto_enabled`
+- `switch.bb_hems_battery_protection_enabled`
 - `switch.bb_hems_dashboard_enabled`
 - `number.bb_hems_min_battery_soc`
 - `number.bb_hems_protect_battery_soc`
@@ -343,6 +344,11 @@ Configured flexible loads and heating rods are switched by the integration itsel
 - In `seconds`, configured surplus loads switch on after 60 seconds and off after 30 seconds.
 - In `minutes`, configured surplus loads switch on after 10 minutes and off after 5 minutes.
 - When `switch.bb_hems_auto_enabled` is off, BB HEMS does not switch devices automatically.
+
+`switch.bb_hems_battery_protection_enabled` can disable the battery protection
+layer. When disabled, SoC, minimum SoC and battery discharge protection no
+longer block HEMS decisions. Surplus, weather, scheduler and hard grid logic
+still apply.
 
 To avoid using the battery for surplus consumers, set
 `number.bb_hems_battery_discharge_limit` to `0`. Any positive configured battery

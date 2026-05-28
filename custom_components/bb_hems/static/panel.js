@@ -243,7 +243,7 @@ class BbHemsPanel extends HTMLElement {
           grid-template-columns: minmax(0, 1.4fr) minmax(360px, .75fr);
           gap: 12px;
         }
-        .stack { display: grid; gap: 12px; }
+        .stack { display: grid; gap: 12px; align-content: start; }
         .event-card, .next-card {
           padding: 14px 16px;
           border: 1px solid var(--line);
@@ -346,12 +346,13 @@ class BbHemsPanel extends HTMLElement {
                 ${loadTiles(attrs, states)}
               </div>
             </div>
+
+            ${actionHistory(attrs)}
           </div>
 
           <aside class="stack">
             ${blockerCard(states, attrs)}
             ${virtualBatteryCard(states, attrs)}
-            ${actionHistory(attrs)}
           </aside>
         </section>
       </main>

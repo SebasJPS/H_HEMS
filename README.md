@@ -258,8 +258,9 @@ The first controller version evaluates:
 - Optional 15-minute PV average.
 - Minimum battery SoC across all configured batteries.
 - Total battery discharge.
-- Total battery charge. From 60% SoC and with suitable weather, BB HEMS can
-  conservatively treat part of active battery charging as usable surplus.
+- Total battery charge. From the configured minimum battery SoC and with
+  suitable weather, BB HEMS can conservatively treat part of active battery
+  charging as usable surplus.
 - Weather state, cloud coverage and sunshine.
 - PV forecast for today and PV power forecast for the next hour / next 3 hours when configured.
 - Sun elevation/azimuth from `sun.sun` and configured PV arrays. Each PV surface
@@ -327,8 +328,9 @@ for `auto` and `comfort`. Hard protection rules such as battery protection,
 
 If battery charge sensors are configured, BB HEMS can also use active battery
 charging as a smart surplus signal. This is intentionally conservative: the
-lowest battery SoC must be at least 60%, weather must be approved and BB HEMS
-keeps a small charging reserve before flexible loads are planned.
+lowest battery SoC must be at least the configured minimum battery SoC, weather
+must be approved and BB HEMS keeps a small charging reserve before flexible
+loads are planned.
 
 For DIY batteries without a native SoC sensor, BB HEMS can calculate a virtual
 SoC from a charge power sensor, a discharge power sensor and the configured

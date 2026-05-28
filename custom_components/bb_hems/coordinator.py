@@ -427,8 +427,9 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         grid_tolerance = self._grid_tolerance(battery_soc_min, good_weather)
         seasonal_grid_adjustment = self._learning_grid_tolerance_adjustment(mode)
         grid_tolerance += seasonal_grid_adjustment
+        min_battery_soc = float(opts[OPT_MIN_BATTERY_SOC])
         usable_battery_charge = self._usable_battery_charge(
-            battery_soc_min, battery_charge, good_weather, bad_weather
+            battery_soc_min, battery_charge, min_battery_soc, good_weather, bad_weather
         )
 
         auto_enabled = bool(opts[OPT_AUTO_ENABLED])
@@ -523,6 +524,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                 battery_charge,
                 usable_battery_charge,
                 battery_soc_min,
+                min_battery_soc,
                 good_weather,
                 bad_weather,
             )
@@ -1276,6 +1278,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         battery_charge: float,
         usable_battery_charge: float,
         battery_soc: float | None,
+        min_battery_soc: float,
         good_weather: bool,
         bad_weather: bool,
     ) -> tuple[tuple[str, ...], float, float, str]:
@@ -1321,6 +1324,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                 battery_soc,
                 battery_charge,
                 usable_battery_charge,
+                min_battery_soc,
                 good_weather,
                 bad_weather,
             )
@@ -1339,6 +1343,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         battery_soc: float | None,
         battery_charge: float,
         usable_battery_charge: float,
+        min_battery_soc: float,
         good_weather: bool,
         bad_weather: bool,
     ) -> str:
@@ -1347,8 +1352,8 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             return "Batterie lädt nicht"
         if battery_soc is None:
             return f"Batterie lädt {battery_charge:.0f} W, davon nutzbar 0 W, weil kein SoC bekannt ist"
-        if battery_soc < 60:
-            return f"Batterie lädt {battery_charge:.0f} W, davon nutzbar 0 W, weil SoC {battery_soc:.1f}% unter 60% liegt"
+        if battery_soc < min_battery_soc:
+            return f"Batterie lädt {battery_charge:.0f} W, davon nutzbar 0 W, weil SoC {battery_soc:.1f}% unter Mindest-SoC {min_battery_soc:.1f}% liegt"
         if bad_weather:
             return f"Batterie lädt {battery_charge:.0f} W, davon nutzbar 0 W, weil schlechte Wetterlage erkannt wurde"
         if not good_weather:
@@ -1796,11 +1801,17 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         self,
         battery_soc: float | None,
         battery_charge: float,
+        min_battery_soc: float,
         good_weather: bool,
         bad_weather: bool,
     ) -> float:
         """Return battery charge power that may be shifted to flexible loads."""
-        if battery_soc is None or battery_soc < 60 or not good_weather or bad_weather:
+        if (
+            battery_soc is None
+            or battery_soc < min_battery_soc
+            or not good_weather
+            or bad_weather
+        ):
             return 0.0
         reserve = 100.0 if battery_soc < 75 else 50.0
         return max(0.0, battery_charge - reserve)

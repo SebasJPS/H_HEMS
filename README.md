@@ -33,12 +33,17 @@ This repository contains an initial custom integration scaffold:
 - Energy-style sidebar dashboard served by the integration.
 - Persistent HEMS learning values that survive Home Assistant restarts and
   group experience by season and time of day.
+- Optional target temperatures for heating rods, so pool/boiler heating stops
+  even when surplus is still available.
+- Optional virtual battery helper for DIY batteries without a native SoC sensor.
 
 The current version calculates central decisions, directly switches configured
 flexible loads and heating rods, estimates the energy shifted into surplus
 periods today, remembers seasonal/time-of-day HEMS experience across restarts,
-and shows the result in an energy-dashboard style sidebar. Full device-level
-cost accounting is still planned.
+can stop heating rods at configured target temperatures, can estimate a virtual
+battery SoC from charge/discharge power, and shows the result in an
+energy-dashboard style sidebar. Full device-level cost accounting is still
+planned.
 
 ## Sidebar HEMS Dashboard
 
@@ -108,6 +113,10 @@ Suggested mapping from the original automation:
 | Flexible load power sensors | `sensor.a8m_power` |
 | Heating rods | `switch.boiler_heating_rod` |
 | Heating rod power sensors | `sensor.boiler_heating_rod_power` |
+| Heating rod temperature sensors | `sensor.pool_temperature` |
+| Heating rod target temperatures | `28` |
+| Virtual battery charge | `sensor.diy_battery_charge_power` |
+| Virtual battery discharge | `sensor.diy_battery_discharge_power` |
 
 ## Entities
 
@@ -125,6 +134,10 @@ Suggested mapping from the original automation:
 - `sensor.bb_hems_battery_discharge_total`
 - `sensor.bb_hems_battery_charge_total`
 - `sensor.bb_hems_usable_battery_charge`
+- `sensor.bb_hems_virtual_battery_soc`
+- `sensor.bb_hems_virtual_battery_energy`
+- `sensor.bb_hems_virtual_battery_usable_energy`
+- `sensor.bb_hems_virtual_battery_confidence`
 - `sensor.bb_hems_grid_tolerance`
 - `sensor.bb_hems_cloud_coverage`
 - `sensor.bb_hems_sunshine_minutes`
@@ -161,7 +174,16 @@ Suggested mapping from the original automation:
 - `number.bb_hems_battery_discharge_limit`
 - `number.bb_hems_flexible_load_power` fallback/start estimate
 - `number.bb_hems_heating_rod_power` fallback/start estimate
+- `number.bb_hems_heating_rod_temperature_hysteresis`
+- `number.bb_hems_virtual_battery_capacity`
+- `number.bb_hems_virtual_battery_min_soc`
+- `number.bb_hems_virtual_battery_max_soc`
+- `number.bb_hems_virtual_battery_manual_soc`
+- `number.bb_hems_virtual_battery_charge_efficiency`
+- `number.bb_hems_virtual_battery_discharge_efficiency`
 - `select.bb_hems_response_profile`
+- `switch.bb_hems_virtual_battery_enabled`
+- `switch.bb_hems_use_virtual_battery`
 
 ## Operating Modes
 
@@ -224,6 +246,13 @@ are configured, but the entities remain available for custom dashboards. This
 avoids switching all surplus consumers at once and also turns running loads off
 when their actual power is no longer covered by real surplus.
 
+Heating rods can additionally use optional temperature sensors and target
+temperatures. Both lists must follow the same order as the heating rod switches.
+Example: two heating rods with target temperatures `55, 28` means the first
+heats up to 55 °C and the second, for example a pool, up to 28 °C. When a target
+is reached, BB HEMS turns that heating rod off immediately, regardless of
+surplus. The hysteresis number prevents immediate restart just below the target.
+
 BB HEMS also estimates how much energy it has shifted into surplus periods
 today. The estimate integrates the planned HEMS surplus load while flexible
 loads are allowed. `sensor.bb_hems_shifted_energy_today` exposes this value in
@@ -248,6 +277,15 @@ If battery charge sensors are configured, BB HEMS can also use active battery
 charging as a smart surplus signal. This is intentionally conservative: the
 lowest battery SoC must be at least 60%, weather must be approved and BB HEMS
 keeps a small charging reserve before flexible loads are planned.
+
+For DIY batteries without a native SoC sensor, BB HEMS can calculate a virtual
+SoC from a charge power sensor, a discharge power sensor and the configured
+capacity. The user can correct `number.bb_hems_virtual_battery_manual_soc` from
+time to time; BB HEMS then recalibrates the internal energy value and raises the
+confidence value as more corrections are made. Min/max SoC define the usable
+range, for example 10% to 90%. The virtual battery is only used for HEMS
+decisions when both `switch.bb_hems_virtual_battery_enabled` and
+`switch.bb_hems_use_virtual_battery` are on.
 
 The main output is still exposed for dashboards and optional automations:
 

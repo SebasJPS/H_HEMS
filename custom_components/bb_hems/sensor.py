@@ -28,6 +28,8 @@ from .const import (
     CONF_HEAT_PUMP_SWITCHES,
     CONF_HEATING_ROD_POWER_SENSORS,
     CONF_HEATING_ROD_SWITCHES,
+    CONF_HEATING_ROD_TARGET_TEMPERATURES,
+    CONF_HEATING_ROD_TEMPERATURE_SENSORS,
     CONF_PV_ARRAY_SPECS,
     CONF_PV_AVERAGE_SENSOR,
     CONF_PV_FORECAST_NEXT_3H_SENSOR,
@@ -38,6 +40,8 @@ from .const import (
     CONF_SUNSHINE_SENSOR,
     CONF_WALLBOX_SWITCHES,
     CONF_WEATHER_STATE_SENSOR,
+    CONF_VIRTUAL_BATTERY_CHARGE_SENSOR,
+    CONF_VIRTUAL_BATTERY_DISCHARGE_SENSOR,
 )
 from .coordinator import HemsCoordinator, HemsData
 from .entity import HemsEntity
@@ -144,6 +148,44 @@ SENSORS: tuple[HemsSensorDescription, ...] = (
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda data: round(data.usable_battery_charge, 1),
+    ),
+    HemsSensorDescription(
+        key="virtual_battery_soc",
+        translation_key="virtual_battery_soc",
+        native_unit_of_measurement=PERCENTAGE,
+        device_class=SensorDeviceClass.BATTERY,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: None
+        if data.virtual_battery_soc is None
+        else round(data.virtual_battery_soc, 1),
+    ),
+    HemsSensorDescription(
+        key="virtual_battery_energy",
+        translation_key="virtual_battery_energy",
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: None
+        if data.virtual_battery_energy is None
+        else round(data.virtual_battery_energy, 3),
+    ),
+    HemsSensorDescription(
+        key="virtual_battery_usable_energy",
+        translation_key="virtual_battery_usable_energy",
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: None
+        if data.virtual_battery_usable_energy is None
+        else round(data.virtual_battery_usable_energy, 3),
+    ),
+    HemsSensorDescription(
+        key="virtual_battery_confidence",
+        translation_key="virtual_battery_confidence",
+        native_unit_of_measurement=PERCENTAGE,
+        icon="mdi:shield-check",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: round(data.virtual_battery_confidence, 1),
     ),
     HemsSensorDescription(
         key="grid_tolerance",
@@ -304,6 +346,13 @@ class HemsSensor(HemsEntity, SensorEntity):
             "battery_reason": data.battery_reason,
             "battery_charge": data.battery_charge,
             "usable_battery_charge": data.usable_battery_charge,
+            "virtual_battery_enabled": data.virtual_battery_enabled,
+            "virtual_battery_used": data.virtual_battery_used,
+            "virtual_battery_soc": data.virtual_battery_soc,
+            "virtual_battery_energy": data.virtual_battery_energy,
+            "virtual_battery_usable_energy": data.virtual_battery_usable_energy,
+            "virtual_battery_confidence": data.virtual_battery_confidence,
+            "virtual_battery_reason": data.virtual_battery_reason,
             "load_reason": data.load_reason,
             "action_history": data.action_history,
             "configured_pv_sources": data.configured_pv_sources,
@@ -312,12 +361,14 @@ class HemsSensor(HemsEntity, SensorEntity):
             "configured_wallboxes": data.configured_wallboxes,
             "configured_heat_pumps": data.configured_heat_pumps,
             "configured_heating_rods": data.configured_heating_rods,
+            "blocked_heating_rods": data.blocked_heating_rods,
             "response_profile": data.response_profile,
             "switch_on_delay_seconds": data.switch_on_delay_seconds,
             "switch_off_delay_seconds": data.switch_off_delay_seconds,
             "available_surplus_budget": data.available_surplus_budget,
             "scheduled_surplus_loads": data.scheduled_surplus_loads,
             "scheduled_surplus_power": data.scheduled_surplus_power,
+            "temperature_blocked_loads": data.temperature_blocked_loads,
             "shifted_energy_today": data.shifted_energy_today,
             "estimated_savings_today": data.estimated_savings_today,
             "shifted_energy_total": data.shifted_energy_total,
@@ -344,6 +395,12 @@ class HemsSensor(HemsEntity, SensorEntity):
                 CONF_BATTERY_DISCHARGE_SENSORS, []
             ),
             "battery_charge_sensors": config.get(CONF_BATTERY_CHARGE_SENSORS, []),
+            "virtual_battery_charge_sensor": config.get(
+                CONF_VIRTUAL_BATTERY_CHARGE_SENSOR
+            ),
+            "virtual_battery_discharge_sensor": config.get(
+                CONF_VIRTUAL_BATTERY_DISCHARGE_SENSOR
+            ),
             "weather_state_sensor": config.get(CONF_WEATHER_STATE_SENSOR),
             "cloud_sensor": config.get(CONF_CLOUD_SENSOR),
             "sunshine_sensor": config.get(CONF_SUNSHINE_SENSOR),
@@ -357,5 +414,11 @@ class HemsSensor(HemsEntity, SensorEntity):
             "heating_rod_switches": config.get(CONF_HEATING_ROD_SWITCHES, []),
             "heating_rod_power_sensors": config.get(
                 CONF_HEATING_ROD_POWER_SENSORS, []
+            ),
+            "heating_rod_temperature_sensors": config.get(
+                CONF_HEATING_ROD_TEMPERATURE_SENSORS, []
+            ),
+            "heating_rod_target_temperatures": config.get(
+                CONF_HEATING_ROD_TARGET_TEMPERATURES
             ),
         }

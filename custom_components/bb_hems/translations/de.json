@@ -18,6 +18,8 @@
           "battery_soc_sensors": "Batterie-SoC-Sensoren",
           "battery_discharge_sensors": "Batterie-Entladungssensoren",
           "battery_charge_sensors": "Batterie-Ladungssensoren",
+          "virtual_battery_charge_sensor": "Virtuelle Batterie Ladung",
+          "virtual_battery_discharge_sensor": "Virtuelle Batterie Entladung",
           "weather_state_sensor": "Wetterzustand",
           "cloud_sensor": "Bewölkungsgrad",
           "sunshine_sensor": "Sonnenscheindauer",
@@ -27,7 +29,9 @@
           "wallbox_switches": "Wallboxen",
           "heat_pump_switches": "Wärmepumpen",
           "heating_rod_switches": "Heizstäbe",
-          "heating_rod_power_sensors": "Leistungssensoren Heizstäbe"
+          "heating_rod_power_sensors": "Leistungssensoren Heizstäbe",
+          "heating_rod_temperature_sensors": "Temperatursensoren Heizstäbe",
+          "heating_rod_target_temperatures": "Zieltemperaturen Heizstäbe"
         },
         "data_description": {
           "name": "Anzeigename der HEMS-Instanz.",
@@ -42,6 +46,8 @@
           "battery_soc_sensors": "SoC-Sensoren deiner Batterien in Prozent. Bei mehreren Batterien nutzt BB HEMS den niedrigsten SoC als Schutzwert.",
           "battery_discharge_sensors": "Aktuelle Entladeleistung der Batterien in Watt. BB HEMS summiert diese Werte und stoppt flexible Lasten bei zu hoher Entladung.",
           "battery_charge_sensors": "Aktuelle Ladeleistung der Batterien in Watt. Ab 60% SoC kann BB HEMS einen konservativen Teil davon als nutzbaren Überschuss einplanen.",
+          "virtual_battery_charge_sensor": "Optionaler Ladeleistungssensor für eine selbstgebaute Batterie ohne eigenen SoC.",
+          "virtual_battery_discharge_sensor": "Optionaler Entladeleistungssensor für eine selbstgebaute Batterie ohne eigenen SoC.",
           "weather_state_sensor": "Wetterzustand als Sensor oder Weather-Entität, z.B. sunny, partlycloudy, rainy oder deutsche Zustände.",
           "cloud_sensor": "Bewölkung in Prozent. Niedrige Werte machen PV-Überschuss wahrscheinlicher.",
           "sunshine_sensor": "Sonnenscheindauer oder Sonnenindikator. Der Wert sollte größer werden, wenn aktuell Sonne verfügbar ist.",
@@ -51,7 +57,9 @@
           "wallbox_switches": "Schaltbare Wallboxen oder Ladefreigaben. Wird aktuell als Gerätegruppe erfasst und später priorisiert.",
           "heat_pump_switches": "Schaltbare Wärmepumpen oder SG-Ready-Freigaben. Wird aktuell als Gerätegruppe erfasst und später priorisiert.",
           "heating_rod_switches": "Schaltbare Heizstäbe oder Boiler-Freigaben. BB HEMS behandelt sie als Überschussverbraucher.",
-          "heating_rod_power_sensors": "Optionale Leistungssensoren der Heizstäbe in gleicher Reihenfolge wie die Schalter."
+          "heating_rod_power_sensors": "Optionale Leistungssensoren der Heizstäbe in gleicher Reihenfolge wie die Schalter.",
+          "heating_rod_temperature_sensors": "Optionale Temperatursensoren der Heizstäbe in gleicher Reihenfolge wie die Schalter.",
+          "heating_rod_target_temperatures": "Optionale Zieltemperaturen in gleicher Reihenfolge wie die Heizstäbe, z.B. 55, 28."
         }
       }
     }
@@ -64,12 +72,12 @@
         "menu_options": {
           "energy_sources": "Netz, PV und Batterie",
           "weather_sources": "Wetter und Sonne",
-          "load_sources": "Verbraucher und Leistungssensoren"
+          "load_sources": "Verbraucher, Leistung und Temperatur"
         },
         "menu_option_descriptions": {
           "energy_sources": "Netzleistung, PV-Leistung, PV-Forecast, PV-Flächen, Batterie-SoC, Batterie-Entladung und Batterie-Ladung bearbeiten.",
           "weather_sources": "Wetterzustand, Bewölkung, Sonnenschein und Sonnenstand bearbeiten, damit BB HEMS PV-Fenster besser einschätzen kann.",
-          "load_sources": "Schaltbare Verbraucher, Wallboxen, Wärmepumpen, Heizstäbe und passende Leistungssensoren bearbeiten."
+          "load_sources": "Schaltbare Verbraucher, Wallboxen, Wärmepumpen, Heizstäbe, Leistungssensoren und Heizstab-Temperaturen bearbeiten."
         }
       },
       "energy_sources": {
@@ -97,7 +105,9 @@
           "wallbox_switches": "Wallboxen",
           "heat_pump_switches": "Wärmepumpen",
           "heating_rod_switches": "Heizstäbe",
-          "heating_rod_power_sensors": "Leistungssensoren Heizstäbe"
+          "heating_rod_power_sensors": "Leistungssensoren Heizstäbe",
+          "heating_rod_temperature_sensors": "Temperatursensoren Heizstäbe",
+          "heating_rod_target_temperatures": "Zieltemperaturen Heizstäbe"
         },
         "data_description": {
           "name": "Anzeigename der HEMS-Instanz.",
@@ -121,7 +131,9 @@
           "wallbox_switches": "Schaltbare Wallboxen oder Ladefreigaben. Wird aktuell als Gerätegruppe erfasst und später priorisiert.",
           "heat_pump_switches": "Schaltbare Wärmepumpen oder SG-Ready-Freigaben. Wird aktuell als Gerätegruppe erfasst und später priorisiert.",
           "heating_rod_switches": "Schaltbare Heizstäbe oder Boiler-Freigaben. BB HEMS behandelt sie als Überschussverbraucher.",
-          "heating_rod_power_sensors": "Optionale Leistungssensoren der Heizstäbe in gleicher Reihenfolge wie die Schalter."
+          "heating_rod_power_sensors": "Optionale Leistungssensoren der Heizstäbe in gleicher Reihenfolge wie die Schalter.",
+          "heating_rod_temperature_sensors": "Optionale Temperatursensoren der Heizstäbe in gleicher Reihenfolge wie die Schalter.",
+          "heating_rod_target_temperatures": "Optionale Zieltemperaturen in gleicher Reihenfolge wie die Heizstäbe, z.B. 55, 28."
         }
       },
       "weather_sources": {
@@ -176,6 +188,10 @@
       "battery_discharge_total": { "name": "Batterie-Entladung gesamt" },
       "battery_charge_total": { "name": "Batterie-Ladung gesamt" },
       "usable_battery_charge": { "name": "Nutzbare Batterie-Ladung" },
+      "virtual_battery_soc": { "name": "Virtuelle Batterie SoC" },
+      "virtual_battery_energy": { "name": "Virtuelle Batterie Energie" },
+      "virtual_battery_usable_energy": { "name": "Virtuelle Batterie nutzbare Energie" },
+      "virtual_battery_confidence": { "name": "Virtuelle Batterie Vertrauen" },
       "grid_tolerance": { "name": "Netztoleranz" },
       "cloud_coverage": { "name": "Bewölkung" },
       "sunshine_minutes": { "name": "Sonnenschein" },
@@ -206,7 +222,14 @@
       "grid_hard_import_limit": { "name": "Netzbezug hart" },
       "battery_discharge_limit": { "name": "Entladegrenze Batterie" },
       "flexible_load_power": { "name": "Fallback-Leistung flexible Verbraucher" },
-      "heating_rod_power": { "name": "Fallback-Leistung Heizstab" }
+      "heating_rod_power": { "name": "Fallback-Leistung Heizstab" },
+      "heating_rod_temperature_hysteresis": { "name": "Heizstab Temperatur-Hysterese" },
+      "virtual_battery_capacity": { "name": "Virtuelle Batterie Kapazität" },
+      "virtual_battery_min_soc": { "name": "Virtuelle Batterie min SoC" },
+      "virtual_battery_max_soc": { "name": "Virtuelle Batterie max SoC" },
+      "virtual_battery_manual_soc": { "name": "Virtuelle Batterie manueller SoC" },
+      "virtual_battery_charge_efficiency": { "name": "Virtuelle Batterie Lade-Wirkungsgrad" },
+      "virtual_battery_discharge_efficiency": { "name": "Virtuelle Batterie Entlade-Wirkungsgrad" }
     },
     "select": {
       "mode": { "name": "Betriebsart" },
@@ -214,7 +237,9 @@
     },
     "switch": {
       "auto_enabled": { "name": "Automatik aktiv" },
-      "dashboard_enabled": { "name": "Dashboard aktiv" }
+      "dashboard_enabled": { "name": "Dashboard aktiv" },
+      "virtual_battery_enabled": { "name": "Virtuelle Batterie aktiv" },
+      "use_virtual_battery": { "name": "Virtuelle Batterie im HEMS nutzen" }
     }
   }
 }

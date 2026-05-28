@@ -23,6 +23,8 @@ from .const import (
     CONF_HEAT_PUMP_SWITCHES,
     CONF_HEATING_ROD_POWER_SENSORS,
     CONF_HEATING_ROD_SWITCHES,
+    CONF_HEATING_ROD_TARGET_TEMPERATURES,
+    CONF_HEATING_ROD_TEMPERATURE_SENSORS,
     CONF_PV_ARRAY_SPECS,
     CONF_PV_AVERAGE_SENSOR,
     CONF_PV_FORECAST_NEXT_3H_SENSOR,
@@ -33,6 +35,8 @@ from .const import (
     CONF_SUNSHINE_SENSOR,
     CONF_WALLBOX_SWITCHES,
     CONF_WEATHER_STATE_SENSOR,
+    CONF_VIRTUAL_BATTERY_CHARGE_SENSOR,
+    CONF_VIRTUAL_BATTERY_DISCHARGE_SENSOR,
     DEFAULTS,
     DOMAIN,
     NAME,
@@ -54,12 +58,12 @@ def _options_menu_labels(language: str | None) -> dict[str, str]:
         return {
             "energy_sources": "Netz, PV und Batterie - Messwerte und Forecasts",
             "weather_sources": "Wetter und Sonne - Wetterzustand, Bewölkung, Sonnenstand",
-            "load_sources": "Verbraucher - Schalter und Leistungssensoren",
+            "load_sources": "Verbraucher - Schalter, Leistung und Temperatur",
         }
     return {
         "energy_sources": "Grid, PV and battery - meters and forecasts",
         "weather_sources": "Weather and sun - state, clouds and sun position",
-        "load_sources": "Loads - switches and power sensors",
+        "load_sources": "Loads - switches, power and temperature",
     }
 
 
@@ -137,6 +141,12 @@ class BbHemsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_BATTERY_CHARGE_SENSORS: _entity_list(
                     user_input.get(CONF_BATTERY_CHARGE_SENSORS)
                 ),
+                CONF_VIRTUAL_BATTERY_CHARGE_SENSOR: user_input.get(
+                    CONF_VIRTUAL_BATTERY_CHARGE_SENSOR
+                ),
+                CONF_VIRTUAL_BATTERY_DISCHARGE_SENSOR: user_input.get(
+                    CONF_VIRTUAL_BATTERY_DISCHARGE_SENSOR
+                ),
                 CONF_WEATHER_STATE_SENSOR: user_input.get(CONF_WEATHER_STATE_SENSOR),
                 CONF_CLOUD_SENSOR: user_input.get(CONF_CLOUD_SENSOR),
                 CONF_SUNSHINE_SENSOR: user_input.get(CONF_SUNSHINE_SENSOR),
@@ -158,6 +168,12 @@ class BbHemsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 ),
                 CONF_HEATING_ROD_POWER_SENSORS: _entity_list(
                     user_input.get(CONF_HEATING_ROD_POWER_SENSORS)
+                ),
+                CONF_HEATING_ROD_TEMPERATURE_SENSORS: _entity_list(
+                    user_input.get(CONF_HEATING_ROD_TEMPERATURE_SENSORS)
+                ),
+                CONF_HEATING_ROD_TARGET_TEMPERATURES: user_input.get(
+                    CONF_HEATING_ROD_TARGET_TEMPERATURES
                 ),
             }
             return self.async_create_entry(title=data[CONF_NAME], data=data, options=DEFAULTS)
@@ -225,6 +241,12 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
                     CONF_BATTERY_CHARGE_SENSORS: _entity_list(
                         user_input.get(CONF_BATTERY_CHARGE_SENSORS)
                     ),
+                    CONF_VIRTUAL_BATTERY_CHARGE_SENSOR: user_input.get(
+                        CONF_VIRTUAL_BATTERY_CHARGE_SENSOR
+                    ),
+                    CONF_VIRTUAL_BATTERY_DISCHARGE_SENSOR: user_input.get(
+                        CONF_VIRTUAL_BATTERY_DISCHARGE_SENSOR
+                    ),
                 }
             )
             return self.async_create_entry(title="", data=dict(self._entry.options))
@@ -279,6 +301,12 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
                     CONF_HEATING_ROD_POWER_SENSORS: _entity_list(
                         user_input.get(CONF_HEATING_ROD_POWER_SENSORS)
                     ),
+                    CONF_HEATING_ROD_TEMPERATURE_SENSORS: _entity_list(
+                        user_input.get(CONF_HEATING_ROD_TEMPERATURE_SENSORS)
+                    ),
+                    CONF_HEATING_ROD_TARGET_TEMPERATURES: user_input.get(
+                        CONF_HEATING_ROD_TARGET_TEMPERATURES
+                    ),
                 }
             )
             return self.async_create_entry(title="", data=dict(self._entry.options))
@@ -313,6 +341,12 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
             CONF_BATTERY_CHARGE_SENSORS: _entity_list(
                 data.get(CONF_BATTERY_CHARGE_SENSORS)
             ),
+            CONF_VIRTUAL_BATTERY_CHARGE_SENSOR: data.get(
+                CONF_VIRTUAL_BATTERY_CHARGE_SENSOR
+            ),
+            CONF_VIRTUAL_BATTERY_DISCHARGE_SENSOR: data.get(
+                CONF_VIRTUAL_BATTERY_DISCHARGE_SENSOR
+            ),
             CONF_WEATHER_STATE_SENSOR: data.get(CONF_WEATHER_STATE_SENSOR),
             CONF_CLOUD_SENSOR: data.get(CONF_CLOUD_SENSOR),
             CONF_SUNSHINE_SENSOR: data.get(CONF_SUNSHINE_SENSOR),
@@ -330,6 +364,12 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
             ),
             CONF_HEATING_ROD_POWER_SENSORS: _entity_list(
                 data.get(CONF_HEATING_ROD_POWER_SENSORS)
+            ),
+            CONF_HEATING_ROD_TEMPERATURE_SENSORS: _entity_list(
+                data.get(CONF_HEATING_ROD_TEMPERATURE_SENSORS)
+            ),
+            CONF_HEATING_ROD_TARGET_TEMPERATURES: data.get(
+                CONF_HEATING_ROD_TARGET_TEMPERATURES
             ),
         }
 
@@ -398,6 +438,16 @@ def _schema(defaults: dict[str, Any]) -> vol.Schema:
             ): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
             ),
+            _optional_entity(
+                defaults, CONF_VIRTUAL_BATTERY_CHARGE_SENSOR
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
+            ),
+            _optional_entity(
+                defaults, CONF_VIRTUAL_BATTERY_DISCHARGE_SENSOR
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
+            ),
             vol.Optional(
                 CONF_WEATHER_STATE_SENSOR,
                 default=defaults.get(CONF_WEATHER_STATE_SENSOR),
@@ -457,6 +507,17 @@ def _schema(defaults: dict[str, Any]) -> vol.Schema:
                 default=defaults.get(CONF_HEATING_ROD_POWER_SENSORS, []),
             ): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+            ),
+            vol.Optional(
+                CONF_HEATING_ROD_TEMPERATURE_SENSORS,
+                default=defaults.get(CONF_HEATING_ROD_TEMPERATURE_SENSORS, []),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+            ),
+            _optional_text(
+                defaults, CONF_HEATING_ROD_TARGET_TEMPERATURES
+            ): selector.TextSelector(
+                selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT)
             ),
         }
     )
@@ -524,6 +585,16 @@ def _energy_sources_schema(defaults: dict[str, Any]) -> vol.Schema:
                 default=defaults.get(CONF_BATTERY_CHARGE_SENSORS, []),
             ): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+            ),
+            _optional_entity(
+                defaults, CONF_VIRTUAL_BATTERY_CHARGE_SENSOR
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
+            ),
+            _optional_entity(
+                defaults, CONF_VIRTUAL_BATTERY_DISCHARGE_SENSOR
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
             ),
         }
     )
@@ -598,6 +669,17 @@ def _load_sources_schema(defaults: dict[str, Any]) -> vol.Schema:
                 default=defaults.get(CONF_HEATING_ROD_POWER_SENSORS, []),
             ): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+            ),
+            vol.Optional(
+                CONF_HEATING_ROD_TEMPERATURE_SENSORS,
+                default=defaults.get(CONF_HEATING_ROD_TEMPERATURE_SENSORS, []),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+            ),
+            _optional_text(
+                defaults, CONF_HEATING_ROD_TARGET_TEMPERATURES
+            ): selector.TextSelector(
+                selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT)
             ),
         }
     )

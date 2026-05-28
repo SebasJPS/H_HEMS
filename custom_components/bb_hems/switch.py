@@ -8,7 +8,13 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import OPT_AUTO_ENABLED, OPT_DASHBOARD_ENABLED, PANEL_URL
+from .const import (
+    OPT_AUTO_ENABLED,
+    OPT_DASHBOARD_ENABLED,
+    OPT_USE_VIRTUAL_BATTERY,
+    OPT_VIRTUAL_BATTERY_ENABLED,
+    PANEL_URL,
+)
 from .coordinator import HemsCoordinator
 from .entity import HemsEntity
 
@@ -20,7 +26,14 @@ async def async_setup_entry(
 ) -> None:
     """Set up HEMS switches."""
     coordinator: HemsCoordinator = entry.runtime_data
-    async_add_entities([HemsAutoSwitch(coordinator), HemsDashboardSwitch(coordinator)])
+    async_add_entities(
+        [
+            HemsAutoSwitch(coordinator),
+            HemsDashboardSwitch(coordinator),
+            HemsVirtualBatterySwitch(coordinator),
+            HemsUseVirtualBatterySwitch(coordinator),
+        ]
+    )
 
 
 class HemsAutoSwitch(HemsEntity, SwitchEntity):
@@ -71,3 +84,43 @@ class HemsDashboardSwitch(HemsEntity, SwitchEntity):
         """Disable the bundled dashboard."""
         await self.coordinator.async_set_option(OPT_DASHBOARD_ENABLED, False)
         frontend.async_remove_panel(self.coordinator.hass, PANEL_URL)
+
+
+class HemsVirtualBatterySwitch(HemsEntity, SwitchEntity):
+    """Enable virtual battery calculation."""
+
+    _attr_translation_key = "virtual_battery_enabled"
+    _attr_icon = "mdi:battery-sync"
+
+    def __init__(self, coordinator: HemsCoordinator) -> None:
+        super().__init__(coordinator, "virtual_battery_enabled")
+
+    @property
+    def is_on(self) -> bool:
+        return bool(self.coordinator.opts[OPT_VIRTUAL_BATTERY_ENABLED])
+
+    async def async_turn_on(self, **kwargs: object) -> None:
+        await self.coordinator.async_set_option(OPT_VIRTUAL_BATTERY_ENABLED, True)
+
+    async def async_turn_off(self, **kwargs: object) -> None:
+        await self.coordinator.async_set_option(OPT_VIRTUAL_BATTERY_ENABLED, False)
+
+
+class HemsUseVirtualBatterySwitch(HemsEntity, SwitchEntity):
+    """Allow the virtual battery to participate in HEMS decisions."""
+
+    _attr_translation_key = "use_virtual_battery"
+    _attr_icon = "mdi:battery-check"
+
+    def __init__(self, coordinator: HemsCoordinator) -> None:
+        super().__init__(coordinator, "use_virtual_battery")
+
+    @property
+    def is_on(self) -> bool:
+        return bool(self.coordinator.opts[OPT_USE_VIRTUAL_BATTERY])
+
+    async def async_turn_on(self, **kwargs: object) -> None:
+        await self.coordinator.async_set_option(OPT_USE_VIRTUAL_BATTERY, True)
+
+    async def async_turn_off(self, **kwargs: object) -> None:
+        await self.coordinator.async_set_option(OPT_USE_VIRTUAL_BATTERY, False)

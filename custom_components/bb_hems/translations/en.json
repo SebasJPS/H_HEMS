@@ -18,6 +18,8 @@
           "battery_soc_sensors": "Battery SoC sensors",
           "battery_discharge_sensors": "Battery discharge sensors",
           "battery_charge_sensors": "Battery charge sensors",
+          "virtual_battery_charge_sensor": "Virtual battery charge",
+          "virtual_battery_discharge_sensor": "Virtual battery discharge",
           "weather_state_sensor": "Weather state",
           "cloud_sensor": "Cloud coverage",
           "sunshine_sensor": "Sunshine duration",
@@ -27,7 +29,9 @@
           "wallbox_switches": "Wallboxes",
           "heat_pump_switches": "Heat pumps",
           "heating_rod_switches": "Heating rods",
-          "heating_rod_power_sensors": "Heating rod power sensors"
+          "heating_rod_power_sensors": "Heating rod power sensors",
+          "heating_rod_temperature_sensors": "Heating rod temperature sensors",
+          "heating_rod_target_temperatures": "Heating rod target temperatures"
         },
         "data_description": {
           "name": "Display name of this HEMS instance.",
@@ -42,6 +46,8 @@
           "battery_soc_sensors": "Battery state-of-charge sensors in percent. With multiple batteries, BB HEMS uses the lowest SoC as protection value.",
           "battery_discharge_sensors": "Current battery discharge power in watts. BB HEMS sums these values and stops flexible loads when discharge is too high.",
           "battery_charge_sensors": "Current battery charge power in watts. From 60% SoC, BB HEMS can conservatively plan part of this as usable surplus.",
+          "virtual_battery_charge_sensor": "Optional charge power sensor for a DIY battery without its own SoC.",
+          "virtual_battery_discharge_sensor": "Optional discharge power sensor for a DIY battery without its own SoC.",
           "weather_state_sensor": "Weather state as a sensor or weather entity, for example sunny, partlycloudy or rainy.",
           "cloud_sensor": "Cloud coverage in percent. Lower values make PV surplus more likely.",
           "sunshine_sensor": "Sunshine duration or sunshine indicator. The value should increase when sunshine is currently available.",
@@ -51,7 +57,9 @@
           "wallbox_switches": "Switchable wallboxes or charging-enable entities. Currently stored as a device group for later prioritization.",
           "heat_pump_switches": "Switchable heat pumps or SG-ready enable entities. Currently stored as a device group for later prioritization.",
           "heating_rod_switches": "Switchable heating rods or boiler-enable entities. BB HEMS treats them as surplus loads.",
-          "heating_rod_power_sensors": "Optional power sensors for heating rods in the same order as the switches."
+          "heating_rod_power_sensors": "Optional power sensors for heating rods in the same order as the switches.",
+          "heating_rod_temperature_sensors": "Optional temperature sensors for heating rods in the same order as the switches.",
+          "heating_rod_target_temperatures": "Optional target temperatures in the same order as the heating rods, for example 55, 28."
         }
       }
     }
@@ -64,12 +72,12 @@
         "menu_options": {
           "energy_sources": "Grid, PV and battery",
           "weather_sources": "Weather and sun",
-          "load_sources": "Loads and power sensors"
+          "load_sources": "Loads, power and temperature"
         },
         "menu_option_descriptions": {
           "energy_sources": "Edit grid power, PV power, PV forecasts, PV arrays, battery SoC, battery discharge and battery charging.",
           "weather_sources": "Edit weather state, cloud coverage, sunshine and sun position so BB HEMS can evaluate PV windows better.",
-          "load_sources": "Edit switchable loads, wallboxes, heat pumps, heating rods and matching power sensors."
+          "load_sources": "Edit switchable loads, wallboxes, heat pumps, heating rods, power sensors and heating rod temperatures."
         }
       },
       "energy_sources": {
@@ -97,7 +105,9 @@
           "wallbox_switches": "Wallboxes",
           "heat_pump_switches": "Heat pumps",
           "heating_rod_switches": "Heating rods",
-          "heating_rod_power_sensors": "Heating rod power sensors"
+          "heating_rod_power_sensors": "Heating rod power sensors",
+          "heating_rod_temperature_sensors": "Heating rod temperature sensors",
+          "heating_rod_target_temperatures": "Heating rod target temperatures"
         },
         "data_description": {
           "name": "Display name of this HEMS instance.",
@@ -121,7 +131,9 @@
           "wallbox_switches": "Switchable wallboxes or charging-enable entities. Currently stored as a device group for later prioritization.",
           "heat_pump_switches": "Switchable heat pumps or SG-ready enable entities. Currently stored as a device group for later prioritization.",
           "heating_rod_switches": "Switchable heating rods or boiler-enable entities. BB HEMS treats them as surplus loads.",
-          "heating_rod_power_sensors": "Optional power sensors for heating rods in the same order as the switches."
+          "heating_rod_power_sensors": "Optional power sensors for heating rods in the same order as the switches.",
+          "heating_rod_temperature_sensors": "Optional temperature sensors for heating rods in the same order as the switches.",
+          "heating_rod_target_temperatures": "Optional target temperatures in the same order as the heating rods, for example 55, 28."
         }
       },
       "weather_sources": {
@@ -169,6 +181,10 @@
       "sun_elevation": { "name": "Sun elevation" },
       "battery_charge_total": { "name": "Battery charge total" },
       "usable_battery_charge": { "name": "Usable battery charge" },
+      "virtual_battery_soc": { "name": "Virtual battery SoC" },
+      "virtual_battery_energy": { "name": "Virtual battery energy" },
+      "virtual_battery_usable_energy": { "name": "Virtual battery usable energy" },
+      "virtual_battery_confidence": { "name": "Virtual battery confidence" },
       "available_surplus_budget": { "name": "Available surplus budget" },
       "scheduled_surplus_power": { "name": "Scheduled surplus power" },
       "shifted_energy_today": { "name": "HEMS shifted energy today" },
@@ -180,6 +196,13 @@
     "number": {
       "flexible_load_power": { "name": "Fallback flexible load power" },
       "heating_rod_power": { "name": "Fallback heating rod power" },
+      "heating_rod_temperature_hysteresis": { "name": "Heating rod temperature hysteresis" },
+      "virtual_battery_capacity": { "name": "Virtual battery capacity" },
+      "virtual_battery_min_soc": { "name": "Virtual battery min SoC" },
+      "virtual_battery_max_soc": { "name": "Virtual battery max SoC" },
+      "virtual_battery_manual_soc": { "name": "Virtual battery manual SoC" },
+      "virtual_battery_charge_efficiency": { "name": "Virtual battery charge efficiency" },
+      "virtual_battery_discharge_efficiency": { "name": "Virtual battery discharge efficiency" },
       "pv_azimuth": { "name": "Fallback PV azimuth" },
       "pv_tilt": { "name": "Fallback PV tilt" }
     },
@@ -188,7 +211,9 @@
       "response_profile": { "name": "Response profile" }
     },
     "switch": {
-      "dashboard_enabled": { "name": "Dashboard enabled" }
+      "dashboard_enabled": { "name": "Dashboard enabled" },
+      "virtual_battery_enabled": { "name": "Virtual battery enabled" },
+      "use_virtual_battery": { "name": "Use virtual battery in HEMS" }
     }
   }
 }

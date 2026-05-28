@@ -26,6 +26,8 @@ from .const import (
     CONF_HEAT_PUMP_SWITCHES,
     CONF_HEATING_ROD_POWER_SENSORS,
     CONF_HEATING_ROD_SWITCHES,
+    CONF_HEATING_ROD_TARGET_TEMPERATURES,
+    CONF_HEATING_ROD_TEMPERATURE_SENSORS,
     CONF_PV_ARRAY_SPECS,
     CONF_PV_AVERAGE_SENSOR,
     CONF_PV_FORECAST_NEXT_3H_SENSOR,
@@ -36,6 +38,8 @@ from .const import (
     CONF_SUNSHINE_SENSOR,
     CONF_WALLBOX_SWITCHES,
     CONF_WEATHER_STATE_SENSOR,
+    CONF_VIRTUAL_BATTERY_CHARGE_SENSOR,
+    CONF_VIRTUAL_BATTERY_DISCHARGE_SENSOR,
     DEFAULTS,
     DOMAIN,
     GOOD_WEATHER,
@@ -51,6 +55,7 @@ from .const import (
     OPT_GRID_HARD_IMPORT_LIMIT,
     OPT_GRID_IMPORT_LIMIT,
     OPT_HEATING_ROD_POWER,
+    OPT_HEATING_ROD_TEMPERATURE_HYSTERESIS,
     OPT_MIN_BATTERY_SOC,
     OPT_MODE,
     OPT_PROTECT_BATTERY_SOC,
@@ -59,6 +64,14 @@ from .const import (
     OPT_PV_TILT,
     OPT_PV_THRESHOLD,
     OPT_RESPONSE_PROFILE,
+    OPT_USE_VIRTUAL_BATTERY,
+    OPT_VIRTUAL_BATTERY_CAPACITY,
+    OPT_VIRTUAL_BATTERY_CHARGE_EFFICIENCY,
+    OPT_VIRTUAL_BATTERY_DISCHARGE_EFFICIENCY,
+    OPT_VIRTUAL_BATTERY_ENABLED,
+    OPT_VIRTUAL_BATTERY_MANUAL_SOC,
+    OPT_VIRTUAL_BATTERY_MAX_SOC,
+    OPT_VIRTUAL_BATTERY_MIN_SOC,
     RESPONSE_AUTO,
     RESPONSE_MINUTES,
     RESPONSE_REALTIME,
@@ -85,6 +98,10 @@ class LoadProfile:
     power_sensor: str | None
     priority: int
     is_on: bool
+    blocked: bool = False
+    blocked_reason: str | None = None
+    temperature: float | None = None
+    target_temperature: float | None = None
 
     @property
     def scheduling_power(self) -> float:
@@ -128,6 +145,13 @@ class HemsData:
     battery_discharge: float
     battery_charge: float
     usable_battery_charge: float
+    virtual_battery_enabled: bool
+    virtual_battery_used: bool
+    virtual_battery_soc: float | None
+    virtual_battery_energy: float | None
+    virtual_battery_usable_energy: float | None
+    virtual_battery_confidence: float
+    virtual_battery_reason: str
     cloud_coverage: float | None
     sunshine_minutes: float | None
     weather_state: str | None
@@ -145,12 +169,14 @@ class HemsData:
     configured_wallboxes: int
     configured_heat_pumps: int
     configured_heating_rods: int
+    blocked_heating_rods: int
     response_profile: str
     switch_on_delay_seconds: int
     switch_off_delay_seconds: int
     available_surplus_budget: float
     scheduled_surplus_loads: tuple[str, ...]
     scheduled_surplus_power: float
+    temperature_blocked_loads: tuple[str, ...]
     shifted_energy_today: float
     estimated_savings_today: float
     shifted_energy_total: float
@@ -191,6 +217,10 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         self._energy_estimate_last_power: float = 0.0
         self._shifted_energy_today: float = 0.0
         self._shifted_energy_total: float = 0.0
+        self._virtual_battery_energy: float | None = None
+        self._virtual_battery_last_update: datetime | None = None
+        self._virtual_battery_manual_reference: float | None = None
+        self._virtual_battery_corrections: int = 0
         self._learning_store = Store(
             hass, LEARNING_STORE_VERSION, f"{DOMAIN}_{entry.entry_id}_learning"
         )
@@ -217,6 +247,19 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         self._shifted_energy_total = self._safe_float(
             stored.get("shifted_energy_total"), 0.0
         )
+        self._virtual_battery_energy = (
+            self._safe_float(stored.get("virtual_battery_energy"), 0.0)
+            if stored.get("virtual_battery_energy") is not None
+            else None
+        )
+        self._virtual_battery_manual_reference = (
+            self._safe_float(stored.get("virtual_battery_manual_reference"), 0.0)
+            if stored.get("virtual_battery_manual_reference") is not None
+            else None
+        )
+        self._virtual_battery_corrections = int(
+            self._safe_float(stored.get("virtual_battery_corrections"), 0.0)
+        )
         self._learning_buckets = self._safe_learning_buckets(
             stored.get("learning_buckets")
         )
@@ -237,6 +280,11 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                 "energy_estimate_day": self._energy_estimate_day,
                 "shifted_energy_today": self._shifted_energy_today,
                 "shifted_energy_total": self._shifted_energy_total,
+                "virtual_battery_energy": self._virtual_battery_energy,
+                "virtual_battery_manual_reference": (
+                    self._virtual_battery_manual_reference
+                ),
+                "virtual_battery_corrections": self._virtual_battery_corrections,
                 "learning_buckets": self._learning_buckets,
                 "action_history": self._action_history,
             }
@@ -326,6 +374,13 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             self._float_state(entity_id, 0.0)
             for entity_id in battery_charge_sources
         )
+        virtual_battery = self._update_virtual_battery()
+        if virtual_battery["used"]:
+            if virtual_battery["soc"] is not None:
+                battery_socs.append(virtual_battery["soc"])
+                battery_soc_min = min(battery_socs)
+            battery_discharge += virtual_battery["discharge_power"]
+            battery_charge += virtual_battery["charge_power"]
 
         weather_state = self._state(data.get(CONF_WEATHER_STATE_SENSOR))
         weather_normalized = weather_state.lower() if weather_state else None
@@ -486,6 +541,13 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             battery_discharge=battery_discharge,
             battery_charge=battery_charge,
             usable_battery_charge=usable_battery_charge,
+            virtual_battery_enabled=virtual_battery["enabled"],
+            virtual_battery_used=virtual_battery["used"],
+            virtual_battery_soc=virtual_battery["soc"],
+            virtual_battery_energy=virtual_battery["energy"],
+            virtual_battery_usable_energy=virtual_battery["usable_energy"],
+            virtual_battery_confidence=virtual_battery["confidence"],
+            virtual_battery_reason=virtual_battery["reason"],
             cloud_coverage=cloud_coverage,
             sunshine_minutes=sunshine_minutes,
             weather_state=weather_state,
@@ -507,12 +569,16 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             configured_wallboxes=len(wallboxes),
             configured_heat_pumps=len(heat_pumps),
             configured_heating_rods=len(heating_rods),
+            blocked_heating_rods=sum(1 for load in controlled_loads if load.blocked),
             response_profile=str(opts[OPT_RESPONSE_PROFILE]),
             switch_on_delay_seconds=int(switch_on_delay.total_seconds()),
             switch_off_delay_seconds=int(switch_off_delay.total_seconds()),
             available_surplus_budget=available_budget,
             scheduled_surplus_loads=scheduled_loads,
             scheduled_surplus_power=scheduled_power,
+            temperature_blocked_loads=tuple(
+                load.entity_id for load in controlled_loads if load.blocked
+            ),
             shifted_energy_today=shifted_energy_today,
             estimated_savings_today=estimated_savings_today,
             shifted_energy_total=self._shifted_energy_total,
@@ -555,6 +621,95 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         self._energy_estimate_last_update = now
         self._energy_estimate_last_power = max(0.0, current_power)
         return self._shifted_energy_today
+
+    def _update_virtual_battery(self) -> dict[str, Any]:
+        """Estimate a virtual battery SoC from charge/discharge power."""
+        opts = self.opts
+        enabled = bool(opts[OPT_VIRTUAL_BATTERY_ENABLED])
+        use_for_hems = bool(opts[OPT_USE_VIRTUAL_BATTERY])
+        capacity = max(0.1, float(opts[OPT_VIRTUAL_BATTERY_CAPACITY]))
+        manual_soc = max(
+            0.0, min(100.0, float(opts[OPT_VIRTUAL_BATTERY_MANUAL_SOC]))
+        )
+        min_soc = max(0.0, min(100.0, float(opts[OPT_VIRTUAL_BATTERY_MIN_SOC])))
+        max_soc = max(min_soc, min(100.0, float(opts[OPT_VIRTUAL_BATTERY_MAX_SOC])))
+        charge_power = self._positive_float_state(
+            self.config_entry.data.get(CONF_VIRTUAL_BATTERY_CHARGE_SENSOR)
+        ) or 0.0
+        discharge_power = self._positive_float_state(
+            self.config_entry.data.get(CONF_VIRTUAL_BATTERY_DISCHARGE_SENSOR)
+        ) or 0.0
+
+        if not enabled:
+            self._virtual_battery_last_update = datetime.now()
+            return {
+                "enabled": False,
+                "used": False,
+                "soc": None,
+                "energy": None,
+                "usable_energy": None,
+                "confidence": 0.0,
+                "reason": "Virtuelle Batterie ist deaktiviert.",
+                "charge_power": 0.0,
+                "discharge_power": 0.0,
+            }
+
+        now = datetime.now()
+        if self._virtual_battery_energy is None:
+            self._virtual_battery_energy = capacity * manual_soc / 100
+            self._virtual_battery_manual_reference = manual_soc
+        elif (
+            self._virtual_battery_manual_reference is None
+            or abs(manual_soc - self._virtual_battery_manual_reference) >= 0.5
+        ):
+            current_soc = self._virtual_battery_energy / capacity * 100
+            if abs(manual_soc - current_soc) >= 1.0:
+                self._virtual_battery_corrections += 1
+            self._virtual_battery_energy = capacity * manual_soc / 100
+            self._virtual_battery_manual_reference = manual_soc
+
+        if self._virtual_battery_last_update is not None:
+            elapsed_hours = max(
+                0.0, (now - self._virtual_battery_last_update).total_seconds() / 3600
+            )
+            charge_eff = max(
+                0.0, min(1.0, float(opts[OPT_VIRTUAL_BATTERY_CHARGE_EFFICIENCY]) / 100)
+            )
+            discharge_eff = max(
+                0.01,
+                min(1.0, float(opts[OPT_VIRTUAL_BATTERY_DISCHARGE_EFFICIENCY]) / 100),
+            )
+            delta = (
+                charge_power * charge_eff
+                - discharge_power / discharge_eff
+            ) * elapsed_hours / 1000
+            self._virtual_battery_energy = max(
+                0.0, min(capacity, self._virtual_battery_energy + delta)
+            )
+
+        self._virtual_battery_last_update = now
+        soc = max(0.0, min(100.0, self._virtual_battery_energy / capacity * 100))
+        usable_energy = max(
+            0.0, min(capacity * max_soc / 100, self._virtual_battery_energy)
+            - capacity * min_soc / 100
+        )
+        confidence = min(100.0, 30.0 + self._virtual_battery_corrections * 12.0)
+        reason = (
+            f"Virtuelle Batterie berechnet aus Ladung {charge_power:.0f} W, "
+            f"Entladung {discharge_power:.0f} W und manueller Kalibrierung "
+            f"{manual_soc:.1f}%."
+        )
+        return {
+            "enabled": True,
+            "used": use_for_hems,
+            "soc": soc,
+            "energy": self._virtual_battery_energy,
+            "usable_energy": usable_energy,
+            "confidence": confidence,
+            "reason": reason,
+            "charge_power": charge_power,
+            "discharge_power": discharge_power,
+        }
 
     def _update_learning_bucket(
         self,
@@ -762,13 +917,13 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         if not bool(opts[OPT_AUTO_ENABLED]):
             return False
 
+        action_added = await self._async_turn_off_temperature_blocked_loads(data)
         target_on = data.flexible_loads_allowed and bool(data.scheduled_surplus_loads)
         if not self._flexible_load_decision_is_stable(target_on, data):
-            return False
+            return action_added
 
         desired_on = set(data.scheduled_surplus_loads) if target_on else set()
         flexible_loads = self._controlled_surplus_load_profiles()
-        action_added = False
 
         for load in flexible_loads:
             entity_id = load.entity_id
@@ -802,6 +957,34 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
 
         return action_added
 
+    async def _async_turn_off_temperature_blocked_loads(self, data: HemsData) -> bool:
+        """Immediately stop heating rods that reached their target temperature."""
+        action_added = False
+        for entity_id in data.temperature_blocked_loads:
+            state = self.hass.states.get(entity_id)
+            if state is None or state.state in {
+                STATE_OFF,
+                STATE_UNAVAILABLE,
+                STATE_UNKNOWN,
+            }:
+                continue
+            domain = entity_id.split(".", 1)[0]
+            if domain not in {"switch", "input_boolean"}:
+                continue
+            await self.hass.services.async_call(
+                domain,
+                "turn_off",
+                {"entity_id": entity_id},
+                blocking=False,
+            )
+            self._add_action(
+                "Heizstab Temperatur erreicht",
+                f"{entity_id} wurde ausgeschaltet, weil die Zieltemperatur erreicht ist.",
+                "protect",
+            )
+            action_added = True
+        return action_added
+
     def _controlled_surplus_load_profiles(self) -> list[LoadProfile]:
         """Return all loads controlled by the smart surplus scheduler."""
         data = self.config_entry.data
@@ -810,6 +993,13 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         heating_rod_power = float(opts[OPT_HEATING_ROD_POWER])
         flexible_power_sensors = data.get(CONF_FLEXIBLE_LOAD_POWER_SENSORS, [])
         heating_rod_power_sensors = data.get(CONF_HEATING_ROD_POWER_SENSORS, [])
+        heating_rod_temperature_sensors = data.get(
+            CONF_HEATING_ROD_TEMPERATURE_SENSORS, []
+        )
+        heating_rod_targets = self._float_list(
+            data.get(CONF_HEATING_ROD_TARGET_TEMPERATURES)
+        )
+        hysteresis = float(opts[OPT_HEATING_ROD_TEMPERATURE_HYSTERESIS])
 
         profiles: list[LoadProfile] = []
         for index, entity_id in enumerate(data.get(CONF_FLEXIBLE_LOAD_SWITCHES, [])):
@@ -827,6 +1017,15 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             )
         for index, entity_id in enumerate(data.get(CONF_HEATING_ROD_SWITCHES, [])):
             power_sensor = self._matching_entity(heating_rod_power_sensors, index)
+            temperature_sensor = self._matching_entity(
+                heating_rod_temperature_sensors, index
+            )
+            temperature = self._float_state(temperature_sensor, None)
+            target_temperature = self._matching_number(heating_rod_targets, index)
+            is_on = self.hass.states.is_state(entity_id, STATE_ON)
+            blocked, blocked_reason = self._heating_rod_temperature_block(
+                temperature, target_temperature, hysteresis, is_on
+            )
             profiles.append(
                 LoadProfile(
                     entity_id=entity_id,
@@ -835,7 +1034,11 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                     actual_power=self._positive_float_state(power_sensor),
                     power_sensor=power_sensor,
                     priority=30,
-                    is_on=self.hass.states.is_state(entity_id, STATE_ON),
+                    is_on=is_on,
+                    blocked=blocked,
+                    blocked_reason=blocked_reason,
+                    temperature=temperature,
+                    target_temperature=target_temperature,
                 )
             )
         return profiles
@@ -845,6 +1048,44 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         if index >= len(entity_ids):
             return None
         return entity_ids[index]
+
+    def _matching_number(self, values: list[float | None], index: int) -> float | None:
+        if index >= len(values):
+            return None
+        return values[index]
+
+    def _float_list(self, value: Any) -> list[float | None]:
+        if not value:
+            return []
+        raw_items = value if isinstance(value, list) else str(value).split(",")
+        numbers: list[float | None] = []
+        for raw in raw_items:
+            try:
+                numbers.append(float(str(raw).strip().replace(",", ".")))
+            except (TypeError, ValueError):
+                numbers.append(None)
+        return numbers
+
+    def _heating_rod_temperature_block(
+        self,
+        temperature: float | None,
+        target: float | None,
+        hysteresis: float,
+        is_on: bool,
+    ) -> tuple[bool, str | None]:
+        if temperature is None or target is None:
+            return False, None
+        if temperature >= target:
+            return (
+                True,
+                f"Temperatur {temperature:.1f}°C hat Ziel {target:.1f}°C erreicht.",
+            )
+        if not is_on and temperature >= target - max(0.0, hysteresis):
+            return (
+                True,
+                f"Temperatur {temperature:.1f}°C liegt innerhalb der Hysterese unter Ziel {target:.1f}°C.",
+            )
+        return False, None
 
     def _schedule_surplus_loads(
         self,
@@ -866,12 +1107,21 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         )
         if not allowed:
             return (), 0.0, budget, "Smart Scheduler blockiert alle Überschussverbraucher, weil die zentrale HEMS-Freigabe fehlt."
+        available_loads = [load for load in loads if not load.blocked]
+        blocked_loads = [load for load in loads if load.blocked]
         if not loads:
             return (), 0.0, budget, "Smart Scheduler hat keine schaltbaren Überschussverbraucher konfiguriert."
+        if not available_loads:
+            reason = "Alle HEMS-Verbraucher sind blockiert."
+            if blocked_loads:
+                reason = "Alle HEMS-Verbraucher sind blockiert: " + "; ".join(
+                    load.blocked_reason or load.entity_id for load in blocked_loads
+                )
+            return (), 0.0, budget, reason
 
         selected: list[LoadProfile] = []
         used_power = 0.0
-        for load in sorted(loads, key=lambda item: (item.priority, not item.is_on, item.estimated_power)):
+        for load in sorted(available_loads, key=lambda item: (item.priority, not item.is_on, item.estimated_power)):
             load_power = load.scheduling_power
             if load_power <= 0 or used_power + load_power <= budget:
                 selected.append(load)
@@ -1009,6 +1259,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             OPT_AUTO_ENABLED: "Automatik",
             OPT_BATTERY_DISCHARGE_LIMIT: "Entladegrenze Batterie",
             OPT_DASHBOARD_ENABLED: "Dashboard",
+            OPT_HEATING_ROD_TEMPERATURE_HYSTERESIS: "Heizstab Temperatur-Hysterese",
             OPT_GRID_HARD_IMPORT_LIMIT: "Netzbezug hart",
             OPT_GRID_IMPORT_LIMIT: "Netzbezug-Toleranz",
             OPT_FLEXIBLE_LOAD_POWER: "Fallback-Leistung flexible Verbraucher",
@@ -1021,6 +1272,14 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             OPT_PV_AVG_THRESHOLD: "PV-Schwellwert 15 min",
             OPT_PV_TILT: "PV-Neigung",
             OPT_PV_THRESHOLD: "PV-Schwellwert aktuell",
+            OPT_USE_VIRTUAL_BATTERY: "Virtuelle Batterie im HEMS nutzen",
+            OPT_VIRTUAL_BATTERY_ENABLED: "Virtuelle Batterie",
+            OPT_VIRTUAL_BATTERY_CAPACITY: "Virtuelle Batterie Kapazität",
+            OPT_VIRTUAL_BATTERY_MIN_SOC: "Virtuelle Batterie min SoC",
+            OPT_VIRTUAL_BATTERY_MAX_SOC: "Virtuelle Batterie max SoC",
+            OPT_VIRTUAL_BATTERY_MANUAL_SOC: "Virtuelle Batterie manueller SoC",
+            OPT_VIRTUAL_BATTERY_CHARGE_EFFICIENCY: "Virtuelle Batterie Lade-Wirkungsgrad",
+            OPT_VIRTUAL_BATTERY_DISCHARGE_EFFICIENCY: "Virtuelle Batterie Entlade-Wirkungsgrad",
         }.get(key, key)
 
     def _state(self, entity_id: str | None) -> str | None:

@@ -2,6 +2,7 @@ const ALIASES = {
   energy_mode: ["energy_mode", "energiemodus", "betrieb"],
   pv_window: ["pv_window", "pv fenster"],
   battery_soc_min: ["battery_soc_min", "batterie soc minimum", "batterie min"],
+  virtual_battery_soc: ["virtual_battery_soc", "virtuelle batterie soc"],
   battery_discharge_total: ["battery_discharge_total", "batterie entladung gesamt", "batterie entladung"],
   available_surplus_budget: ["available_surplus_budget", "verfugbares uberschussbudget", "verfuegbares ueberschussbudget"],
   scheduled_surplus_power: ["scheduled_surplus_power", "geplante uberschussleistung", "geplante ueberschussleistung"],
@@ -19,7 +20,7 @@ const ALIASES = {
   mode_select: ["select.bb_hems_mode", "betriebsart", "operating mode"],
 };
 
-const BB_HEMS_VERSION = "0.3.0";
+const BB_HEMS_VERSION = "0.5.0";
 const MODE_LABELS = {
   auto: "Auto",
   eco: "Eco",
@@ -349,6 +350,7 @@ class BbHemsPanel extends HTMLElement {
 
           <aside class="stack">
             ${blockerCard(states, attrs)}
+            ${virtualBatteryCard(states, attrs)}
             ${actionHistory(attrs)}
           </aside>
         </section>
@@ -424,21 +426,36 @@ function nextCandidateTile(attrs) {
 function loadTiles(attrs, states) {
   return [
     loadTile("Flexible Lasten", attrs.flexible_load_switches, attrs.configured_flexible_loads, "info", "Dürfen bei Überschuss starten.", attrs.scheduled_surplus_loads),
-    loadTile("Heizstäbe", attrs.heating_rod_switches, attrs.configured_heating_rods, "good", "Werden als Überschussverbraucher priorisiert.", attrs.scheduled_surplus_loads),
+    loadTile("Heizstäbe", attrs.heating_rod_switches, attrs.configured_heating_rods, "good", "Werden als Überschussverbraucher priorisiert.", attrs.scheduled_surplus_loads, Number(attrs.blocked_heating_rods || 0)),
     loadTile("Wallboxen", attrs.wallbox_switches, attrs.configured_wallboxes, "warn", "Aktuell als Gruppe erfasst, Detailstrategie folgt.", attrs.scheduled_surplus_loads),
     loadTile("Wärmepumpen", attrs.heat_pump_switches, attrs.configured_heat_pumps, "warn", "Aktuell als Gruppe erfasst, Detailstrategie folgt.", attrs.scheduled_surplus_loads),
   ].join("");
 }
 
-function loadTile(title, entities, count, configuredState, fallbackNote, scheduledLoads) {
+function loadTile(title, entities, count, configuredState, fallbackNote, scheduledLoads, blockedCount = 0) {
   const items = asArray(entities);
   const configured = Number(count ?? items.length);
   const scheduled = asArray(scheduledLoads).filter((entity) => items.includes(entity));
-  const state = configured <= 0 ? "bad" : scheduled.length ? "good" : configuredState;
-  const pill = configured <= 0 ? "nicht konfiguriert" : scheduled.length ? "aktiv" : "bereit";
-  const value = configured <= 0 ? "kein Gerät" : scheduled.length ? `${scheduled.length} aktiv` : `${configured} Gerät${configured === 1 ? "" : "e"}`;
+  const blocked = Number(blockedCount || 0);
+  const state = configured <= 0 ? "bad" : blocked ? "warn" : scheduled.length ? "good" : configuredState;
+  const pill = configured <= 0 ? "nicht konfiguriert" : blocked ? "Temperatur" : scheduled.length ? "aktiv" : "bereit";
+  const value = configured <= 0 ? "kein Gerät" : blocked ? `${blocked} blockiert` : scheduled.length ? `${scheduled.length} aktiv` : `${configured} Gerät${configured === 1 ? "" : "e"}`;
   const note = scheduled.length ? `Geplant: ${scheduled.join(", ")}` : fallbackNote;
   return `<article class="tile ${state}"><div class="tile-top"><span>${esc(title)}</span><span class="pill ${state}">${esc(pill)}</span></div><div class="value small-value">${esc(value)}</div><div class="note">${esc(note)}</div></article>`;
+}
+
+function virtualBatteryCard(states, attrs) {
+  const enabled = Boolean(attrs.virtual_battery_enabled);
+  if (!enabled) return "";
+  const used = Boolean(attrs.virtual_battery_used);
+  const soc = attrs.virtual_battery_soc ?? numericState(byKey(states, "virtual_battery_soc"));
+  const confidence = Number(attrs.virtual_battery_confidence || 0);
+  return `<section class="next-card">
+    <h2>Virtuelle Batterie</h2>
+    ${blockerItem(used, "HEMS-Nutzung", used ? "Virtuelle Batterie wird in Batterie-SoC, Ladung und Entladung berücksichtigt." : "Virtuelle Batterie rechnet mit, wird aber noch nicht für HEMS-Entscheidungen genutzt.")}
+    ${blockerItem(confidence >= 50, "Vertrauen", `${confidence.toLocaleString("de-DE", { maximumFractionDigits: 0 })}% · ${attrs.virtual_battery_reason || "Manuelle Korrekturen verbessern die Genauigkeit."}`)}
+    ${blockerItem(Number(soc) > 0, "Berechneter SoC", `${Number(soc || 0).toLocaleString("de-DE", { maximumFractionDigits: 1 })}%`)}
+  </section>`;
 }
 
 function blockerCard(states, attrs) {

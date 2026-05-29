@@ -64,12 +64,22 @@ def _options_menu_labels(language: str | None) -> dict[str, str]:
         return {
             "energy_sources": "Netz, PV und Batterie - Messwerte und Forecasts",
             "weather_sources": "Wetter und Sonne - Wetterzustand, Bewölkung, Sonnenstand",
-            "load_sources": "Verbraucher - Schalter, Leistung und Temperatur",
+            "load_flexible": "Flexible Verbraucher - darf HEMS ein- und ausschalten",
+            "load_start_only": "Nur starten - Waschmaschine, Geschirrspüler, Trockner",
+            "load_heating_rods": "Heizstäbe - mit optionaler Zieltemperatur",
+            "load_wallboxes": "Wallboxen - Ladefreigaben",
+            "load_heat_pumps": "Wärmepumpen - SG-Ready oder Freigaben",
+            "load_advanced": "Erweiterte Geräteprofile - Priorität und Verhalten",
         }
     return {
         "energy_sources": "Grid, PV and battery - meters and forecasts",
         "weather_sources": "Weather and sun - state, clouds and sun position",
-        "load_sources": "Loads - switches, power and temperature",
+        "load_flexible": "Flexible loads - HEMS may turn on and off",
+        "load_start_only": "Start only - washing machine, dishwasher, dryer",
+        "load_heating_rods": "Heating rods - with optional target temperature",
+        "load_wallboxes": "Wallboxes - charge release",
+        "load_heat_pumps": "Heat pumps - SG-ready or releases",
+        "load_advanced": "Advanced device profiles - priority and behavior",
     }
 
 
@@ -346,6 +356,127 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
         return self.async_show_form(
             step_id="load_sources",
             data_schema=_load_sources_schema(self._defaults()),
+        )
+
+    async def async_step_load_flexible(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        if user_input is not None:
+            self._update_data(
+                {
+                    CONF_FLEXIBLE_LOAD_SWITCHES: _entity_list(
+                        user_input.get(CONF_FLEXIBLE_LOAD_SWITCHES)
+                    ),
+                    CONF_FLEXIBLE_LOAD_POWER_SENSORS: _entity_list(
+                        user_input.get(CONF_FLEXIBLE_LOAD_POWER_SENSORS)
+                    ),
+                }
+            )
+            return self.async_create_entry(title="", data=dict(self._entry.options))
+
+        return self.async_show_form(
+            step_id="load_flexible",
+            data_schema=_load_flexible_schema(self._defaults()),
+        )
+
+    async def async_step_load_start_only(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        if user_input is not None:
+            self._update_data(
+                {
+                    CONF_START_ONLY_APPLIANCE_SWITCHES: _entity_list(
+                        user_input.get(CONF_START_ONLY_APPLIANCE_SWITCHES)
+                    ),
+                    CONF_START_ONLY_APPLIANCE_POWER_SENSORS: _entity_list(
+                        user_input.get(CONF_START_ONLY_APPLIANCE_POWER_SENSORS)
+                    ),
+                }
+            )
+            return self.async_create_entry(title="", data=dict(self._entry.options))
+
+        return self.async_show_form(
+            step_id="load_start_only",
+            data_schema=_load_start_only_schema(self._defaults()),
+        )
+
+    async def async_step_load_heating_rods(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        if user_input is not None:
+            self._update_data(
+                {
+                    CONF_HEATING_ROD_SWITCHES: _entity_list(
+                        user_input.get(CONF_HEATING_ROD_SWITCHES)
+                    ),
+                    CONF_HEATING_ROD_POWER_SENSORS: _entity_list(
+                        user_input.get(CONF_HEATING_ROD_POWER_SENSORS)
+                    ),
+                    CONF_HEATING_ROD_TEMPERATURE_SENSORS: _entity_list(
+                        user_input.get(CONF_HEATING_ROD_TEMPERATURE_SENSORS)
+                    ),
+                    CONF_HEATING_ROD_TARGET_TEMPERATURES: user_input.get(
+                        CONF_HEATING_ROD_TARGET_TEMPERATURES
+                    ),
+                }
+            )
+            return self.async_create_entry(title="", data=dict(self._entry.options))
+
+        return self.async_show_form(
+            step_id="load_heating_rods",
+            data_schema=_load_heating_rods_schema(self._defaults()),
+        )
+
+    async def async_step_load_wallboxes(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        if user_input is not None:
+            self._update_data(
+                {
+                    CONF_WALLBOX_SWITCHES: _entity_list(
+                        user_input.get(CONF_WALLBOX_SWITCHES)
+                    ),
+                }
+            )
+            return self.async_create_entry(title="", data=dict(self._entry.options))
+
+        return self.async_show_form(
+            step_id="load_wallboxes",
+            data_schema=_load_wallboxes_schema(self._defaults()),
+        )
+
+    async def async_step_load_heat_pumps(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        if user_input is not None:
+            self._update_data(
+                {
+                    CONF_HEAT_PUMP_SWITCHES: _entity_list(
+                        user_input.get(CONF_HEAT_PUMP_SWITCHES)
+                    ),
+                }
+            )
+            return self.async_create_entry(title="", data=dict(self._entry.options))
+
+        return self.async_show_form(
+            step_id="load_heat_pumps",
+            data_schema=_load_heat_pumps_schema(self._defaults()),
+        )
+
+    async def async_step_load_advanced(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        if user_input is not None:
+            self._update_data(
+                {
+                    CONF_DEVICE_PROFILES: user_input.get(CONF_DEVICE_PROFILES),
+                }
+            )
+            return self.async_create_entry(title="", data=dict(self._entry.options))
+
+        return self.async_show_form(
+            step_id="load_advanced",
+            data_schema=_load_advanced_schema(self._defaults()),
         )
 
     def _update_data(self, updates: dict[str, Any]) -> None:
@@ -770,6 +901,110 @@ def _load_sources_schema(defaults: dict[str, Any]) -> vol.Schema:
             _optional_text(
                 defaults, CONF_HEATING_ROD_TARGET_TEMPERATURES
             ): selector.TextSelector(
+                selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT)
+            ),
+        }
+    )
+
+
+def _load_flexible_schema(defaults: dict[str, Any]) -> vol.Schema:
+    return vol.Schema(
+        {
+            vol.Optional(
+                CONF_FLEXIBLE_LOAD_SWITCHES,
+                default=defaults.get(CONF_FLEXIBLE_LOAD_SWITCHES, []),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=SWITCHABLE_DOMAINS, multiple=True)
+            ),
+            vol.Optional(
+                CONF_FLEXIBLE_LOAD_POWER_SENSORS,
+                default=defaults.get(CONF_FLEXIBLE_LOAD_POWER_SENSORS, []),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+            ),
+        }
+    )
+
+
+def _load_start_only_schema(defaults: dict[str, Any]) -> vol.Schema:
+    return vol.Schema(
+        {
+            vol.Optional(
+                CONF_START_ONLY_APPLIANCE_SWITCHES,
+                default=defaults.get(CONF_START_ONLY_APPLIANCE_SWITCHES, []),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=STARTABLE_DOMAINS, multiple=True)
+            ),
+            vol.Optional(
+                CONF_START_ONLY_APPLIANCE_POWER_SENSORS,
+                default=defaults.get(CONF_START_ONLY_APPLIANCE_POWER_SENSORS, []),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+            ),
+        }
+    )
+
+
+def _load_heating_rods_schema(defaults: dict[str, Any]) -> vol.Schema:
+    return vol.Schema(
+        {
+            vol.Optional(
+                CONF_HEATING_ROD_SWITCHES,
+                default=defaults.get(CONF_HEATING_ROD_SWITCHES, []),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=SWITCHABLE_DOMAINS, multiple=True)
+            ),
+            vol.Optional(
+                CONF_HEATING_ROD_POWER_SENSORS,
+                default=defaults.get(CONF_HEATING_ROD_POWER_SENSORS, []),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+            ),
+            vol.Optional(
+                CONF_HEATING_ROD_TEMPERATURE_SENSORS,
+                default=defaults.get(CONF_HEATING_ROD_TEMPERATURE_SENSORS, []),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+            ),
+            _optional_text(
+                defaults, CONF_HEATING_ROD_TARGET_TEMPERATURES
+            ): selector.TextSelector(
+                selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT)
+            ),
+        }
+    )
+
+
+def _load_wallboxes_schema(defaults: dict[str, Any]) -> vol.Schema:
+    return vol.Schema(
+        {
+            vol.Optional(
+                CONF_WALLBOX_SWITCHES,
+                default=defaults.get(CONF_WALLBOX_SWITCHES, []),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=SWITCHABLE_DOMAINS, multiple=True)
+            ),
+        }
+    )
+
+
+def _load_heat_pumps_schema(defaults: dict[str, Any]) -> vol.Schema:
+    return vol.Schema(
+        {
+            vol.Optional(
+                CONF_HEAT_PUMP_SWITCHES,
+                default=defaults.get(CONF_HEAT_PUMP_SWITCHES, []),
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=SWITCHABLE_DOMAINS, multiple=True)
+            ),
+        }
+    )
+
+
+def _load_advanced_schema(defaults: dict[str, Any]) -> vol.Schema:
+    return vol.Schema(
+        {
+            _optional_text(defaults, CONF_DEVICE_PROFILES): selector.TextSelector(
                 selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT)
             ),
         }

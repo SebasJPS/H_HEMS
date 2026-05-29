@@ -82,12 +82,22 @@
         "menu_options": {
           "energy_sources": "Grid, PV and battery",
           "weather_sources": "Weather and sun",
-          "load_sources": "Loads, power and temperature"
+          "load_flexible": "Flexible loads",
+          "load_start_only": "Start-only appliances",
+          "load_heating_rods": "Heating rods",
+          "load_wallboxes": "Wallboxes",
+          "load_heat_pumps": "Heat pumps",
+          "load_advanced": "Advanced device profiles"
         },
         "menu_option_descriptions": {
           "energy_sources": "Edit grid power, PV power, PV forecasts, PV arrays, battery SoC, battery discharge and battery charging.",
           "weather_sources": "Edit weather state, cloud coverage, sunshine and sun position so BB HEMS can evaluate PV windows better.",
-          "load_sources": "Edit switchable loads, wallboxes, heat pumps, heating rods, power sensors and heating rod temperatures."
+          "load_flexible": "Edit normal loads that BB HEMS may turn on during surplus and turn off again when surplus is gone.",
+          "load_start_only": "Edit appliances BB HEMS may only start, such as washing machines, dishwashers or dryers.",
+          "load_heating_rods": "Edit heating rods, power sensors, temperature sensors and target temperatures.",
+          "load_wallboxes": "Edit wallbox switches or charging release entities.",
+          "load_heat_pumps": "Edit heat-pump switches or SG-ready release entities.",
+          "load_advanced": "Edit optional JSON profiles for priority, power, cooldown, minimum runtime and start-only behavior."
         }
       },
       "energy_sources": {
@@ -192,6 +202,76 @@
           "heat_pump_switches": "Switchable heat pumps or SG-ready enable entities. Currently stored as a device group for later prioritization.",
           "heating_rod_switches": "Switchable heating rods or boiler-enable entities. BB HEMS treats them as surplus loads.",
           "heating_rod_power_sensors": "Optional power sensors for heating rods in the same order as the switches."
+        }
+      },
+      "load_flexible": {
+        "title": "Flexible loads",
+        "description": "BB HEMS may turn these loads on during surplus and turn them off again later.",
+        "data": {
+          "flexible_load_switches": "Flexible loads",
+          "flexible_load_power_sensors": "Flexible load power sensors"
+        },
+        "data_description": {
+          "flexible_load_switches": "Switchable loads that may be enabled during surplus, for example a dehumidifier.",
+          "flexible_load_power_sensors": "Optional power sensors in the same order. While a load is running, BB HEMS uses this real consumption instead of the global estimate."
+        }
+      },
+      "load_start_only": {
+        "title": "Start-only appliances",
+        "description": "BB HEMS starts these appliances only when surplus fits. After that, BB HEMS will not turn them off automatically.",
+        "data": {
+          "start_only_appliance_switches": "Start-only appliances",
+          "start_only_appliance_power_sensors": "Start-only appliance power sensors"
+        },
+        "data_description": {
+          "start_only_appliance_switches": "Switch, input_boolean or button. Example: switch.dishwasher_start. BB HEMS starts the appliance only and will not turn it off afterwards.",
+          "start_only_appliance_power_sensors": "Optional. With a power sensor, BB HEMS can detect whether the program is actually running. Without a power sensor, BB HEMS blocks conservatively after start so the appliance is not started again."
+        }
+      },
+      "load_heating_rods": {
+        "title": "Heating rods",
+        "description": "Heating rods are surplus loads and can optionally be limited by target temperature.",
+        "data": {
+          "heating_rod_switches": "Heating rods",
+          "heating_rod_power_sensors": "Heating rod power sensors",
+          "heating_rod_temperature_sensors": "Heating rod temperature sensors",
+          "heating_rod_target_temperatures": "Heating rod target temperatures"
+        },
+        "data_description": {
+          "heating_rod_switches": "Switchable heating rods or boiler/pool release entities.",
+          "heating_rod_power_sensors": "Optional power sensors in the same order as the heating rods.",
+          "heating_rod_temperature_sensors": "Optional temperature sensors in the same order as the heating rods.",
+          "heating_rod_target_temperatures": "Optional target temperatures in the same order, for example 55, 28. BB HEMS turns the heating rod off when the target temperature is reached."
+        }
+      },
+      "load_wallboxes": {
+        "title": "Wallboxes",
+        "description": "Configure wallbox switches or charging release entities here.",
+        "data": {
+          "wallbox_switches": "Wallboxes"
+        },
+        "data_description": {
+          "wallbox_switches": "Switchable wallboxes or charging release entities. Detailed charge-current control follows later."
+        }
+      },
+      "load_heat_pumps": {
+        "title": "Heat pumps",
+        "description": "Configure heat-pump switches or SG-ready release entities here.",
+        "data": {
+          "heat_pump_switches": "Heat pumps"
+        },
+        "data_description": {
+          "heat_pump_switches": "Switchable heat pumps or SG-ready release entities. Comfort bands and thermal buffers follow later."
+        }
+      },
+      "load_advanced": {
+        "title": "Advanced device profiles",
+        "description": "Optional for devices that need per-device priority, power, battery usage, cooldown, minimum runtime or start-only behavior.",
+        "data": {
+          "device_profiles": "Device profiles"
+        },
+        "data_description": {
+          "device_profiles": "JSON list. Example: [{\"name\":\"Dishwasher\",\"switch\":\"switch.dishwasher_start\",\"category\":\"appliance\",\"power\":1200,\"control_mode\":\"start_only\",\"priority\":40,\"cooldown\":720,\"allow_battery\":false}]"
         }
       }
     }

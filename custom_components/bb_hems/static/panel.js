@@ -21,7 +21,7 @@ const ALIASES = {
   mode_select: ["select.bb_hems_mode", "betriebsart", "operating mode"],
 };
 
-const BB_HEMS_VERSION = "0.9.2";
+const BB_HEMS_VERSION = "0.10.0";
 const I18N = {
   de: {
     subtitle: "Was HEMS gerade entscheidet, schaltet und einspart",

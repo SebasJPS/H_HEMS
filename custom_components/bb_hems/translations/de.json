@@ -82,12 +82,22 @@
         "menu_options": {
           "energy_sources": "Netz, PV und Batterie",
           "weather_sources": "Wetter und Sonne",
-          "load_sources": "Verbraucher, Leistung und Temperatur"
+          "load_flexible": "Flexible Verbraucher",
+          "load_start_only": "Nur starten: Waschmaschine, Geschirrspüler, Trockner",
+          "load_heating_rods": "Heizstäbe",
+          "load_wallboxes": "Wallboxen",
+          "load_heat_pumps": "Wärmepumpen",
+          "load_advanced": "Erweiterte Geräteprofile"
         },
         "menu_option_descriptions": {
           "energy_sources": "Netzleistung, PV-Leistung, PV-Forecast, PV-Flächen, Batterie-SoC, Batterie-Entladung und Batterie-Ladung bearbeiten.",
           "weather_sources": "Wetterzustand, Bewölkung, Sonnenschein und Sonnenstand bearbeiten, damit BB HEMS PV-Fenster besser einschätzen kann.",
-          "load_sources": "Schaltbare Verbraucher, Wallboxen, Wärmepumpen, Heizstäbe, Leistungssensoren und Heizstab-Temperaturen bearbeiten."
+          "load_flexible": "Normale Verbraucher bearbeiten, die BB HEMS bei Überschuss einschalten und bei fehlendem Überschuss wieder ausschalten darf.",
+          "load_start_only": "Geräte bearbeiten, die BB HEMS nur starten darf. Geeignet für Waschmaschine, Geschirrspüler oder Trockner.",
+          "load_heating_rods": "Heizstäbe, Leistungssensoren, Temperatursensoren und Zieltemperaturen bearbeiten.",
+          "load_wallboxes": "Wallbox-Schalter oder Ladefreigaben bearbeiten.",
+          "load_heat_pumps": "Wärmepumpen-Schalter oder SG-Ready-Freigaben bearbeiten.",
+          "load_advanced": "Optionale JSON-Profile für Priorität, Leistung, Cooldown, Mindestlaufzeit und Start-only-Verhalten bearbeiten."
         }
       },
       "energy_sources": {
@@ -192,6 +202,76 @@
           "heat_pump_switches": "Schaltbare Wärmepumpen oder SG-Ready-Freigaben. Wird aktuell als Gerätegruppe erfasst und später priorisiert.",
           "heating_rod_switches": "Schaltbare Heizstäbe oder Boiler-Freigaben. BB HEMS behandelt sie als Überschussverbraucher.",
           "heating_rod_power_sensors": "Optionale Leistungssensoren der Heizstäbe in gleicher Reihenfolge wie die Schalter."
+        }
+      },
+      "load_flexible": {
+        "title": "Flexible Verbraucher",
+        "description": "Diese Verbraucher darf BB HEMS bei Überschuss einschalten und später auch wieder ausschalten.",
+        "data": {
+          "flexible_load_switches": "Flexible Verbraucher",
+          "flexible_load_power_sensors": "Leistungssensoren flexible Verbraucher"
+        },
+        "data_description": {
+          "flexible_load_switches": "Schaltbare Verbraucher, die bei Überschuss freigegeben werden dürfen, z.B. Luftentfeuchter.",
+          "flexible_load_power_sensors": "Optionale Leistungssensoren in gleicher Reihenfolge. Wenn ein Verbraucher läuft, nutzt BB HEMS diesen echten Verbrauch statt des pauschalen Schätzwerts."
+        }
+      },
+      "load_start_only": {
+        "title": "Nur starten: Waschmaschine, Geschirrspüler, Trockner",
+        "description": "Diese Geräte startet BB HEMS nur bei passendem Überschuss. Danach schaltet BB HEMS sie nicht automatisch aus.",
+        "data": {
+          "start_only_appliance_switches": "Nur-starten-Geräte",
+          "start_only_appliance_power_sensors": "Leistungssensoren nur starten"
+        },
+        "data_description": {
+          "start_only_appliance_switches": "Switch, input_boolean oder button. Beispiel: switch.geschirrspuler_einschalter. BB HEMS startet das Gerät nur und schaltet es danach nicht aus.",
+          "start_only_appliance_power_sensors": "Optional. Mit Leistungssensor erkennt BB HEMS, ob das Programm wirklich läuft. Ohne Leistungssensor wird nach dem Start konservativ blockiert, damit das Gerät nicht erneut gestartet wird."
+        }
+      },
+      "load_heating_rods": {
+        "title": "Heizstäbe",
+        "description": "Heizstäbe sind Überschussverbraucher und können zusätzlich mit Zieltemperatur begrenzt werden.",
+        "data": {
+          "heating_rod_switches": "Heizstäbe",
+          "heating_rod_power_sensors": "Leistungssensoren Heizstäbe",
+          "heating_rod_temperature_sensors": "Temperatursensoren Heizstäbe",
+          "heating_rod_target_temperatures": "Zieltemperaturen Heizstäbe"
+        },
+        "data_description": {
+          "heating_rod_switches": "Schaltbare Heizstäbe oder Boiler-/Pool-Freigaben.",
+          "heating_rod_power_sensors": "Optionale Leistungssensoren in gleicher Reihenfolge wie die Heizstäbe.",
+          "heating_rod_temperature_sensors": "Optionale Temperatursensoren in gleicher Reihenfolge wie die Heizstäbe.",
+          "heating_rod_target_temperatures": "Optionale Zieltemperaturen in gleicher Reihenfolge, z.B. 55, 28. Bei erreichter Temperatur schaltet BB HEMS den Heizstab aus."
+        }
+      },
+      "load_wallboxes": {
+        "title": "Wallboxen",
+        "description": "Hier werden Wallbox-Schalter oder Ladefreigaben eingetragen.",
+        "data": {
+          "wallbox_switches": "Wallboxen"
+        },
+        "data_description": {
+          "wallbox_switches": "Schaltbare Wallboxen oder Ladefreigaben. Detaillierte Ladestrom-Regelung folgt später."
+        }
+      },
+      "load_heat_pumps": {
+        "title": "Wärmepumpen",
+        "description": "Hier werden Wärmepumpen-Schalter oder SG-Ready-Freigaben eingetragen.",
+        "data": {
+          "heat_pump_switches": "Wärmepumpen"
+        },
+        "data_description": {
+          "heat_pump_switches": "Schaltbare Wärmepumpen oder SG-Ready-Freigaben. Komfortbänder und thermische Puffer folgen später."
+        }
+      },
+      "load_advanced": {
+        "title": "Erweiterte Geräteprofile",
+        "description": "Optional für Geräte, die Priorität, Leistung, Batterie-Nutzung, Cooldown, Mindestlaufzeit oder Start-only-Verhalten pro Gerät brauchen.",
+        "data": {
+          "device_profiles": "Geräteprofile"
+        },
+        "data_description": {
+          "device_profiles": "JSON-Liste. Beispiel: [{\"name\":\"Geschirrspüler\",\"switch\":\"switch.geschirrspuler_einschalter\",\"category\":\"appliance\",\"power\":1200,\"control_mode\":\"start_only\",\"priority\":40,\"cooldown\":720,\"allow_battery\":false}]"
         }
       }
     }

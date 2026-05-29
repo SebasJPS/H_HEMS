@@ -47,6 +47,8 @@ This repository contains an initial custom integration scaffold:
   and English.
 - Decision reasons, scheduler messages, blockers and HEMS history are generated
   in German or English based on the Home Assistant language.
+- Category-specific setup pages for flexible loads, start-only appliances,
+  heating rods, wallboxes, heat pumps and advanced profiles.
 - Advanced per-device profiles with name, category, switch, power estimate,
   priority, minimum runtime, cooldown and battery usage.
 
@@ -295,8 +297,8 @@ are configured, but the entities remain available for custom dashboards. This
 avoids switching all surplus consumers at once and also turns running loads off
 when their actual power is no longer covered by real surplus.
 
-The setup separates load categories so common devices can be configured without
-JSON:
+The setup separates load categories into their own Home Assistant option pages,
+so common devices can be configured without JSON:
 
 - Flexible loads: BB HEMS may turn them on and off according to surplus.
 - Start-only appliances: washing machines, dishwashers or dryers. BB HEMS may
@@ -333,6 +335,12 @@ turn-off path. For `start_only`, `switch` may also point to a Home Assistant
 
 Example start-only appliance:
 `[{"name":"Dishwasher","switch":"switch.dishwasher_start","category":"appliance","power":1200,"power_sensor":"sensor.dishwasher_power","priority":40,"control_mode":"start_only","start_power_threshold":20,"start_timeout":30,"cooldown":720,"allow_battery":false}]`
+
+Simple start-only setup without JSON: open the integration options, choose
+`Start-only appliances` / `Nur starten`, add
+`switch.geschirrspuler_einschalter` under the start-only appliances and leave
+the power sensor empty if no power sensor exists. BB HEMS will only start that
+entity and will not turn it off afterwards.
 
 Heating rods can additionally use optional temperature sensors and target
 temperatures. Both lists must follow the same order as the heating rod switches.

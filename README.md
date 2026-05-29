@@ -43,6 +43,8 @@ This repository contains an initial custom integration scaffold:
 - Optional grid import and export price sensors for more realistic HEMS savings.
 - Dashboard language follows Home Assistant and can be toggled between German
   and English.
+- Decision reasons, scheduler messages, blockers and HEMS history are generated
+  in German or English based on the Home Assistant language.
 - Advanced per-device profiles with name, category, switch, power estimate,
   priority, minimum runtime, cooldown and battery usage.
 

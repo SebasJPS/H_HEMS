@@ -328,13 +328,21 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         """Return options with defaults."""
         return {**DEFAULTS, **dict(self.config_entry.options)}
 
+    @property
+    def _language_is_german(self) -> bool:
+        language = getattr(self.hass.config, "language", None)
+        return bool(language and str(language).lower().startswith("de"))
+
+    def _txt(self, de: str, en: str) -> str:
+        return de if self._language_is_german else en
+
     async def async_set_option(self, key: str, value: Any) -> None:
         """Persist an option and refresh entities."""
         options = dict(self.config_entry.options)
         previous = options.get(key, DEFAULTS.get(key))
         options[key] = value
         self._add_action(
-            "Einstellung geändert",
+            self._txt("Einstellung geändert", "Setting changed"),
             f"{self._option_label(key)}: {previous} -> {value}",
             "manual",
         )
@@ -357,8 +365,12 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         )
         savings_price = max(0.0, grid_import_price - grid_export_price)
         price_reason = (
-            f"Ersparnis je verschobener kWh: Netzbezug {grid_import_price:.3f} EUR/kWh "
-            f"minus Einspeisevergütung {grid_export_price:.3f} EUR/kWh."
+            self._txt(
+                f"Ersparnis je verschobener kWh: Netzbezug {grid_import_price:.3f} EUR/kWh "
+                f"minus Einspeisevergütung {grid_export_price:.3f} EUR/kWh.",
+                f"Savings per shifted kWh: grid import {grid_import_price:.3f} EUR/kWh "
+                f"minus export compensation {grid_export_price:.3f} EUR/kWh.",
+            )
         )
         pv_sources = data.get(CONF_PV_POWER_SENSORS, [])
         battery_soc_sources = data.get(CONF_BATTERY_SOC_SENSORS, [])
@@ -448,17 +460,32 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             surplus_available = False
             flexible_loads_allowed = False
             energy_mode = "off"
-            surplus_reason = "Automatik oder HEMS-Modus ist ausgeschaltet."
-            load_reason = "Flexible Verbraucher sind gesperrt, weil HEMS ausgeschaltet ist."
+            surplus_reason = self._txt(
+                "Automatik oder HEMS-Modus ist ausgeschaltet.",
+                "Automation or HEMS mode is switched off.",
+            )
+            load_reason = self._txt(
+                "Flexible Verbraucher sind gesperrt, weil HEMS ausgeschaltet ist.",
+                "Flexible loads are blocked because HEMS is switched off.",
+            )
         elif mode == MODE_FORCE_SURPLUS:
             surplus_available = True
             flexible_loads_allowed = not battery_protect
             energy_mode = "force_surplus" if flexible_loads_allowed else "battery_protect"
-            surplus_reason = "Modus force_surplus erzwingt die Überschussfreigabe."
+            surplus_reason = self._txt(
+                "Modus force_surplus erzwingt die Überschussfreigabe.",
+                "Mode force_surplus forces surplus release.",
+            )
             load_reason = (
-                "Flexible Verbraucher sind erlaubt, weil force_surplus aktiv ist."
+                self._txt(
+                    "Flexible Verbraucher sind erlaubt, weil force_surplus aktiv ist.",
+                    "Flexible loads are allowed because force_surplus is active.",
+                )
                 if flexible_loads_allowed
-                else "Flexible Verbraucher bleiben trotz force_surplus gesperrt, weil Batterieschutz aktiv ist."
+                else self._txt(
+                    "Flexible Verbraucher bleiben trotz force_surplus gesperrt, weil Batterieschutz aktiv ist.",
+                    "Flexible loads remain blocked despite force_surplus because battery protection is active.",
+                )
             )
         else:
             pv_threshold = float(opts[OPT_PV_THRESHOLD])
@@ -699,7 +726,10 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                 "energy": None,
                 "usable_energy": None,
                 "confidence": 0.0,
-                "reason": "Virtuelle Batterie ist deaktiviert.",
+                "reason": self._txt(
+                    "Virtuelle Batterie ist deaktiviert.",
+                    "Virtual battery is disabled.",
+                ),
                 "charge_power": 0.0,
                 "discharge_power": 0.0,
             }
@@ -745,9 +775,14 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         )
         confidence = min(100.0, 30.0 + self._virtual_battery_corrections * 12.0)
         reason = (
-            f"Virtuelle Batterie berechnet aus Ladung {charge_power:.0f} W, "
-            f"Entladung {discharge_power:.0f} W und manueller Kalibrierung "
-            f"{manual_soc:.1f}%."
+            self._txt(
+                f"Virtuelle Batterie berechnet aus Ladung {charge_power:.0f} W, "
+                f"Entladung {discharge_power:.0f} W und manueller Kalibrierung "
+                f"{manual_soc:.1f}%.",
+                f"Virtual battery calculated from charge {charge_power:.0f} W, "
+                f"discharge {discharge_power:.0f} W and manual calibration "
+                f"{manual_soc:.1f}%.",
+            )
         )
         return {
             "enabled": True,
@@ -860,12 +895,24 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         average_budget: float | None,
     ) -> str:
         if samples < LEARNING_MIN_SAMPLES:
-            return f"HEMS lernt {label} noch. Nach mehr Messpunkten wird diese Jahreszeit/Tageszeit besser bewertet."
+            return self._txt(
+                f"HEMS lernt {label} noch. Nach mehr Messpunkten wird diese Jahreszeit/Tageszeit besser bewertet.",
+                f"HEMS is still learning {label}. This season/time window will be rated better after more samples.",
+            )
         if success_rate is not None and success_rate >= 60:
-            return f"{label} war bisher oft geeignet: {success_rate:.0f}% Freigaben, durchschnittlich {average_budget or 0:.0f} W Budget."
+            return self._txt(
+                f"{label} war bisher oft geeignet: {success_rate:.0f}% Freigaben, durchschnittlich {average_budget or 0:.0f} W Budget.",
+                f"{label} has often been suitable so far: {success_rate:.0f}% releases, average budget {average_budget or 0:.0f} W.",
+            )
         if success_rate is not None and success_rate >= 30:
-            return f"{label} ist wechselhaft: {success_rate:.0f}% Freigaben. HEMS bleibt vorsichtig und wartet auf klares Budget."
-        return f"{label} war bisher selten geeignet. HEMS bewertet diese Phase konservativer und wartet eher auf echte Überschüsse."
+            return self._txt(
+                f"{label} ist wechselhaft: {success_rate:.0f}% Freigaben. HEMS bleibt vorsichtig und wartet auf klares Budget.",
+                f"{label} is mixed: {success_rate:.0f}% releases. HEMS stays cautious and waits for a clear budget.",
+            )
+        return self._txt(
+            f"{label} war bisher selten geeignet. HEMS bewertet diese Phase konservativer und wartet eher auf echte Überschüsse.",
+            f"{label} has rarely been suitable so far. HEMS rates this phase more conservatively and waits for real surplus.",
+        )
 
     def _learning_grid_tolerance_adjustment(self, mode: str) -> float:
         """Return a conservative learned grid-tolerance adjustment."""
@@ -902,12 +949,12 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         return "autumn"
 
     def _season_label(self, season: str) -> str:
-        return {
-            "winter": "Winter",
-            "spring": "Frühjahr",
-            "summer": "Sommer",
-            "autumn": "Herbst",
-        }.get(season, season)
+        labels = (
+            {"winter": "Winter", "spring": "Frühjahr", "summer": "Sommer", "autumn": "Herbst"}
+            if self._language_is_german
+            else {"winter": "winter", "spring": "spring", "summer": "summer", "autumn": "autumn"}
+        )
+        return labels.get(season, season)
 
     def _day_part(self, hour: int) -> str:
         if hour < 6:
@@ -921,13 +968,12 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         return "evening"
 
     def _day_part_label(self, day_part: str) -> str:
-        return {
-            "night": "Nacht",
-            "morning": "Morgen",
-            "midday": "Mittag",
-            "afternoon": "Nachmittag",
-            "evening": "Abend",
-        }.get(day_part, day_part)
+        labels = (
+            {"night": "Nacht", "morning": "Morgen", "midday": "Mittag", "afternoon": "Nachmittag", "evening": "Abend"}
+            if self._language_is_german
+            else {"night": "night", "morning": "morning", "midday": "midday", "afternoon": "afternoon", "evening": "evening"}
+        )
+        return labels.get(day_part, day_part)
 
     def _safe_learning_buckets(self, value: Any) -> dict[str, dict[str, Any]]:
         if not isinstance(value, dict):
@@ -1007,7 +1053,11 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                 continue
             blocked_reason = self._device_switch_block_reason(load, should_be_on)
             if blocked_reason is not None:
-                self._add_action("Geräteprofil wartet", blocked_reason, "device")
+                self._add_action(
+                    self._txt("Geräteprofil wartet", "Device profile waits"),
+                    blocked_reason,
+                    "device",
+                )
                 action_added = True
                 continue
             service = "turn_on" if should_be_on else "turn_off"
@@ -1031,8 +1081,11 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                 blocking=False,
             )
             self._add_action(
-                "Verbraucher geschaltet",
-                f"{load.name} wurde {'eingeschaltet' if should_be_on else 'ausgeschaltet'}. {data.scheduler_reason}",
+                self._txt("Verbraucher geschaltet", "Load switched"),
+                self._txt(
+                    f"{load.name} wurde {'eingeschaltet' if should_be_on else 'ausgeschaltet'}. {data.scheduler_reason}",
+                    f"{load.name} was {'switched on' if should_be_on else 'switched off'}. {data.scheduler_reason}",
+                ),
                 "device",
             )
             self._record_device_switch(load, should_be_on)
@@ -1066,8 +1119,11 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             blocking=False,
         )
         self._add_action(
-            "Startfreigabe beendet",
-            f"{load.name} wurde nach {self._duration_text(load.start_timeout)} ohne Lauf-Erkennung wieder freigegeben.",
+            self._txt("Startfreigabe beendet", "Start release ended"),
+            self._txt(
+                f"{load.name} wurde nach {self._duration_text(load.start_timeout)} ohne Lauf-Erkennung wieder freigegeben.",
+                f"{load.name} was released again after {self._duration_text(load.start_timeout)} without run detection.",
+            ),
             "device",
         )
         self._record_device_switch(load, False)
@@ -1086,25 +1142,40 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                         "started_at"
                     ) or now.isoformat(timespec="seconds")
                     state.pop("start_pending_at", None)
-                    return f"{load.name} läuft bereits und wird nicht erneut gestartet."
+                    return self._txt(
+                        f"{load.name} läuft bereits und wird nicht erneut gestartet.",
+                        f"{load.name} is already running and will not be started again.",
+                    )
                 pending_at = self._parse_datetime(state.get("start_pending_at"))
                 if pending_at is not None and now - pending_at < load.start_timeout:
                     remaining = load.start_timeout - (now - pending_at)
-                    return f"{load.name} wartet noch {self._duration_text(remaining)} auf Lauf-Erkennung."
+                    return self._txt(
+                        f"{load.name} wartet noch {self._duration_text(remaining)} auf Lauf-Erkennung.",
+                        f"{load.name} waits another {self._duration_text(remaining)} for run detection.",
+                    )
             else:
-                return f"{load.name} ist Start-only und wird nach dem Start nicht ausgeschaltet."
+                return self._txt(
+                    f"{load.name} ist Start-only und wird nach dem Start nicht ausgeschaltet.",
+                    f"{load.name} is start-only and will not be switched off after start.",
+                )
 
         if should_be_on:
             last_off = self._parse_datetime(state.get("last_off"))
             if last_off is not None and now - last_off < load.cooldown:
                 remaining = load.cooldown - (now - last_off)
-                return f"{load.name} bleibt wegen Cooldown noch {self._duration_text(remaining)} aus."
+                return self._txt(
+                    f"{load.name} bleibt wegen Cooldown noch {self._duration_text(remaining)} aus.",
+                    f"{load.name} remains off for cooldown for another {self._duration_text(remaining)}.",
+                )
             return None
 
         last_on = self._parse_datetime(state.get("last_on"))
         if load.is_on and last_on is not None and now - last_on < load.min_runtime:
             remaining = load.min_runtime - (now - last_on)
-            return f"{load.name} bleibt wegen Mindestlaufzeit noch {self._duration_text(remaining)} an."
+            return self._txt(
+                f"{load.name} bleibt wegen Mindestlaufzeit noch {self._duration_text(remaining)} an.",
+                f"{load.name} remains on for minimum runtime for another {self._duration_text(remaining)}.",
+            )
         return None
 
     def _record_device_switch(self, load: LoadProfile, switched_on: bool) -> None:
@@ -1161,8 +1232,11 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                 blocking=False,
             )
             self._add_action(
-                "Heizstab Temperatur erreicht",
-                f"{entity_id} wurde ausgeschaltet, weil die Zieltemperatur erreicht ist.",
+                self._txt("Heizstab Temperatur erreicht", "Heating rod target reached"),
+                self._txt(
+                    f"{entity_id} wurde ausgeschaltet, weil die Zieltemperatur erreicht ist.",
+                    f"{entity_id} was switched off because the target temperature was reached.",
+                ),
                 "protect",
             )
             action_added = True
@@ -1347,26 +1421,42 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                 "started_at"
             ) or now.isoformat(timespec="seconds")
             runtime_state.pop("start_pending_at", None)
-            return replace(load, blocked=True, blocked_reason=f"{load.name} läuft bereits.")
+            return replace(
+                load,
+                blocked=True,
+                blocked_reason=self._txt(
+                    f"{load.name} läuft bereits.",
+                    f"{load.name} is already running.",
+                ),
+            )
         pending_at = self._parse_datetime(state.get("start_pending_at"))
         if pending_at is not None and now - pending_at < load.start_timeout:
             remaining = load.start_timeout - (now - pending_at)
             return replace(
                 load,
                 blocked=True,
-                blocked_reason=f"{load.name} wartet noch {self._duration_text(remaining)} auf Lauf-Erkennung.",
+                blocked_reason=self._txt(
+                    f"{load.name} wartet noch {self._duration_text(remaining)} auf Lauf-Erkennung.",
+                    f"{load.name} waits another {self._duration_text(remaining)} for run detection.",
+                ),
             )
         if pending_at is not None and load.is_on:
             if load.power_sensor is None:
                 return replace(
                     load,
                     blocked=True,
-                    blocked_reason=f"{load.name} wurde gestartet und hat keinen Leistungssensor für Lauf-Erkennung.",
+                    blocked_reason=self._txt(
+                        f"{load.name} wurde gestartet und hat keinen Leistungssensor für Lauf-Erkennung.",
+                        f"{load.name} was started and has no power sensor for run detection.",
+                    ),
                 )
             return replace(
                 load,
                 blocked=True,
-                blocked_reason=f"{load.name} hat innerhalb des Start-Timeouts keinen Lauf erkannt.",
+                blocked_reason=self._txt(
+                    f"{load.name} hat innerhalb des Start-Timeouts keinen Lauf erkannt.",
+                    f"{load.name} did not detect a run within the start timeout.",
+                ),
             )
         last_on = self._parse_datetime(state.get("last_on"))
         if last_on is not None and now - last_on < load.cooldown:
@@ -1374,7 +1464,10 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             return replace(
                 load,
                 blocked=True,
-                blocked_reason=f"{load.name} bleibt wegen Cooldown noch {self._duration_text(remaining)} gesperrt.",
+                blocked_reason=self._txt(
+                    f"{load.name} bleibt wegen Cooldown noch {self._duration_text(remaining)} gesperrt.",
+                    f"{load.name} remains blocked for cooldown for another {self._duration_text(remaining)}.",
+                ),
             )
         return load
 
@@ -1428,12 +1521,18 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         if temperature >= target:
             return (
                 True,
-                f"Temperatur {temperature:.1f}°C hat Ziel {target:.1f}°C erreicht.",
+                self._txt(
+                    f"Temperatur {temperature:.1f}°C hat Ziel {target:.1f}°C erreicht.",
+                    f"Temperature {temperature:.1f}°C reached target {target:.1f}°C.",
+                ),
             )
         if not is_on and temperature >= target - max(0.0, hysteresis):
             return (
                 True,
-                f"Temperatur {temperature:.1f}°C liegt innerhalb der Hysterese unter Ziel {target:.1f}°C.",
+                self._txt(
+                    f"Temperatur {temperature:.1f}°C liegt innerhalb der Hysterese unter Ziel {target:.1f}°C.",
+                    f"Temperature {temperature:.1f}°C is within hysteresis below target {target:.1f}°C.",
+                ),
             )
         return False, None
 
@@ -1465,16 +1564,27 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             current_export + active_power - max(0.0, battery_discharge),
         )
         if not allowed:
-            return (), 0.0, budget_with_battery, "Smart Scheduler blockiert alle Überschussverbraucher, weil die zentrale HEMS-Freigabe fehlt."
+            return (), 0.0, budget_with_battery, self._txt(
+                "Smart Scheduler blockiert alle Überschussverbraucher, weil die zentrale HEMS-Freigabe fehlt.",
+                "Smart scheduler blocks all surplus loads because the central HEMS release is missing.",
+            )
         available_loads = [load for load in loads if not load.blocked]
         blocked_loads = [load for load in loads if load.blocked]
         if not loads:
-            return (), 0.0, budget_with_battery, "Smart Scheduler hat keine schaltbaren Überschussverbraucher konfiguriert."
+            return (), 0.0, budget_with_battery, self._txt(
+                "Smart Scheduler hat keine schaltbaren Überschussverbraucher konfiguriert.",
+                "Smart scheduler has no switchable surplus loads configured.",
+            )
         if not available_loads:
-            reason = "Alle HEMS-Verbraucher sind blockiert."
+            reason = self._txt(
+                "Alle HEMS-Verbraucher sind blockiert.",
+                "All HEMS loads are blocked.",
+            )
             if blocked_loads:
-                reason = "Alle HEMS-Verbraucher sind blockiert: " + "; ".join(
-                    load.blocked_reason or load.entity_id for load in blocked_loads
+                reason = self._txt(
+                    "Alle HEMS-Verbraucher sind blockiert: ",
+                    "All HEMS loads are blocked: ",
+                ) + "; ".join(load.blocked_reason or load.entity_id for load in blocked_loads
                 )
             return (), 0.0, budget_with_battery, reason
 
@@ -1496,14 +1606,20 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                 good_weather,
                 bad_weather,
             )
-            return (), 0.0, budget_with_battery, f"Smart Scheduler wartet: echtes Überschussbudget {budget_with_battery:.0f} W reicht für keinen konfigurierten Verbraucher. Export {current_export:.0f} W, laufende Lasten {active_power:.0f} W, {battery_note}, Batterieentladung {battery_discharge:.0f} W."
+            return (), 0.0, budget_with_battery, self._txt(
+                f"Smart Scheduler wartet: echtes Überschussbudget {budget_with_battery:.0f} W reicht für keinen konfigurierten Verbraucher. Export {current_export:.0f} W, laufende Lasten {active_power:.0f} W, {battery_note}, Batterieentladung {battery_discharge:.0f} W.",
+                f"Smart scheduler waits: real surplus budget {budget_with_battery:.0f} W is not enough for any configured load. Export {current_export:.0f} W, running loads {active_power:.0f} W, {battery_note}, battery discharge {battery_discharge:.0f} W.",
+            )
 
         names = ", ".join(load.name for load in selected)
         return (
             tuple(load.entity_id for load in selected),
             used_power,
             budget_with_battery,
-            f"Smart Scheduler plant {len(selected)} Verbraucher mit ca. {used_power:.0f} W: {names}. Echtes Überschussbudget: {budget_with_battery:.0f} W (Export {current_export:.0f} W + laufende Lasten {active_power:.0f} W + nutzbare Batterieladung {usable_battery_charge:.0f} W - Batterieentladung {battery_discharge:.0f} W).",
+            self._txt(
+                f"Smart Scheduler plant {len(selected)} Verbraucher mit ca. {used_power:.0f} W: {names}. Echtes Überschussbudget: {budget_with_battery:.0f} W (Export {current_export:.0f} W + laufende Lasten {active_power:.0f} W + nutzbare Batterieladung {usable_battery_charge:.0f} W - Batterieentladung {battery_discharge:.0f} W).",
+                f"Smart scheduler plans {len(selected)} load(s) with about {used_power:.0f} W: {names}. Real surplus budget: {budget_with_battery:.0f} W (export {current_export:.0f} W + running loads {active_power:.0f} W + usable battery charge {usable_battery_charge:.0f} W - battery discharge {battery_discharge:.0f} W).",
+            ),
         )
 
     def _usable_battery_charge_note(
@@ -1517,18 +1633,36 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
     ) -> str:
         """Explain why measured battery charge is or is not usable."""
         if battery_charge <= 0:
-            return "Batterie lädt nicht"
+            return self._txt("Batterie lädt nicht", "battery is not charging")
         if battery_soc is None:
-            return f"Batterie lädt {battery_charge:.0f} W, davon nutzbar 0 W, weil kein SoC bekannt ist"
+            return self._txt(
+                f"Batterie lädt {battery_charge:.0f} W, davon nutzbar 0 W, weil kein SoC bekannt ist",
+                f"battery charges {battery_charge:.0f} W, usable 0 W because no SoC is known",
+            )
         if battery_soc < min_battery_soc:
-            return f"Batterie lädt {battery_charge:.0f} W, davon nutzbar 0 W, weil SoC {battery_soc:.1f}% unter Mindest-SoC {min_battery_soc:.1f}% liegt"
+            return self._txt(
+                f"Batterie lädt {battery_charge:.0f} W, davon nutzbar 0 W, weil SoC {battery_soc:.1f}% unter Mindest-SoC {min_battery_soc:.1f}% liegt",
+                f"battery charges {battery_charge:.0f} W, usable 0 W because SoC {battery_soc:.1f}% is below minimum SoC {min_battery_soc:.1f}%",
+            )
         if bad_weather:
-            return f"Batterie lädt {battery_charge:.0f} W, davon nutzbar 0 W, weil schlechte Wetterlage erkannt wurde"
+            return self._txt(
+                f"Batterie lädt {battery_charge:.0f} W, davon nutzbar 0 W, weil schlechte Wetterlage erkannt wurde",
+                f"battery charges {battery_charge:.0f} W, usable 0 W because bad weather was detected",
+            )
         if not good_weather:
-            return f"Batterie lädt {battery_charge:.0f} W, davon nutzbar 0 W, weil die Wetterfreigabe fehlt"
+            return self._txt(
+                f"Batterie lädt {battery_charge:.0f} W, davon nutzbar 0 W, weil die Wetterfreigabe fehlt",
+                f"battery charges {battery_charge:.0f} W, usable 0 W because weather release is missing",
+            )
         if usable_battery_charge <= 0:
-            return f"Batterie lädt {battery_charge:.0f} W, davon nutzbar 0 W nach Sicherheitsreserve"
-        return f"Batterie lädt {battery_charge:.0f} W, davon nutzbar {usable_battery_charge:.0f} W"
+            return self._txt(
+                f"Batterie lädt {battery_charge:.0f} W, davon nutzbar 0 W nach Sicherheitsreserve",
+                f"battery charges {battery_charge:.0f} W, usable 0 W after safety reserve",
+            )
+        return self._txt(
+            f"Batterie lädt {battery_charge:.0f} W, davon nutzbar {usable_battery_charge:.0f} W",
+            f"battery charges {battery_charge:.0f} W, usable {usable_battery_charge:.0f} W",
+        )
 
     def _flexible_load_decision_is_stable(
         self, target_on: bool, data: HemsData
@@ -1611,26 +1745,28 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         self._last_decision_snapshot = snapshot
 
         if previous is None:
-            self._add_action("HEMS bewertet", load_reason, energy_mode)
+            self._add_action(self._txt("HEMS bewertet", "HEMS evaluated"), load_reason, energy_mode)
             return
 
         if previous["energy_mode"] != energy_mode:
             self._add_action(
-                "Modus geändert",
+                self._txt("Modus geändert", "Mode changed"),
                 f"{previous['energy_mode']} -> {energy_mode}. {load_reason}",
                 energy_mode,
             )
         if previous["flexible_loads_allowed"] != flexible_loads_allowed:
             self._add_action(
-                "Flexible Verbraucher freigegeben"
+                self._txt("Flexible Verbraucher freigegeben", "Flexible loads released")
                 if flexible_loads_allowed
-                else "Flexible Verbraucher gesperrt",
+                else self._txt("Flexible Verbraucher gesperrt", "Flexible loads blocked"),
                 load_reason,
                 "allow" if flexible_loads_allowed else "block",
             )
         if previous["battery_protect"] != battery_protect:
             self._add_action(
-                "Batterieschutz aktiv" if battery_protect else "Batterieschutz beendet",
+                self._txt("Batterieschutz aktiv", "Battery protection active")
+                if battery_protect
+                else self._txt("Batterieschutz beendet", "Battery protection ended"),
                 load_reason,
                 "protect" if battery_protect else "allow",
             )
@@ -1638,16 +1774,19 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             previous["active_flexible_loads"] != active_flexible_loads
             or previous["active_flexible_entities"] != tuple(active_flexible_entities)
         ):
-            active = ", ".join(active_flexible_entities) or "keiner"
+            active = ", ".join(active_flexible_entities) or self._txt("keiner", "none")
             self._add_action(
-                "Verbraucherstatus geändert",
-                f"{active_flexible_loads} aktive flexible Verbraucher: {active}.",
+                self._txt("Verbraucherstatus geändert", "Load status changed"),
+                self._txt(
+                    f"{active_flexible_loads} aktive flexible Verbraucher: {active}.",
+                    f"{active_flexible_loads} active flexible loads: {active}.",
+                ),
                 "device",
             )
 
     def _option_label(self, key: str) -> str:
         """Return a readable option label for the dashboard history."""
-        return {
+        labels_de = {
             OPT_AUTO_ENABLED: "Automatik",
             OPT_BATTERY_DISCHARGE_LIMIT: "Entladegrenze Batterie",
             OPT_BATTERY_PROTECTION_ENABLED: "Batterieschutz",
@@ -1672,7 +1811,34 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             OPT_VIRTUAL_BATTERY_MANUAL_SOC: "Virtuelle Batterie manueller SoC",
             OPT_VIRTUAL_BATTERY_CHARGE_EFFICIENCY: "Virtuelle Batterie Lade-Wirkungsgrad",
             OPT_VIRTUAL_BATTERY_DISCHARGE_EFFICIENCY: "Virtuelle Batterie Entlade-Wirkungsgrad",
-        }.get(key, key)
+        }
+        labels_en = {
+            OPT_AUTO_ENABLED: "Automation",
+            OPT_BATTERY_DISCHARGE_LIMIT: "Battery discharge limit",
+            OPT_BATTERY_PROTECTION_ENABLED: "Battery protection",
+            OPT_DASHBOARD_ENABLED: "Dashboard",
+            OPT_HEATING_ROD_TEMPERATURE_HYSTERESIS: "Heating rod temperature hysteresis",
+            OPT_GRID_HARD_IMPORT_LIMIT: "Hard grid import",
+            OPT_GRID_IMPORT_LIMIT: "Grid import tolerance",
+            OPT_FLEXIBLE_LOAD_POWER: "Fallback flexible load power",
+            OPT_HEATING_ROD_POWER: "Fallback heating rod power",
+            OPT_MIN_BATTERY_SOC: "Minimum SoC",
+            OPT_MODE: "Operating mode",
+            OPT_RESPONSE_PROFILE: "Response mode",
+            OPT_PROTECT_BATTERY_SOC: "Battery protection SoC",
+            OPT_PV_AVG_THRESHOLD: "PV threshold 15 min",
+            OPT_PV_THRESHOLD: "Current PV threshold",
+            OPT_START_ONLY_APPLIANCE_POWER: "Fallback start-only appliance power",
+            OPT_USE_VIRTUAL_BATTERY: "Use virtual battery in HEMS",
+            OPT_VIRTUAL_BATTERY_ENABLED: "Virtual battery",
+            OPT_VIRTUAL_BATTERY_CAPACITY: "Virtual battery capacity",
+            OPT_VIRTUAL_BATTERY_MIN_SOC: "Virtual battery min SoC",
+            OPT_VIRTUAL_BATTERY_MAX_SOC: "Virtual battery max SoC",
+            OPT_VIRTUAL_BATTERY_MANUAL_SOC: "Virtual battery manual SoC",
+            OPT_VIRTUAL_BATTERY_CHARGE_EFFICIENCY: "Virtual battery charge efficiency",
+            OPT_VIRTUAL_BATTERY_DISCHARGE_EFFICIENCY: "Virtual battery discharge efficiency",
+        }
+        return (labels_de if self._language_is_german else labels_en).get(key, key)
 
     def _state(self, entity_id: str | None) -> str | None:
         if not entity_id:
@@ -1852,7 +2018,10 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         next_3h = forecast_next_3h
 
         if sun_elevation is not None and sun_elevation <= 0:
-            return "night", "Sonne ist unter dem Horizont; PV-Fenster ist nachts geschlossen."
+            return "night", self._txt(
+                "Sonne ist unter dem Horizont; PV-Fenster ist nachts geschlossen.",
+                "Sun is below the horizon; PV window is closed at night.",
+            )
 
         if (
             next_3h is not None
@@ -1862,31 +2031,59 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             today_text = (
                 f", heute {forecast_today:.1f}" if forecast_today is not None else ""
             )
-            return "low_today", f"PV-Forecast bleibt niedrig: nächste 3 h {next_3h:.1f}{today_text}; aktuelles PV {pv_power:.1f} W."
+            today_text_en = f", today {forecast_today:.1f}" if forecast_today is not None else ""
+            return "low_today", self._txt(
+                f"PV-Forecast bleibt niedrig: nächste 3 h {next_3h:.1f}{today_text}; aktuelles PV {pv_power:.1f} W.",
+                f"PV forecast remains low: next 3 h {next_3h:.1f}{today_text_en}; current PV {pv_power:.1f} W.",
+            )
 
         if next_3h is not None and next_3h >= max(pv_power * 1.5, pv_threshold * 2):
-            return "good_later", f"PV-Forecast erwartet später deutlich mehr: nächste 3 h {next_3h:.1f} gegenüber aktuell {pv_power:.1f} W."
+            return "good_later", self._txt(
+                f"PV-Forecast erwartet später deutlich mehr: nächste 3 h {next_3h:.1f} gegenüber aktuell {pv_power:.1f} W.",
+                f"PV forecast expects much more later: next 3 h {next_3h:.1f} compared with current {pv_power:.1f} W.",
+            )
 
         if next_hour is not None and next_hour >= max(pv_power * 1.25, pv_threshold * 1.5):
-            return "rising", f"PV steigt voraussichtlich: nächste Stunde {next_hour:.1f}, aktuell {pv_power:.1f} W."
+            return "rising", self._txt(
+                f"PV steigt voraussichtlich: nächste Stunde {next_hour:.1f}, aktuell {pv_power:.1f} W.",
+                f"PV is expected to rise: next hour {next_hour:.1f}, current {pv_power:.1f} W.",
+            )
 
         if sun_azimuth is not None and sun_elevation is not None:
             score = pv_orientation["score"]
             best_array = pv_orientation["best_array"]
             best_delta = pv_orientation["best_delta"]
             if score is not None and score >= 0.62:
-                return "peak_now", f"Sonne steht günstig zu einer PV-Fläche: beste Fläche {best_array}, Azimut-Differenz {best_delta:.1f}°, Score {score:.2f}, Elevation {sun_elevation:.1f}°."
+                return "peak_now", self._txt(
+                    f"Sonne steht günstig zu einer PV-Fläche: beste Fläche {best_array}, Azimut-Differenz {best_delta:.1f}°, Score {score:.2f}, Elevation {sun_elevation:.1f}°.",
+                    f"Sun is well aligned with a PV surface: best surface {best_array}, azimuth delta {best_delta:.1f}°, score {score:.2f}, elevation {sun_elevation:.1f}°.",
+                )
             if score is not None and (score <= 0.22 or sun_elevation < 12):
-                return "falling", f"PV-Fenster wird schwach: {len(pv_arrays)} PV-Flächen, beste Fläche {best_array}, Score {score:.2f}, Elevation {sun_elevation:.1f}°."
+                return "falling", self._txt(
+                    f"PV-Fenster wird schwach: {len(pv_arrays)} PV-Flächen, beste Fläche {best_array}, Score {score:.2f}, Elevation {sun_elevation:.1f}°.",
+                    f"PV window is getting weak: {len(pv_arrays)} PV surfaces, best surface {best_array}, score {score:.2f}, elevation {sun_elevation:.1f}°.",
+                )
 
         if pv_power > pv_average * 1.1 and pv_power >= pv_threshold:
-            return "rising", f"PV-Leistung liegt über dem 15-Minuten-Mittel: aktuell {pv_power:.1f} W, Mittel {pv_average:.1f} W."
+            return "rising", self._txt(
+                f"PV-Leistung liegt über dem 15-Minuten-Mittel: aktuell {pv_power:.1f} W, Mittel {pv_average:.1f} W.",
+                f"PV power is above the 15-minute average: current {pv_power:.1f} W, average {pv_average:.1f} W.",
+            )
         if pv_power < pv_average * 0.8 and pv_average >= pv_threshold:
-            return "falling", f"PV-Leistung fällt unter das 15-Minuten-Mittel: aktuell {pv_power:.1f} W, Mittel {pv_average:.1f} W."
+            return "falling", self._txt(
+                f"PV-Leistung fällt unter das 15-Minuten-Mittel: aktuell {pv_power:.1f} W, Mittel {pv_average:.1f} W.",
+                f"PV power falls below the 15-minute average: current {pv_power:.1f} W, average {pv_average:.1f} W.",
+            )
 
         if pv_power >= pv_threshold:
-            return "usable_now", f"PV-Fenster ist nutzbar: aktuell {pv_power:.1f} W über Schwellwert {pv_threshold:.1f} W."
-        return "weak_now", f"PV-Fenster ist schwach: aktuell {pv_power:.1f} W unter Schwellwert {pv_threshold:.1f} W."
+            return "usable_now", self._txt(
+                f"PV-Fenster ist nutzbar: aktuell {pv_power:.1f} W über Schwellwert {pv_threshold:.1f} W.",
+                f"PV window is usable: current {pv_power:.1f} W above threshold {pv_threshold:.1f} W.",
+            )
+        return "weak_now", self._txt(
+            f"PV-Fenster ist schwach: aktuell {pv_power:.1f} W unter Schwellwert {pv_threshold:.1f} W.",
+            f"PV window is weak: current {pv_power:.1f} W below threshold {pv_threshold:.1f} W.",
+        )
 
     def _angle_delta(self, first: float, second: float) -> float:
         """Return smallest difference between two compass angles."""
@@ -1919,9 +2116,15 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         sunshine: float | None,
     ) -> str:
         if battery_soc is not None and battery_soc >= 90:
-            return f"Batterie-SoC {battery_soc:.1f}% ist mindestens 90%, Wetter wird großzügig freigegeben."
+            return self._txt(
+                f"Batterie-SoC {battery_soc:.1f}% ist mindestens 90%, Wetter wird großzügig freigegeben.",
+                f"Battery SoC {battery_soc:.1f}% is at least 90%; weather is released generously.",
+            )
         if weather is None:
-            return "Kein Wetterzustand konfiguriert oder verfügbar; Wetter blockiert deshalb nicht."
+            return self._txt(
+                "Kein Wetterzustand konfiguriert oder verfügbar; Wetter blockiert deshalb nicht.",
+                "No weather state configured or available; weather does not block.",
+            )
 
         weather_ok = weather in GOOD_WEATHER
         cloud_value = clouds if clouds is not None else 0
@@ -1929,12 +2132,24 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
 
         if battery_soc is not None and battery_soc >= 75:
             if weather_ok and cloud_value < 85:
-                return f"Wetter '{weather}' ist freigegeben und Bewölkung {cloud_value:.1f}% liegt unter 85%."
-            return f"Wetter hält zurück: Zustand '{weather}', Bewölkung {cloud_value:.1f}% bei SoC {battery_soc:.1f}%. Erlaubt wären freigegebenes Wetter und unter 85% Bewölkung."
+                return self._txt(
+                    f"Wetter '{weather}' ist freigegeben und Bewölkung {cloud_value:.1f}% liegt unter 85%.",
+                    f"Weather '{weather}' is released and cloud coverage {cloud_value:.1f}% is below 85%.",
+                )
+            return self._txt(
+                f"Wetter hält zurück: Zustand '{weather}', Bewölkung {cloud_value:.1f}% bei SoC {battery_soc:.1f}%. Erlaubt wären freigegebenes Wetter und unter 85% Bewölkung.",
+                f"Weather holds back: state '{weather}', cloud coverage {cloud_value:.1f}% at SoC {battery_soc:.1f}%. Released weather and below 85% cloud coverage would be required.",
+            )
 
         if weather_ok and cloud_value < 70 and sunshine_value > 20:
-            return f"Wetter '{weather}', Bewölkung {cloud_value:.1f}% unter 70% und Sonne {sunshine_value:.1f} min über 20 min."
-        return f"Wetter hält zurück: Zustand '{weather}', Bewölkung {cloud_value:.1f}% und Sonne {sunshine_value:.1f} min. Bei SoC unter 75% braucht BB HEMS gutes Wetter, unter 70% Bewölkung und über 20 min Sonne."
+            return self._txt(
+                f"Wetter '{weather}', Bewölkung {cloud_value:.1f}% unter 70% und Sonne {sunshine_value:.1f} min über 20 min.",
+                f"Weather '{weather}', cloud coverage {cloud_value:.1f}% below 70% and sun {sunshine_value:.1f} min above 20 min.",
+            )
+        return self._txt(
+            f"Wetter hält zurück: Zustand '{weather}', Bewölkung {cloud_value:.1f}% und Sonne {sunshine_value:.1f} min. Bei SoC unter 75% braucht BB HEMS gutes Wetter, unter 70% Bewölkung und über 20 min Sonne.",
+            f"Weather holds back: state '{weather}', cloud coverage {cloud_value:.1f}% and sun {sunshine_value:.1f} min. Below 75% SoC, BB HEMS requires good weather, below 70% cloud coverage and more than 20 min sun.",
+        )
 
     def _bad_weather(self, weather: str | None, clouds: float | None) -> bool:
         cloud_value = clouds if clouds is not None else 0
@@ -1994,20 +2209,38 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
     ) -> str:
         opts = self.opts
         if not bool(opts[OPT_BATTERY_PROTECTION_ENABLED]):
-            return "Batterieschutz ist deaktiviert; SoC- und Batterieentladegrenzen blockieren HEMS nicht."
+            return self._txt(
+                "Batterieschutz ist deaktiviert; SoC- und Batterieentladegrenzen blockieren HEMS nicht.",
+                "Battery protection is disabled; SoC and battery discharge limits do not block HEMS.",
+            )
         protect_soc = float(opts[OPT_PROTECT_BATTERY_SOC])
         discharge_limit = float(opts[OPT_BATTERY_DISCHARGE_LIMIT])
         if battery_soc is not None and battery_soc < protect_soc:
-            return f"Batterieschutz aktiv: SoC {battery_soc:.1f}% liegt unter Schutzgrenze {protect_soc:.1f}%."
+            return self._txt(
+                f"Batterieschutz aktiv: SoC {battery_soc:.1f}% liegt unter Schutzgrenze {protect_soc:.1f}%.",
+                f"Battery protection active: SoC {battery_soc:.1f}% is below protection limit {protect_soc:.1f}%.",
+            )
         if discharge_limit <= 0 and battery_discharge > 0:
-            return f"Batterieschutz aktiv: Batterie entlädt mit {battery_discharge:.1f} W; die Entladegrenze ist auf 0 W gesetzt."
+            return self._txt(
+                f"Batterieschutz aktiv: Batterie entlädt mit {battery_discharge:.1f} W; die Entladegrenze ist auf 0 W gesetzt.",
+                f"Battery protection active: battery discharges with {battery_discharge:.1f} W; discharge limit is set to 0 W.",
+            )
         if discharge_limit > 0 and battery_discharge >= discharge_limit:
-            return f"Batterieschutz aktiv: Batterie entlädt mit {battery_discharge:.1f} W und erreicht die Grenze {discharge_limit:.1f} W."
+            return self._txt(
+                f"Batterieschutz aktiv: Batterie entlädt mit {battery_discharge:.1f} W und erreicht die Grenze {discharge_limit:.1f} W.",
+                f"Battery protection active: battery discharges with {battery_discharge:.1f} W and reaches the limit {discharge_limit:.1f} W.",
+            )
         if bad_weather and battery_soc is not None and battery_soc < 70:
-            return f"Batterieschutz aktiv: schlechtes Wetter und SoC {battery_soc:.1f}% unter 70%."
+            return self._txt(
+                f"Batterieschutz aktiv: schlechtes Wetter und SoC {battery_soc:.1f}% unter 70%.",
+                f"Battery protection active: bad weather and SoC {battery_soc:.1f}% below 70%.",
+            )
         if battery_protect:
-            return "Batterieschutz ist aktiv."
-        return f"Kein Batterieschutz: SoC {battery_soc if battery_soc is not None else 'n/a'}%, Entladung {battery_discharge:.1f} W."
+            return self._txt("Batterieschutz ist aktiv.", "Battery protection is active.")
+        return self._txt(
+            f"Kein Batterieschutz: SoC {battery_soc if battery_soc is not None else 'n/a'}%, Entladung {battery_discharge:.1f} W.",
+            f"No battery protection: SoC {battery_soc if battery_soc is not None else 'n/a'}%, discharge {battery_discharge:.1f} W.",
+        )
 
     def _battery_soc_ok(self, battery_soc: float | None) -> bool:
         if not bool(self.opts[OPT_BATTERY_PROTECTION_ENABLED]):
@@ -2031,18 +2264,33 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
     ) -> str:
         if surplus_available:
             if usable_battery_charge > 0:
-                return f"Überschuss erfüllt: zusätzlich zur PV ist nutzbare Batterieladung {usable_battery_charge:.1f} W verfügbar; Netz {grid_power:.1f} W <= {grid_limit:.1f} W."
-            return f"Überschuss erfüllt: PV {pv_power:.1f} W >= {pv_threshold:.1f} W, PV 15 min {pv_average:.1f} W >= {pv_avg_threshold:.1f} W und Netz {grid_power:.1f} W <= {grid_limit:.1f} W oder Netzmittel {grid_average:.1f} W < 50 W bei Wetterfreigabe."
+                return self._txt(
+                    f"Überschuss erfüllt: zusätzlich zur PV ist nutzbare Batterieladung {usable_battery_charge:.1f} W verfügbar; Netz {grid_power:.1f} W <= {grid_limit:.1f} W.",
+                    f"Surplus fulfilled: in addition to PV, usable battery charge {usable_battery_charge:.1f} W is available; grid {grid_power:.1f} W <= {grid_limit:.1f} W.",
+                )
+            return self._txt(
+                f"Überschuss erfüllt: PV {pv_power:.1f} W >= {pv_threshold:.1f} W, PV 15 min {pv_average:.1f} W >= {pv_avg_threshold:.1f} W und Netz {grid_power:.1f} W <= {grid_limit:.1f} W oder Netzmittel {grid_average:.1f} W < 50 W bei Wetterfreigabe.",
+                f"Surplus fulfilled: PV {pv_power:.1f} W >= {pv_threshold:.1f} W, PV 15 min {pv_average:.1f} W >= {pv_avg_threshold:.1f} W and grid {grid_power:.1f} W <= {grid_limit:.1f} W or grid average {grid_average:.1f} W < 50 W with weather release.",
+            )
         missing: list[str] = []
         if pv_power < pv_threshold:
-            missing.append(f"PV aktuell {pv_power:.1f} W unter {pv_threshold:.1f} W")
+            missing.append(self._txt(
+                f"PV aktuell {pv_power:.1f} W unter {pv_threshold:.1f} W",
+                f"current PV {pv_power:.1f} W below {pv_threshold:.1f} W",
+            ))
         if pv_average < pv_avg_threshold:
-            missing.append(f"PV 15 min {pv_average:.1f} W unter {pv_avg_threshold:.1f} W")
+            missing.append(self._txt(
+                f"PV 15 min {pv_average:.1f} W unter {pv_avg_threshold:.1f} W",
+                f"PV 15 min {pv_average:.1f} W below {pv_avg_threshold:.1f} W",
+            ))
         if not (grid_power <= grid_limit or (grid_average < 50 and good_weather)):
-            missing.append(f"Netz {grid_power:.1f} W über Limit {grid_limit:.1f} W und Netzmittel {grid_average:.1f} W nicht als Ausgleich nutzbar")
+            missing.append(self._txt(
+                f"Netz {grid_power:.1f} W über Limit {grid_limit:.1f} W und Netzmittel {grid_average:.1f} W nicht als Ausgleich nutzbar",
+                f"grid {grid_power:.1f} W above limit {grid_limit:.1f} W and grid average {grid_average:.1f} W not usable as compensation",
+            ))
         if usable_battery_charge <= 0:
-            missing.append("keine nutzbare Batterieladung")
-        return "Überschuss fehlt: " + "; ".join(missing)
+            missing.append(self._txt("keine nutzbare Batterieladung", "no usable battery charge"))
+        return self._txt("Überschuss fehlt: ", "Surplus missing: ") + "; ".join(missing)
 
     def _load_reason(
         self,
@@ -2054,18 +2302,27 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
     ) -> str:
         if flexible_loads_allowed:
             if not bool(self.opts[OPT_BATTERY_PROTECTION_ENABLED]):
-                return "Flexible Verbraucher sind erlaubt, weil Überschuss und Wetterfreigabe passen; Batterieschutz ist deaktiviert."
-            return "Flexible Verbraucher sind erlaubt, weil Überschuss, Wetterfreigabe, SoC und Batterieschutz passen."
+                return self._txt(
+                    "Flexible Verbraucher sind erlaubt, weil Überschuss und Wetterfreigabe passen; Batterieschutz ist deaktiviert.",
+                    "Flexible loads are allowed because surplus and weather release match; battery protection is disabled.",
+                )
+            return self._txt(
+                "Flexible Verbraucher sind erlaubt, weil Überschuss, Wetterfreigabe, SoC und Batterieschutz passen.",
+                "Flexible loads are allowed because surplus, weather release, SoC and battery protection match.",
+            )
         blockers: list[str] = []
         if not surplus_available:
-            blockers.append("kein Überschuss")
+            blockers.append(self._txt("kein Überschuss", "no surplus"))
         if not good_weather:
-            blockers.append("keine Wetterfreigabe")
+            blockers.append(self._txt("keine Wetterfreigabe", "no weather release"))
         if battery_protect:
-            blockers.append("Batterieschutz aktiv")
+            blockers.append(self._txt("Batterieschutz aktiv", "battery protection active"))
         if not self._battery_soc_ok(battery_soc):
-            blockers.append(f"SoC {battery_soc:.1f}% unter Mindest-SoC {float(self.opts[OPT_MIN_BATTERY_SOC]):.1f}%")
-        return "Flexible Verbraucher gesperrt: " + ", ".join(blockers)
+            blockers.append(self._txt(
+                f"SoC {battery_soc:.1f}% unter Mindest-SoC {float(self.opts[OPT_MIN_BATTERY_SOC]):.1f}%",
+                f"SoC {battery_soc:.1f}% below minimum SoC {float(self.opts[OPT_MIN_BATTERY_SOC]):.1f}%",
+            ))
+        return self._txt("Flexible Verbraucher gesperrt: ", "Flexible loads blocked: ") + ", ".join(blockers)
 
     def _mode_grid_limit(self, mode: str, grid_tolerance: float) -> float:
         if mode == MODE_COMFORT:

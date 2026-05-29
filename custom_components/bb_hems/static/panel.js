@@ -21,7 +21,7 @@ const ALIASES = {
   mode_select: ["select.bb_hems_mode", "betriebsart", "operating mode"],
 };
 
-const BB_HEMS_VERSION = "0.9.0";
+const BB_HEMS_VERSION = "0.9.1";
 const I18N = {
   de: {
     subtitle: "Was HEMS gerade entscheidet, schaltet und einspart",
@@ -46,6 +46,49 @@ const I18N = {
     controlNote: "Schnell umstellen, ohne die Integration zu öffnen",
     active: "HEMS aktiv",
     paused: "HEMS pausiert",
+    status: "Status",
+    batteryProtectActive: "Batterieschutz aktiv",
+    surplusActive: "Überschuss aktiv",
+    waitingRelease: "wartet auf Freigabe",
+    noSurplus: "kein Überschuss",
+    blocked: "gesperrt",
+    free: "frei",
+    waiting: "wartet",
+    budget: "Überschussbudget",
+    fits: "passt",
+    tight: "knapp",
+    noConfig: "nicht konfiguriert",
+    missing: "fehlt",
+    planned: "geplant",
+    nextCandidate: "Nächster Kandidat",
+    plannedNote: "Diese Verbraucher passen aktuell ins HEMS-Budget.",
+    releaseNote: "Wird freigegeben, sobald Budget, PV-Fenster und Batterieschutz passen.",
+    flexibleLoads: "Flexible Lasten",
+    startOnly: "Nur starten",
+    heatingRods: "Heizstäbe",
+    wallboxes: "Wallboxen",
+    heatPumps: "Wärmepumpen",
+    ready: "bereit",
+    activePill: "aktiv",
+    temperature: "Temperatur",
+    noDevice: "kein Gerät",
+    device: "Gerät",
+    devicesPlural: "Geräte",
+    plannedPrefix: "Geplant",
+    virtualBattery: "Virtuelle Batterie",
+    hemsUse: "HEMS-Nutzung",
+    confidence: "Vertrauen",
+    calculatedSoc: "Berechneter SoC",
+    blockers: "Blocker & Freigaben",
+    batteryFree: "Batterieschutz frei",
+    weatherRelease: "Wetterfreigabe",
+    pvWindow: "PV-Fenster",
+    seasonLearning: "Jahreszeit-Erfahrung",
+    events: "HEMS Ereignisse",
+    noEvents: "Noch keine HEMS-Ereignisse sichtbar.",
+    event: "HEMS-Ereignis",
+    learnedTolerance: "Gelernte Netztoleranz",
+    notSet: "nicht gesetzt",
   },
   en: {
     subtitle: "What HEMS decides, switches and saves right now",
@@ -70,6 +113,49 @@ const I18N = {
     controlNote: "Change mode without opening the integration",
     active: "HEMS active",
     paused: "HEMS paused",
+    status: "Status",
+    batteryProtectActive: "Battery protection active",
+    surplusActive: "Surplus active",
+    waitingRelease: "waiting for release",
+    noSurplus: "no surplus",
+    blocked: "blocked",
+    free: "free",
+    waiting: "waiting",
+    budget: "Surplus budget",
+    fits: "fits",
+    tight: "tight",
+    noConfig: "not configured",
+    missing: "missing",
+    planned: "planned",
+    nextCandidate: "Next candidate",
+    plannedNote: "These loads currently fit into the HEMS budget.",
+    releaseNote: "Will be released once budget, PV window and battery protection match.",
+    flexibleLoads: "Flexible loads",
+    startOnly: "Start only",
+    heatingRods: "Heating rods",
+    wallboxes: "Wallboxes",
+    heatPumps: "Heat pumps",
+    ready: "ready",
+    activePill: "active",
+    temperature: "Temperature",
+    noDevice: "no device",
+    device: "device",
+    devicesPlural: "devices",
+    plannedPrefix: "Planned",
+    virtualBattery: "Virtual battery",
+    hemsUse: "HEMS use",
+    confidence: "Confidence",
+    calculatedSoc: "Calculated SoC",
+    blockers: "Blockers & releases",
+    batteryFree: "Battery protection free",
+    weatherRelease: "Weather release",
+    pvWindow: "PV window",
+    seasonLearning: "Season experience",
+    events: "HEMS events",
+    noEvents: "No HEMS events visible yet.",
+    event: "HEMS event",
+    learnedTolerance: "Learned grid tolerance",
+    notSet: "not set",
   },
 };
 const MODE_LABELS = {
@@ -373,7 +459,7 @@ class BbHemsPanel extends HTMLElement {
             ${benefitTile(tr.shifted, energy(byKey(states, "shifted_energy_today")), tr.shiftedNote, "↗", "good")}
             ${benefitTile(tr.savings, money(byKey(states, "estimated_savings_today")), attrs.price_reason || tr.savingsNote, "€", "good")}
             ${benefitTile(tr.plannedPower, power(byKey(states, "scheduled_surplus_power")), tr.plannedPowerNote, "⚡", "info")}
-            ${benefitTile(tr.experience, learningValue(states, attrs), attrs.seasonal_recommendation || "HEMS sammelt Jahreszeit- und Tageszeit-Erfahrung.", "↻", learningClass(attrs))}
+            ${benefitTile(tr.experience, learningValue(states, attrs), attrs.seasonal_recommendation || tr.experience, "↻", learningClass(attrs))}
           </div>
         </section>
 
@@ -385,9 +471,9 @@ class BbHemsPanel extends HTMLElement {
                 <span class="section-note">${tr.decisionNote}</span>
               </div>
               <div class="tile-grid wide">
-                ${decisionStatusTile(states, attrs)}
-                ${decisionBudgetTile(states, attrs)}
-                ${nextCandidateTile(attrs)}
+                ${decisionStatusTile(states, attrs, tr)}
+                ${decisionBudgetTile(states, attrs, tr)}
+                ${nextCandidateTile(attrs, tr)}
               </div>
             </div>
 
@@ -397,16 +483,16 @@ class BbHemsPanel extends HTMLElement {
                 <span class="section-note">${tr.loadsNote}</span>
               </div>
               <div class="tile-grid loads">
-                ${loadTiles(attrs, states)}
+                ${loadTiles(attrs, states, tr)}
               </div>
             </div>
 
-            ${actionHistory(attrs)}
+            ${actionHistory(attrs, tr)}
           </div>
 
           <aside class="stack">
-            ${blockerCard(states, attrs)}
-            ${virtualBatteryCard(states, attrs)}
+            ${blockerCard(states, attrs, tr)}
+            ${virtualBatteryCard(states, attrs, tr)}
           </aside>
         </section>
       </main>
@@ -459,84 +545,85 @@ function benefitTile(label, value, note, icon, state) {
   return `<article class="tile ${state}"><div class="tile-top"><span>${esc(label)}</span><span class="icon">${esc(icon)}</span></div><div class="value">${esc(value)}</div><div class="note">${esc(note)}</div></article>`;
 }
 
-function decisionStatusTile(states, attrs) {
+function decisionStatusTile(states, attrs, tr) {
   const allowed = isOn(byKey(states, "flexible_loads_allowed")) || attrs.flexible_loads_allowed;
   const protect = isOn(byKey(states, "battery_protect")) || attrs.battery_protect;
   const surplus = isOn(byKey(states, "surplus_available")) || attrs.surplus_available;
-  const status = protect ? "Batterieschutz aktiv" : allowed ? "Überschuss aktiv" : surplus ? "wartet auf Freigabe" : "kein Überschuss";
+  const status = protect ? tr.batteryProtectActive : allowed ? tr.surplusActive : surplus ? tr.waitingRelease : tr.noSurplus;
   const state = protect ? "bad" : allowed ? "good" : surplus ? "warn" : "info";
-  const pill = protect ? "gesperrt" : allowed ? "frei" : "wartet";
-  const reason = attrs.load_reason || attrs.surplus_reason || "HEMS bewertet PV-Fenster, Überschuss, Batterie und Wetter.";
-  return `<article class="tile ${state}"><div class="tile-top"><span>Status</span><span class="pill ${state}">${pill}</span></div><div class="value small-value">${esc(status)}</div><div class="note">${esc(reason)}</div></article>`;
+  const pill = protect ? tr.blocked : allowed ? tr.free : tr.waiting;
+  const reason = attrs.load_reason || attrs.surplus_reason || tr.decisionNote;
+  return `<article class="tile ${state}"><div class="tile-top"><span>${esc(tr.status)}</span><span class="pill ${state}">${esc(pill)}</span></div><div class="value small-value">${esc(status)}</div><div class="note">${esc(reason)}</div></article>`;
 }
 
-function decisionBudgetTile(states, attrs) {
+function decisionBudgetTile(states, attrs, tr) {
   const budget = numericState(byKey(states, "available_surplus_budget"));
   const state = budget > 1000 ? "good" : budget > 0 ? "warn" : "bad";
-  const pill = budget > 1000 ? "passt" : budget > 0 ? "knapp" : "blockiert";
-  const note = attrs.scheduler_reason || "HEMS nutzt das verfügbare Überschussbudget für geplante Verbraucher.";
-  return `<article class="tile ${state}"><div class="tile-top"><span>Überschussbudget</span><span class="pill ${state}">${pill}</span></div><div class="value">${esc(power(byKey(states, "available_surplus_budget")))}</div><div class="note">${esc(note)}</div></article>`;
+  const pill = budget > 1000 ? tr.fits : budget > 0 ? tr.tight : tr.blocked;
+  const note = attrs.scheduler_reason || tr.plannedPowerNote;
+  return `<article class="tile ${state}"><div class="tile-top"><span>${esc(tr.budget)}</span><span class="pill ${state}">${esc(pill)}</span></div><div class="value">${esc(power(byKey(states, "available_surplus_budget")))}</div><div class="note">${esc(note)}</div></article>`;
 }
 
-function nextCandidateTile(attrs) {
-  const scheduled = list(attrs.scheduled_surplus_loads);
-  const hasScheduled = scheduled !== "nicht gesetzt";
-  const candidate = hasScheduled ? scheduled : nextConfiguredLoad(attrs);
-  const state = hasScheduled ? "good" : candidate === "nicht konfiguriert" ? "bad" : "warn";
-  const pill = hasScheduled ? "geplant" : candidate === "nicht konfiguriert" ? "fehlt" : "wartet";
-  const note = hasScheduled ? "Diese Verbraucher passen aktuell ins HEMS-Budget." : "Wird freigegeben, sobald Budget, PV-Fenster und Batterieschutz passen.";
-  return `<article class="tile ${state}"><div class="tile-top"><span>Nächster Kandidat</span><span class="pill ${state}">${pill}</span></div><div class="value small-value">${esc(candidate)}</div><div class="note">${esc(note)}</div></article>`;
+function nextCandidateTile(attrs, tr) {
+  const scheduled = list(attrs.scheduled_surplus_loads, tr);
+  const hasScheduled = scheduled !== tr.notSet;
+  const candidate = hasScheduled ? scheduled : nextConfiguredLoad(attrs, tr);
+  const empty = candidate === tr.noConfig;
+  const state = hasScheduled ? "good" : empty ? "bad" : "warn";
+  const pill = hasScheduled ? tr.planned : empty ? tr.missing : tr.waiting;
+  const note = hasScheduled ? tr.plannedNote : tr.releaseNote;
+  return `<article class="tile ${state}"><div class="tile-top"><span>${esc(tr.nextCandidate)}</span><span class="pill ${state}">${esc(pill)}</span></div><div class="value small-value">${esc(empty ? tr.noConfig : candidate)}</div><div class="note">${esc(note)}</div></article>`;
 }
 
-function loadTiles(attrs, states) {
+function loadTiles(attrs, states, tr) {
   const flexibleCount = Number(attrs.configured_flexible_loads || 0) + Number(attrs.configured_profile_loads || 0);
   return [
-    loadTile("Flexible Lasten", attrs.flexible_load_switches, flexibleCount, "info", "Dürfen bei Überschuss starten. Geräteprofile werden mitgezählt.", attrs.scheduled_surplus_loads),
-    loadTile("Nur starten", attrs.start_only_appliance_switches, attrs.configured_start_only_appliances, "good", "Waschmaschine, Geschirrspüler oder Trockner werden nur gestartet.", attrs.scheduled_surplus_loads),
-    loadTile("Heizstäbe", attrs.heating_rod_switches, attrs.configured_heating_rods, "good", "Werden als Überschussverbraucher priorisiert.", attrs.scheduled_surplus_loads, Number(attrs.blocked_heating_rods || 0)),
-    loadTile("Wallboxen", attrs.wallbox_switches, attrs.configured_wallboxes, "warn", "Aktuell als Gruppe erfasst, Detailstrategie folgt.", attrs.scheduled_surplus_loads),
-    loadTile("Wärmepumpen", attrs.heat_pump_switches, attrs.configured_heat_pumps, "warn", "Aktuell als Gruppe erfasst, Detailstrategie folgt.", attrs.scheduled_surplus_loads),
+    loadTile(tr.flexibleLoads, attrs.flexible_load_switches, flexibleCount, "info", tr.releaseNote, attrs.scheduled_surplus_loads, 0, tr),
+    loadTile(tr.startOnly, attrs.start_only_appliance_switches, attrs.configured_start_only_appliances, "good", tr.plannedNote, attrs.scheduled_surplus_loads, 0, tr),
+    loadTile(tr.heatingRods, attrs.heating_rod_switches, attrs.configured_heating_rods, "good", tr.plannedPowerNote, attrs.scheduled_surplus_loads, Number(attrs.blocked_heating_rods || 0), tr),
+    loadTile(tr.wallboxes, attrs.wallbox_switches, attrs.configured_wallboxes, "warn", tr.releaseNote, attrs.scheduled_surplus_loads, 0, tr),
+    loadTile(tr.heatPumps, attrs.heat_pump_switches, attrs.configured_heat_pumps, "warn", tr.releaseNote, attrs.scheduled_surplus_loads, 0, tr),
   ].join("");
 }
 
-function loadTile(title, entities, count, configuredState, fallbackNote, scheduledLoads, blockedCount = 0) {
+function loadTile(title, entities, count, configuredState, fallbackNote, scheduledLoads, blockedCount = 0, tr = I18N.de) {
   const items = asArray(entities);
   const configured = Number(count ?? items.length);
   const scheduled = asArray(scheduledLoads).filter((entity) => items.includes(entity));
   const blocked = Number(blockedCount || 0);
   const state = configured <= 0 ? "bad" : blocked ? "warn" : scheduled.length ? "good" : configuredState;
-  const pill = configured <= 0 ? "nicht konfiguriert" : blocked ? "Temperatur" : scheduled.length ? "aktiv" : "bereit";
-  const value = configured <= 0 ? "kein Gerät" : blocked ? `${blocked} blockiert` : scheduled.length ? `${scheduled.length} aktiv` : `${configured} Gerät${configured === 1 ? "" : "e"}`;
-  const note = scheduled.length ? `Geplant: ${scheduled.join(", ")}` : fallbackNote;
+  const pill = configured <= 0 ? tr.noConfig : blocked ? tr.temperature : scheduled.length ? tr.activePill : tr.ready;
+  const value = configured <= 0 ? tr.noDevice : blocked ? `${blocked} ${tr.blocked}` : scheduled.length ? `${scheduled.length} ${tr.activePill}` : `${configured} ${configured === 1 ? tr.device : tr.devicesPlural}`;
+  const note = scheduled.length ? `${tr.plannedPrefix}: ${scheduled.join(", ")}` : fallbackNote;
   return `<article class="tile ${state}"><div class="tile-top"><span>${esc(title)}</span><span class="pill ${state}">${esc(pill)}</span></div><div class="value small-value">${esc(value)}</div><div class="note">${esc(note)}</div></article>`;
 }
 
-function virtualBatteryCard(states, attrs) {
+function virtualBatteryCard(states, attrs, tr) {
   const enabled = Boolean(attrs.virtual_battery_enabled);
   if (!enabled) return "";
   const used = Boolean(attrs.virtual_battery_used);
   const soc = attrs.virtual_battery_soc ?? numericState(byKey(states, "virtual_battery_soc"));
   const confidence = Number(attrs.virtual_battery_confidence || 0);
   return `<section class="next-card">
-    <h2>Virtuelle Batterie</h2>
-    ${blockerItem(used, "HEMS-Nutzung", used ? "Virtuelle Batterie wird in Batterie-SoC, Ladung und Entladung berücksichtigt." : "Virtuelle Batterie rechnet mit, wird aber noch nicht für HEMS-Entscheidungen genutzt.")}
-    ${blockerItem(confidence >= 50, "Vertrauen", `${confidence.toLocaleString("de-DE", { maximumFractionDigits: 0 })}% · ${attrs.virtual_battery_reason || "Manuelle Korrekturen verbessern die Genauigkeit."}`)}
-    ${blockerItem(Number(soc) > 0, "Berechneter SoC", `${Number(soc || 0).toLocaleString("de-DE", { maximumFractionDigits: 1 })}%`)}
+    <h2>${esc(tr.virtualBattery)}</h2>
+    ${blockerItem(used, tr.hemsUse, used ? attrs.virtual_battery_reason || tr.hemsUse : attrs.virtual_battery_reason || tr.releaseNote)}
+    ${blockerItem(confidence >= 50, tr.confidence, `${confidence.toLocaleString("de-DE", { maximumFractionDigits: 0 })}% · ${attrs.virtual_battery_reason || tr.confidence}`)}
+    ${blockerItem(Number(soc) > 0, tr.calculatedSoc, `${Number(soc || 0).toLocaleString("de-DE", { maximumFractionDigits: 1 })}%`)}
   </section>`;
 }
 
-function blockerCard(states, attrs) {
+function blockerCard(states, attrs, tr) {
   const protect = isOn(byKey(states, "battery_protect")) || attrs.battery_protect;
   const weather = isOn(byKey(states, "good_weather")) || attrs.good_weather;
   const pvWindow = attrs.pv_window || byKey(states, "pv_window")?.state;
   const budget = numericState(byKey(states, "available_surplus_budget"));
   return `<section class="next-card">
-    <h2>Blocker & Freigaben</h2>
-    ${blockerItem(!protect, "Batterieschutz frei", attrs.battery_reason || "Batterie ist nicht im Schutzmodus.")}
-    ${blockerItem(weather, "Wetterfreigabe", attrs.weather_reason || "Wetter- und Sonnenwerte werden bewertet.")}
-    ${blockerItem(Boolean(pvWindow && !["night", "low_today", "weak_now"].includes(pvWindow)), "PV-Fenster", attrs.pv_window_reason || `PV-Fenster: ${pvWindow || "unbekannt"}.`)}
-    ${blockerItem(budget > 0, "Überschussbudget", budget > 0 ? `${Math.round(budget)} W verfügbar.` : "Kein nutzbares Budget verfügbar.")}
-    ${blockerItem(Number(attrs.learning_samples || 0) >= 12, "Jahreszeit-Erfahrung", learningReason(attrs))}
+    <h2>${esc(tr.blockers)}</h2>
+    ${blockerItem(!protect, tr.batteryFree, attrs.battery_reason || tr.batteryFree)}
+    ${blockerItem(weather, tr.weatherRelease, attrs.weather_reason || tr.weatherRelease)}
+    ${blockerItem(Boolean(pvWindow && !["night", "low_today", "weak_now"].includes(pvWindow)), tr.pvWindow, attrs.pv_window_reason || `${tr.pvWindow}: ${pvWindow || "-"}.`)}
+    ${blockerItem(budget > 0, tr.budget, budget > 0 ? `${Math.round(budget)} W` : tr.noSurplus)}
+    ${blockerItem(Number(attrs.learning_samples || 0) >= 12, tr.seasonLearning, learningReason(attrs, tr))}
   </section>`;
 }
 
@@ -544,12 +631,12 @@ function blockerItem(ok, title, text) {
   return `<div class="next-item"><span class="marker" style="background:var(--${ok ? "good" : "warn"})"></span><div><strong>${esc(title)}</strong><p class="note">${esc(text)}</p></div></div>`;
 }
 
-function actionHistory(attrs) {
+function actionHistory(attrs, tr) {
   const rows = Array.isArray(attrs.action_history) ? attrs.action_history.slice(0, 8) : [];
-  if (!rows.length) return `<section class="event-card"><h2>HEMS Ereignisse</h2><div class="note">Noch keine HEMS-Ereignisse sichtbar.</div></section>`;
-  return `<section class="event-card"><h2>HEMS Ereignisse</h2><div class="event-list">${rows.map((event) => {
+  if (!rows.length) return `<section class="event-card"><h2>${esc(tr.events)}</h2><div class="note">${esc(tr.noEvents)}</div></section>`;
+  return `<section class="event-card"><h2>${esc(tr.events)}</h2><div class="event-list">${rows.map((event) => {
     const blocked = String(event.kind || "").includes("block") || String(event.kind || "").includes("protect");
-    return `<div class="event"><div class="event-time">${esc(formatTime(event.time))}</div><div><div class="event-title">${esc(event.title || "HEMS-Ereignis")}</div><div class="event-reason">${esc(event.reason || "")}</div></div><span class="pill ${blocked ? "warn" : "good"}">${blocked ? "wartet" : "aktiv"}</span></div>`;
+    return `<div class="event"><div class="event-time">${esc(formatTime(event.time))}</div><div><div class="event-title">${esc(event.title || tr.event)}</div><div class="event-reason">${esc(event.reason || "")}</div></div><span class="pill ${blocked ? "warn" : "good"}">${blocked ? esc(tr.waiting) : esc(tr.activePill)}</span></div>`;
   }).join("")}</div></section>`;
 }
 
@@ -624,12 +711,12 @@ function learningClass(attrs) {
   return "bad";
 }
 
-function learningReason(attrs) {
+function learningReason(attrs, tr = I18N.de) {
   const adjustment = Number(attrs.seasonal_grid_adjustment || 0);
-  const recommendation = attrs.seasonal_recommendation || "HEMS sammelt dauerhafte Erfahrungswerte.";
+  const recommendation = attrs.seasonal_recommendation || tr.experience;
   if (!adjustment) return recommendation;
   const sign = adjustment > 0 ? "+" : "";
-  return `${recommendation} Gelernte Netztoleranz: ${sign}${Math.round(adjustment)} W.`;
+  return `${recommendation} ${tr.learnedTolerance}: ${sign}${Math.round(adjustment)} W.`;
 }
 
 function asArray(value) {
@@ -638,15 +725,16 @@ function asArray(value) {
   return [value];
 }
 
-function list(value) {
+function list(value, tr = I18N.de) {
   const items = asArray(value);
-  return items.length ? items.join(", ") : "nicht gesetzt";
+  return items.length ? items.join(", ") : tr.notSet;
 }
 
-function nextConfiguredLoad(attrs) {
+function nextConfiguredLoad(attrs, tr = I18N.de) {
   const groups = [
     attrs.heating_rod_switches,
     attrs.flexible_load_switches,
+    attrs.start_only_appliance_switches,
     attrs.wallbox_switches,
     attrs.heat_pump_switches,
   ];
@@ -654,7 +742,7 @@ function nextConfiguredLoad(attrs) {
     const items = asArray(group);
     if (items.length) return items[0];
   }
-  return "nicht konfiguriert";
+  return tr.noConfig;
 }
 
 function formatTime(value) {

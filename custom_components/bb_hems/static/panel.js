@@ -21,14 +21,14 @@ const ALIASES = {
   mode_select: ["select.bb_hems_mode", "betriebsart", "operating mode"],
 };
 
-const BB_HEMS_VERSION = "0.9.1";
+const BB_HEMS_VERSION = "0.9.2";
 const I18N = {
   de: {
     subtitle: "Was HEMS gerade entscheidet, schaltet und einspart",
     config: "Konfiguration",
     entities: "Entitäten",
     devices: "Geräte",
-    today: "Nutzen heute",
+    today: "HEMS Nutzen",
     todayNote: "Nur HEMS-Werte, keine allgemeine Energiebilanz",
     shifted: "HEMS verschoben",
     shiftedNote: "Energie wurde in PV-/Überschusszeit gelegt.",
@@ -89,13 +89,27 @@ const I18N = {
     event: "HEMS-Ereignis",
     learnedTolerance: "Gelernte Netztoleranz",
     notSet: "nicht gesetzt",
+    rangeToday: "Heute",
+    rangeYesterday: "Gestern",
+    rangeBeforeYesterday: "Vorgestern",
+    range7d: "7 Tage",
+    range30d: "30 Tage",
+    comparedPrevious: "gegen vorherigen Zeitraum",
+    starts: "Starts",
+    eventsShort: "Ereignisse",
+    blocksShort: "Blocker",
+    maxBudget: "Max. Budget",
+    noHistory: "Noch keine HEMS-Historie für diesen Zeitraum.",
+    more: "mehr",
+    less: "weniger",
+    unchanged: "unverändert",
   },
   en: {
     subtitle: "What HEMS decides, switches and saves right now",
     config: "Configuration",
     entities: "Entities",
     devices: "Devices",
-    today: "Today's benefit",
+    today: "HEMS benefit",
     todayNote: "Only HEMS values, not a general energy balance",
     shifted: "HEMS shifted",
     shiftedNote: "Energy moved into PV/surplus time.",
@@ -156,8 +170,23 @@ const I18N = {
     event: "HEMS event",
     learnedTolerance: "Learned grid tolerance",
     notSet: "not set",
+    rangeToday: "Today",
+    rangeYesterday: "Yesterday",
+    rangeBeforeYesterday: "Day before",
+    range7d: "7 days",
+    range30d: "30 days",
+    comparedPrevious: "vs previous period",
+    starts: "Starts",
+    eventsShort: "Events",
+    blocksShort: "Blocks",
+    maxBudget: "Max. budget",
+    noHistory: "No HEMS history for this period yet.",
+    more: "more",
+    less: "less",
+    unchanged: "unchanged",
   },
 };
+const HISTORY_RANGES = ["today", "yesterday", "before_yesterday", "7d", "30d"];
 const MODE_LABELS = {
   auto: "Auto",
   eco: "Eco",
@@ -186,6 +215,8 @@ class BbHemsPanel extends HTMLElement {
     const modeSelect = byKey(states, "mode_select");
     const lang = this.language();
     const tr = I18N[lang];
+    const range = this.historyRange();
+    const history = historySummary(attrs, range, tr);
 
     this.innerHTML = `
       <style>
@@ -338,6 +369,15 @@ class BbHemsPanel extends HTMLElement {
           border-radius: 10px;
           background: #f0f2f4;
         }
+        .segmented.compact {
+          grid-template-columns: repeat(5, minmax(72px, auto));
+          width: auto;
+        }
+        .segmented.compact .segment {
+          min-height: 32px;
+          padding: 5px 10px;
+          font-size: 13px;
+        }
         .segment {
           min-height: 38px;
           border: 0;
@@ -452,14 +492,19 @@ class BbHemsPanel extends HTMLElement {
 
         <section class="section">
           <div class="section-head">
-            <h2>${tr.today}</h2>
-            <span class="section-note">${tr.todayNote}</span>
+            <div>
+              <h2>${tr.today}: ${esc(history.label)}</h2>
+              <span class="section-note">${esc(tr.todayNote)}</span>
+            </div>
+            <div class="segmented compact">
+              ${HISTORY_RANGES.map((item) => `<button class="segment ${item === range ? "active" : ""}" data-history-range="${esc(item)}">${esc(rangeLabel(item, tr))}</button>`).join("")}
+            </div>
           </div>
           <div class="tile-grid">
-            ${benefitTile(tr.shifted, energy(byKey(states, "shifted_energy_today")), tr.shiftedNote, "↗", "good")}
-            ${benefitTile(tr.savings, money(byKey(states, "estimated_savings_today")), attrs.price_reason || tr.savingsNote, "€", "good")}
-            ${benefitTile(tr.plannedPower, power(byKey(states, "scheduled_surplus_power")), tr.plannedPowerNote, "⚡", "info")}
-            ${benefitTile(tr.experience, learningValue(states, attrs), attrs.seasonal_recommendation || tr.experience, "↻", learningClass(attrs))}
+            ${benefitTile(tr.shifted, energyValue(history.shiftedEnergy), comparisonNote(history, "shiftedEnergy", tr) || tr.shiftedNote, "↗", history.shiftedEnergy > 0 ? "good" : "info")}
+            ${benefitTile(tr.savings, moneyValue(history.estimatedSavings), comparisonNote(history, "estimatedSavings", tr) || attrs.price_reason || tr.savingsNote, "€", history.estimatedSavings > 0 ? "good" : "info")}
+            ${benefitTile(tr.plannedPower, powerValue(history.maxScheduledPower), `${tr.maxBudget}: ${powerValue(history.maxAvailableBudget)}`, "⚡", history.maxScheduledPower > 0 ? "good" : "info")}
+            ${benefitTile(tr.eventsShort, String(history.events), `${history.switches} ${tr.starts} · ${history.blocks} ${tr.blocksShort}${history.hasData ? "" : ` · ${tr.noHistory}`}`, "✓", history.events > 0 ? "good" : "warn")}
           </div>
         </section>
 
@@ -506,6 +551,11 @@ class BbHemsPanel extends HTMLElement {
     return String(this._hass?.locale?.language || this._hass?.language || "de").toLowerCase().startsWith("en") ? "en" : "de";
   }
 
+  historyRange() {
+    const stored = localStorage.getItem("bb_hems_history_range");
+    return HISTORY_RANGES.includes(stored) ? stored : "today";
+  }
+
   bindControls(states) {
     this.querySelector("[data-lang-toggle]")?.addEventListener("click", () => {
       localStorage.setItem("bb_hems_language", this.language() === "de" ? "en" : "de");
@@ -526,6 +576,12 @@ class BbHemsPanel extends HTMLElement {
         this._hass.callService("switch", entity?.state === "on" ? "turn_off" : "turn_on", {
           entity_id: button.dataset.switchEntity,
         });
+      });
+    });
+    this.querySelectorAll("[data-history-range]").forEach((button) => {
+      button.addEventListener("click", () => {
+        localStorage.setItem("bb_hems_history_range", button.dataset.historyRange);
+        this.render();
       });
     });
   }
@@ -677,17 +733,134 @@ function val(entity) {
 
 function power(entity) {
   const watts = numericState(entity);
+  return powerValue(watts);
+}
+
+function powerValue(watts) {
   const kw = watts / 1000;
   return `${kw.toLocaleString("de-DE", { minimumFractionDigits: Math.abs(kw) >= 10 ? 0 : 1, maximumFractionDigits: 1 })} kW`;
 }
 
 function energy(entity) {
   if (!entity) return "0,00 kWh";
-  return `${numericState(entity).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kWh`;
+  return energyValue(numericState(entity));
+}
+
+function energyValue(value) {
+  return `${Number(value || 0).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kWh`;
 }
 
 function money(entity) {
-  return numericState(entity).toLocaleString("de-DE", { style: "currency", currency: "EUR" });
+  return moneyValue(numericState(entity));
+}
+
+function moneyValue(value) {
+  return Number(value || 0).toLocaleString("de-DE", { style: "currency", currency: "EUR" });
+}
+
+function rangeLabel(range, tr = I18N.de) {
+  const labels = {
+    today: tr.rangeToday,
+    yesterday: tr.rangeYesterday,
+    before_yesterday: tr.rangeBeforeYesterday,
+    "7d": tr.range7d,
+    "30d": tr.range30d,
+  };
+  return labels[range] || tr.rangeToday;
+}
+
+function historySummary(attrs, range = "today", tr = I18N.de) {
+  const current = periodForRange(range, 0);
+  const previous = periodForRange(range, 1);
+  const currentRows = collectHistory(attrs, current.start, current.days);
+  const previousRows = collectHistory(attrs, previous.start, previous.days);
+  return {
+    label: rangeLabel(range, tr),
+    hasData: currentRows.hasData,
+    shiftedEnergy: currentRows.shiftedEnergy,
+    estimatedSavings: currentRows.estimatedSavings,
+    maxScheduledPower: currentRows.maxScheduledPower,
+    maxAvailableBudget: currentRows.maxAvailableBudget,
+    events: currentRows.events,
+    switches: currentRows.switches,
+    blocks: currentRows.blocks,
+    previous: previousRows,
+  };
+}
+
+function periodForRange(range, previousIndex) {
+  if (range === "yesterday") {
+    return { start: previousIndex ? 2 : 1, days: 1 };
+  }
+  if (range === "before_yesterday") {
+    return { start: previousIndex ? 3 : 2, days: 1 };
+  }
+  if (range === "7d") {
+    return { start: previousIndex ? 7 : 0, days: 7 };
+  }
+  if (range === "30d") {
+    return { start: previousIndex ? 30 : 0, days: 30 };
+  }
+  return { start: previousIndex ? 1 : 0, days: 1 };
+}
+
+function collectHistory(attrs, startOffset, days) {
+  const dates = new Set();
+  for (let offset = startOffset; offset < startOffset + days; offset += 1) {
+    dates.add(localIsoDate(offset));
+  }
+  const rows = Array.isArray(attrs.daily_history) ? attrs.daily_history : [];
+  const selected = rows.filter((row) => dates.has(String(row.date || "")));
+  if (dates.has(localIsoDate(0)) && !selected.some((row) => row.date === localIsoDate(0))) {
+    selected.push({
+      date: localIsoDate(0),
+      shifted_energy: attrs.shifted_energy_today,
+      estimated_savings: attrs.estimated_savings_today,
+      max_scheduled_power: attrs.scheduled_surplus_power,
+      max_available_budget: attrs.available_surplus_budget,
+      events: 0,
+      switches: 0,
+      blocks: 0,
+    });
+  }
+  return selected.reduce((summary, row) => {
+    summary.hasData = true;
+    summary.shiftedEnergy += Number(row.shifted_energy || 0);
+    summary.estimatedSavings += Number(row.estimated_savings || 0);
+    summary.maxScheduledPower = Math.max(summary.maxScheduledPower, Number(row.max_scheduled_power || 0));
+    summary.maxAvailableBudget = Math.max(summary.maxAvailableBudget, Number(row.max_available_budget || 0));
+    summary.events += Number(row.events || 0);
+    summary.switches += Number(row.switches || 0);
+    summary.blocks += Number(row.blocks || 0);
+    return summary;
+  }, {
+    hasData: false,
+    shiftedEnergy: 0,
+    estimatedSavings: 0,
+    maxScheduledPower: 0,
+    maxAvailableBudget: 0,
+    events: 0,
+    switches: 0,
+    blocks: 0,
+  });
+}
+
+function comparisonNote(history, key, tr = I18N.de) {
+  const previous = Number(history.previous?.[key] || 0);
+  const current = Number(history[key] || 0);
+  if (!history.hasData || previous <= 0 && current <= 0) return "";
+  const delta = current - previous;
+  if (Math.abs(delta) < 0.005) return `${tr.unchanged} ${tr.comparedPrevious}`;
+  const direction = delta > 0 ? tr.more : tr.less;
+  const formatted = key === "estimatedSavings" ? moneyValue(Math.abs(delta)) : energyValue(Math.abs(delta));
+  return `${formatted} ${direction} ${tr.comparedPrevious}`;
+}
+
+function localIsoDate(offsetDays = 0) {
+  const date = new Date();
+  date.setHours(12, 0, 0, 0);
+  date.setDate(date.getDate() - offsetDays);
+  return date.toISOString().slice(0, 10);
 }
 
 function activeLoadClass(entity) {

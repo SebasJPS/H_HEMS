@@ -406,6 +406,7 @@ class HemsSensor(HemsEntity, SensorEntity):
             "shifted_energy_today": data.shifted_energy_today,
             "estimated_savings_today": data.estimated_savings_today,
             "shifted_energy_total": data.shifted_energy_total,
+            "daily_history": data.daily_history,
             "learning_bucket": data.learning_bucket,
             "learning_samples": data.learning_samples,
             "seasonal_success_rate": data.seasonal_success_rate,

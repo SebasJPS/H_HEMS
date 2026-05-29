@@ -17,8 +17,8 @@ BB HEMS turns existing Home Assistant sensors and switches into one central ener
 - Support several batteries and use the lowest SoC for conservative protection.
 - Provide one central HEMS state instead of repeating the same YAML logic per device.
 - Expose settings directly as Home Assistant entities.
-- Add a sidebar energy dashboard with live flow, today values, HEMS controls,
-  switching history and estimated HEMS benefit.
+- Add a sidebar energy dashboard with period-based HEMS benefit, HEMS controls,
+  switching history and estimated savings.
 - Prepare the model for many controllable consumers with priorities and categories.
 
 ## Current Status
@@ -35,6 +35,8 @@ This repository contains an initial custom integration scaffold:
 - Switch entity for enabling or disabling automatic HEMS decisions.
 - Direct control of configured flexible loads and heating rods when the HEMS decision allows or blocks them.
 - Energy-style sidebar dashboard served by the integration.
+- Persistent daily HEMS history for today, yesterday, the day before and rolling
+  7/30 day dashboard views.
 - Persistent HEMS learning values that survive Home Assistant restarts and
   group experience by season and time of day.
 - Optional target temperatures for heating rods, so pool/boiler heating stops
@@ -66,8 +68,8 @@ It shows:
 
 - Home Assistant-style tiles focused on HEMS decisions and benefit.
 - Quick controls for `select.bb_hems_mode` and `switch.bb_hems_auto_enabled`.
-- Today's HEMS benefit: shifted energy, estimated savings, planned HEMS load and
-  current seasonal HEMS experience.
+- HEMS benefit by period: today, yesterday, the day before, 7 days and 30 days,
+  with comparison against the previous period.
 - The current decision: surplus status, usable budget, next candidate and the
   relevant reason text.
 - Managed consumer groups such as flexible loads, heating rods, wallboxes and
@@ -346,6 +348,9 @@ kWh. `sensor.bb_hems_estimated_savings_today` multiplies it by the configured
 net benefit: grid import price minus export compensation. If no price sensors
 are configured, BB HEMS uses the fallback number entities. These values are
 estimates for the dashboard, not a replacement for metered utility billing.
+The dashboard also stores a compact daily HEMS history for up to 90 days, so it
+can show yesterday, the day before, 7 day and 30 day HEMS benefit even after a
+Home Assistant restart.
 
 BB HEMS now persists its own learning data in Home Assistant storage. It records
 HEMS experience by season and time of day, including how often flexible loads

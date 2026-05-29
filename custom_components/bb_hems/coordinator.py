@@ -92,6 +92,7 @@ LEARNING_STORE_VERSION = 1
 LEARNING_SAVE_INTERVAL = timedelta(minutes=5)
 LEARNING_MIN_SAMPLES = 12
 LEARNING_DECISION_MIN_SAMPLES = 72
+DAILY_HISTORY_DAYS = 90
 
 
 @dataclass(frozen=True)
@@ -200,6 +201,7 @@ class HemsData:
     shifted_energy_today: float
     estimated_savings_today: float
     shifted_energy_total: float
+    daily_history: list[dict[str, Any]]
     learning_bucket: str
     learning_samples: int
     seasonal_success_rate: float | None
@@ -237,6 +239,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         self._energy_estimate_last_power: float = 0.0
         self._shifted_energy_today: float = 0.0
         self._shifted_energy_total: float = 0.0
+        self._daily_history: dict[str, dict[str, Any]] = {}
         self._virtual_battery_energy: float | None = None
         self._virtual_battery_last_update: datetime | None = None
         self._virtual_battery_manual_reference: float | None = None
@@ -268,6 +271,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         self._shifted_energy_total = self._safe_float(
             stored.get("shifted_energy_total"), 0.0
         )
+        self._daily_history = self._safe_daily_history(stored.get("daily_history"))
         self._virtual_battery_energy = (
             self._safe_float(stored.get("virtual_battery_energy"), 0.0)
             if stored.get("virtual_battery_energy") is not None
@@ -304,6 +308,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                 "energy_estimate_day": self._energy_estimate_day,
                 "shifted_energy_today": self._shifted_energy_today,
                 "shifted_energy_total": self._shifted_energy_total,
+                "daily_history": self._daily_history,
                 "virtual_battery_energy": self._virtual_battery_energy,
                 "virtual_battery_manual_reference": (
                     self._virtual_battery_manual_reference
@@ -571,6 +576,13 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             scheduled_power if flexible_loads_allowed else 0.0
         )
         estimated_savings_today = shifted_energy_today * savings_price
+        self._update_daily_history_metrics(
+            shifted_energy_today,
+            estimated_savings_today,
+            scheduled_power if flexible_loads_allowed else 0.0,
+            available_budget,
+            flexible_loads_allowed,
+        )
         learning = self._update_learning_bucket(
             flexible_loads_allowed=flexible_loads_allowed,
             scheduled_power=scheduled_power,
@@ -659,6 +671,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             shifted_energy_today=shifted_energy_today,
             estimated_savings_today=estimated_savings_today,
             shifted_energy_total=self._shifted_energy_total,
+            daily_history=self._daily_history_rows(),
             learning_bucket=learning["label"],
             learning_samples=learning["samples"],
             seasonal_success_rate=learning["success_rate"],
@@ -681,6 +694,9 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         now = datetime.now()
         today = now.date().isoformat()
         if self._energy_estimate_day != today:
+            if self._energy_estimate_day:
+                previous = self._daily_row(self._energy_estimate_day)
+                previous["shifted_energy"] = round(self._shifted_energy_today, 4)
             self._energy_estimate_day = today
             self._shifted_energy_today = 0.0
             self._energy_estimate_last_update = now
@@ -1000,6 +1016,77 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                 }
             )
         return rows
+
+    def _safe_daily_history(self, value: Any) -> dict[str, dict[str, Any]]:
+        if not isinstance(value, dict):
+            return {}
+        rows: dict[str, dict[str, Any]] = {}
+        for date_key, raw in value.items():
+            if not isinstance(date_key, str) or not isinstance(raw, dict):
+                continue
+            rows[date_key] = {
+                "date": date_key,
+                "shifted_energy": round(self._safe_float(raw.get("shifted_energy"), 0.0), 4),
+                "estimated_savings": round(self._safe_float(raw.get("estimated_savings"), 0.0), 4),
+                "max_scheduled_power": round(self._safe_float(raw.get("max_scheduled_power"), 0.0), 1),
+                "max_available_budget": round(self._safe_float(raw.get("max_available_budget"), 0.0), 1),
+                "release_updates": int(self._safe_float(raw.get("release_updates"), 0.0)),
+                "events": int(self._safe_float(raw.get("events"), 0.0)),
+                "switches": int(self._safe_float(raw.get("switches"), 0.0)),
+                "blocks": int(self._safe_float(raw.get("blocks"), 0.0)),
+            }
+        return dict(sorted(rows.items())[-DAILY_HISTORY_DAYS:])
+
+    def _daily_row(self, date_key: str | None = None) -> dict[str, Any]:
+        key = date_key or datetime.now().date().isoformat()
+        row = self._daily_history.setdefault(
+            key,
+            {
+                "date": key,
+                "shifted_energy": 0.0,
+                "estimated_savings": 0.0,
+                "max_scheduled_power": 0.0,
+                "max_available_budget": 0.0,
+                "release_updates": 0,
+                "events": 0,
+                "switches": 0,
+                "blocks": 0,
+            },
+        )
+        return row
+
+    def _daily_history_rows(self) -> list[dict[str, Any]]:
+        return [
+            dict(row)
+            for _key, row in sorted(self._daily_history.items(), reverse=True)[
+                :DAILY_HISTORY_DAYS
+            ]
+        ]
+
+    def _update_daily_history_metrics(
+        self,
+        shifted_energy: float,
+        estimated_savings: float,
+        scheduled_power: float,
+        available_budget: float,
+        flexible_loads_allowed: bool,
+    ) -> None:
+        row = self._daily_row()
+        row["shifted_energy"] = round(max(0.0, shifted_energy), 4)
+        row["estimated_savings"] = round(max(0.0, estimated_savings), 4)
+        row["max_scheduled_power"] = round(
+            max(self._safe_float(row.get("max_scheduled_power"), 0.0), scheduled_power),
+            1,
+        )
+        row["max_available_budget"] = round(
+            max(self._safe_float(row.get("max_available_budget"), 0.0), available_budget),
+            1,
+        )
+        if flexible_loads_allowed:
+            row["release_updates"] = int(row.get("release_updates", 0)) + 1
+        self._daily_history = dict(
+            sorted(self._daily_history.items())[-DAILY_HISTORY_DAYS:]
+        )
 
     def _safe_device_runtime_state(self, value: Any) -> dict[str, dict[str, str]]:
         if not isinstance(value, dict):
@@ -1711,16 +1798,23 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
 
     def _add_action(self, title: str, reason: str, kind: str) -> None:
         """Add one dashboard action entry."""
+        now = datetime.now()
         self._action_history.insert(
             0,
             {
-                "time": datetime.now().isoformat(timespec="seconds"),
+                "time": now.isoformat(timespec="seconds"),
                 "title": title,
                 "reason": reason,
                 "kind": kind,
             },
         )
         del self._action_history[10:]
+        row = self._daily_row(now.date().isoformat())
+        row["events"] = int(row.get("events", 0)) + 1
+        if kind == "device":
+            row["switches"] = int(row.get("switches", 0)) + 1
+        if kind in {"block", "protect"} or "block" in kind:
+            row["blocks"] = int(row.get("blocks", 0)) + 1
 
     def _update_action_history(
         self,

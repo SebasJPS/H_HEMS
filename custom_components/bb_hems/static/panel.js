@@ -1,9 +1,14 @@
 const ALIASES = {
   energy_mode: ["energy_mode", "energiemodus", "betrieb"],
+  grid_import_power: ["grid_import_power", "netzbezug", "grid import"],
+  grid_export_power: ["grid_export_power", "einspeisung", "grid export"],
+  pv_power_total: ["pv_power_total", "pv gesamt", "pv total"],
   pv_window: ["pv_window", "pv fenster"],
   battery_soc_min: ["battery_soc_min", "batterie soc minimum", "batterie min"],
   virtual_battery_soc: ["virtual_battery_soc", "virtuelle batterie soc"],
+  battery_charge_total: ["battery_charge_total", "batterie ladung gesamt", "batterie ladung"],
   battery_discharge_total: ["battery_discharge_total", "batterie entladung gesamt", "batterie entladung"],
+  house_load_total: ["house_load_total", "hauslast", "house load"],
   available_surplus_budget: ["available_surplus_budget", "verfugbares uberschussbudget", "verfuegbares ueberschussbudget"],
   scheduled_surplus_power: ["scheduled_surplus_power", "geplante uberschussleistung", "geplante ueberschussleistung"],
   shifted_energy_today: ["shifted_energy_today", "hems verschobene energie heute"],
@@ -21,13 +26,25 @@ const ALIASES = {
   mode_select: ["select.bb_hems_mode", "betriebsart", "operating mode"],
 };
 
-const BB_HEMS_VERSION = "0.10.0";
+const BB_HEMS_VERSION = "0.11.0";
 const I18N = {
   de: {
     subtitle: "Was HEMS gerade entscheidet, schaltet und einspart",
     config: "Konfiguration",
     entities: "Entitäten",
     devices: "Geräte",
+    energyStatus: "Energiezustand",
+    energyStatusNote: "Normalisierte Werte aus Wechselrichter, Batterie, Netz und Hauslast",
+    pv: "PV",
+    battery: "Batterie",
+    grid: "Netz",
+    house: "Hauslast",
+    export: "Einspeisung",
+    import: "Bezug",
+    charging: "lädt",
+    discharging: "entlädt",
+    noFlow: "kein Fluss",
+    hemsBudget: "HEMS-Budget",
     today: "HEMS Nutzen",
     todayNote: "Nur HEMS-Werte, keine allgemeine Energiebilanz",
     shifted: "HEMS verschoben",
@@ -109,6 +126,18 @@ const I18N = {
     config: "Configuration",
     entities: "Entities",
     devices: "Devices",
+    energyStatus: "Energy status",
+    energyStatusNote: "Normalized values from inverter, battery, grid and house load",
+    pv: "PV",
+    battery: "Battery",
+    grid: "Grid",
+    house: "House load",
+    export: "Export",
+    import: "Import",
+    charging: "charging",
+    discharging: "discharging",
+    noFlow: "no flow",
+    hemsBudget: "HEMS budget",
     today: "HEMS benefit",
     todayNote: "Only HEMS values, not a general energy balance",
     shifted: "HEMS shifted",
@@ -493,6 +522,21 @@ class BbHemsPanel extends HTMLElement {
         <section class="section">
           <div class="section-head">
             <div>
+              <h2>${esc(tr.energyStatus)}</h2>
+              <span class="section-note">${esc(tr.energyStatusNote)}</span>
+            </div>
+          </div>
+          <div class="tile-grid">
+            ${energyStatusTile(tr.pv, powerValue(Number(attrs.pv_power || numericState(byKey(states, "pv_power_total")))), `${attrs.pv_window_reason || tr.pvWindow}`, "☀", "good")}
+            ${energyStatusTile(tr.battery, batteryValue(attrs, states, tr), batteryNote(attrs, tr), "🔋", batteryClass(attrs))}
+            ${energyStatusTile(tr.grid, gridValue(attrs, states, tr), gridNote(attrs, tr), "↔", gridClass(attrs))}
+            ${energyStatusTile(tr.house, powerValue(Number(attrs.house_load || numericState(byKey(states, "house_load_total")))), `${tr.hemsBudget}: ${powerValue(Number(attrs.available_surplus_budget || numericState(byKey(states, "available_surplus_budget"))))}`, "⌂", "info")}
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-head">
+            <div>
               <h2>${tr.today}: ${esc(history.label)}</h2>
               <span class="section-note">${esc(tr.todayNote)}</span>
             </div>
@@ -599,6 +643,55 @@ function controls(modeSelect, autoSwitch, tr) {
 
 function benefitTile(label, value, note, icon, state) {
   return `<article class="tile ${state}"><div class="tile-top"><span>${esc(label)}</span><span class="icon">${esc(icon)}</span></div><div class="value">${esc(value)}</div><div class="note">${esc(note)}</div></article>`;
+}
+
+function energyStatusTile(label, value, note, icon, state) {
+  return benefitTile(label, value, note, icon, state);
+}
+
+function batteryValue(attrs, states, tr) {
+  const soc = attrs.battery_soc_min ?? numericState(byKey(states, "battery_soc_min"));
+  const charge = Number(attrs.battery_charge || numericState(byKey(states, "battery_charge_total")));
+  const discharge = Number(attrs.battery_discharge || numericState(byKey(states, "battery_discharge_total")));
+  const flow = charge >= discharge ? `${tr.charging} ${powerValue(charge)}` : `${tr.discharging} ${powerValue(discharge)}`;
+  if (soc === null || soc === undefined || Number.isNaN(Number(soc))) return flow;
+  return `${Number(soc).toLocaleString("de-DE", { maximumFractionDigits: 0 })}% · ${flow}`;
+}
+
+function batteryNote(attrs, tr) {
+  const usable = Number(attrs.usable_battery_charge || 0);
+  if (usable > 0) return `${tr.hemsBudget}: ${powerValue(usable)}`;
+  return attrs.battery_reason || tr.batteryFree;
+}
+
+function batteryClass(attrs) {
+  if (attrs.battery_protect) return "bad";
+  if (Number(attrs.usable_battery_charge || 0) > 0) return "good";
+  if (Number(attrs.battery_charge || 0) > 0) return "warn";
+  return "info";
+}
+
+function gridValue(attrs, states, tr) {
+  const gridImport = Number(attrs.grid_import || numericState(byKey(states, "grid_import_power")));
+  const gridExport = Number(attrs.grid_export || numericState(byKey(states, "grid_export_power")));
+  if (gridExport > gridImport) return `${tr.export} ${powerValue(gridExport)}`;
+  if (gridImport > 0) return `${tr.import} ${powerValue(gridImport)}`;
+  return tr.noFlow;
+}
+
+function gridNote(attrs, tr) {
+  const gridImport = Number(attrs.grid_import || 0);
+  const gridExport = Number(attrs.grid_export || 0);
+  return `${tr.import}: ${powerValue(gridImport)} · ${tr.export}: ${powerValue(gridExport)}`;
+}
+
+function gridClass(attrs) {
+  const gridImport = Number(attrs.grid_import || 0);
+  const gridExport = Number(attrs.grid_export || 0);
+  if (gridExport > gridImport) return "good";
+  if (gridImport > 300) return "bad";
+  if (gridImport > 0) return "warn";
+  return "info";
 }
 
 function decisionStatusTile(states, attrs, tr) {

@@ -14,6 +14,8 @@ from homeassistant.helpers import selector
 from .const import (
     CONF_BATTERY_CHARGE_SENSORS,
     CONF_BATTERY_DISCHARGE_SENSORS,
+    CONF_BATTERY_SIGNED_CHARGE_POSITIVE_SENSORS,
+    CONF_BATTERY_SIGNED_DISCHARGE_POSITIVE_SENSORS,
     CONF_BATTERY_SOC_SENSORS,
     CONF_CLOUD_SENSOR,
     CONF_DEVICE_PROFILES,
@@ -21,13 +23,18 @@ from .const import (
     CONF_FLEXIBLE_LOAD_SWITCHES,
     CONF_GRID_AVERAGE_SENSOR,
     CONF_GRID_EXPORT_PRICE_SENSOR,
+    CONF_GRID_EXPORT_POWER_SENSORS,
     CONF_GRID_IMPORT_PRICE_SENSOR,
+    CONF_GRID_IMPORT_POWER_SENSORS,
     CONF_GRID_POWER_SENSOR,
+    CONF_GRID_SIGNED_EXPORT_POSITIVE_SENSORS,
+    CONF_GRID_SIGNED_IMPORT_POSITIVE_SENSORS,
     CONF_HEAT_PUMP_SWITCHES,
     CONF_HEATING_ROD_POWER_SENSORS,
     CONF_HEATING_ROD_SWITCHES,
     CONF_HEATING_ROD_TARGET_TEMPERATURES,
     CONF_HEATING_ROD_TEMPERATURE_SENSORS,
+    CONF_HOUSE_LOAD_SENSORS,
     CONF_PV_ARRAY_SPECS,
     CONF_PV_AVERAGE_SENSOR,
     CONF_PV_FORECAST_NEXT_3H_SENSOR,
@@ -133,6 +140,18 @@ class BbHemsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data = {
                 CONF_NAME: user_input.get(CONF_NAME, NAME),
                 CONF_GRID_POWER_SENSOR: user_input.get(CONF_GRID_POWER_SENSOR),
+                CONF_GRID_IMPORT_POWER_SENSORS: _entity_list(
+                    user_input.get(CONF_GRID_IMPORT_POWER_SENSORS)
+                ),
+                CONF_GRID_EXPORT_POWER_SENSORS: _entity_list(
+                    user_input.get(CONF_GRID_EXPORT_POWER_SENSORS)
+                ),
+                CONF_GRID_SIGNED_IMPORT_POSITIVE_SENSORS: _entity_list(
+                    user_input.get(CONF_GRID_SIGNED_IMPORT_POSITIVE_SENSORS)
+                ),
+                CONF_GRID_SIGNED_EXPORT_POSITIVE_SENSORS: _entity_list(
+                    user_input.get(CONF_GRID_SIGNED_EXPORT_POSITIVE_SENSORS)
+                ),
                 CONF_GRID_AVERAGE_SENSOR: user_input.get(CONF_GRID_AVERAGE_SENSOR),
                 CONF_PV_POWER_SENSORS: _entity_list(
                     user_input.get(CONF_PV_POWER_SENSORS)
@@ -156,6 +175,15 @@ class BbHemsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 ),
                 CONF_BATTERY_CHARGE_SENSORS: _entity_list(
                     user_input.get(CONF_BATTERY_CHARGE_SENSORS)
+                ),
+                CONF_BATTERY_SIGNED_DISCHARGE_POSITIVE_SENSORS: _entity_list(
+                    user_input.get(CONF_BATTERY_SIGNED_DISCHARGE_POSITIVE_SENSORS)
+                ),
+                CONF_BATTERY_SIGNED_CHARGE_POSITIVE_SENSORS: _entity_list(
+                    user_input.get(CONF_BATTERY_SIGNED_CHARGE_POSITIVE_SENSORS)
+                ),
+                CONF_HOUSE_LOAD_SENSORS: _entity_list(
+                    user_input.get(CONF_HOUSE_LOAD_SENSORS)
                 ),
                 CONF_GRID_IMPORT_PRICE_SENSOR: user_input.get(
                     CONF_GRID_IMPORT_PRICE_SENSOR
@@ -246,6 +274,18 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
             self._update_data(
                 {
                     CONF_GRID_POWER_SENSOR: user_input.get(CONF_GRID_POWER_SENSOR),
+                    CONF_GRID_IMPORT_POWER_SENSORS: _entity_list(
+                        user_input.get(CONF_GRID_IMPORT_POWER_SENSORS)
+                    ),
+                    CONF_GRID_EXPORT_POWER_SENSORS: _entity_list(
+                        user_input.get(CONF_GRID_EXPORT_POWER_SENSORS)
+                    ),
+                    CONF_GRID_SIGNED_IMPORT_POSITIVE_SENSORS: _entity_list(
+                        user_input.get(CONF_GRID_SIGNED_IMPORT_POSITIVE_SENSORS)
+                    ),
+                    CONF_GRID_SIGNED_EXPORT_POSITIVE_SENSORS: _entity_list(
+                        user_input.get(CONF_GRID_SIGNED_EXPORT_POSITIVE_SENSORS)
+                    ),
                     CONF_GRID_AVERAGE_SENSOR: user_input.get(CONF_GRID_AVERAGE_SENSOR),
                     CONF_PV_POWER_SENSORS: _entity_list(
                         user_input.get(CONF_PV_POWER_SENSORS)
@@ -269,6 +309,15 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
                     ),
                     CONF_BATTERY_CHARGE_SENSORS: _entity_list(
                         user_input.get(CONF_BATTERY_CHARGE_SENSORS)
+                    ),
+                    CONF_BATTERY_SIGNED_DISCHARGE_POSITIVE_SENSORS: _entity_list(
+                        user_input.get(CONF_BATTERY_SIGNED_DISCHARGE_POSITIVE_SENSORS)
+                    ),
+                    CONF_BATTERY_SIGNED_CHARGE_POSITIVE_SENSORS: _entity_list(
+                        user_input.get(CONF_BATTERY_SIGNED_CHARGE_POSITIVE_SENSORS)
+                    ),
+                    CONF_HOUSE_LOAD_SENSORS: _entity_list(
+                        user_input.get(CONF_HOUSE_LOAD_SENSORS)
                     ),
                     CONF_GRID_IMPORT_PRICE_SENSOR: user_input.get(
                         CONF_GRID_IMPORT_PRICE_SENSOR
@@ -488,6 +537,18 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
         data = self._entry.data
         return {
             CONF_GRID_POWER_SENSOR: data.get(CONF_GRID_POWER_SENSOR),
+            CONF_GRID_IMPORT_POWER_SENSORS: _entity_list(
+                data.get(CONF_GRID_IMPORT_POWER_SENSORS)
+            ),
+            CONF_GRID_EXPORT_POWER_SENSORS: _entity_list(
+                data.get(CONF_GRID_EXPORT_POWER_SENSORS)
+            ),
+            CONF_GRID_SIGNED_IMPORT_POSITIVE_SENSORS: _entity_list(
+                data.get(CONF_GRID_SIGNED_IMPORT_POSITIVE_SENSORS)
+            ),
+            CONF_GRID_SIGNED_EXPORT_POSITIVE_SENSORS: _entity_list(
+                data.get(CONF_GRID_SIGNED_EXPORT_POSITIVE_SENSORS)
+            ),
             CONF_GRID_AVERAGE_SENSOR: data.get(CONF_GRID_AVERAGE_SENSOR),
             CONF_PV_POWER_SENSORS: _entity_list(data.get(CONF_PV_POWER_SENSORS)),
             CONF_PV_AVERAGE_SENSOR: data.get(CONF_PV_AVERAGE_SENSOR),
@@ -504,6 +565,13 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
             CONF_BATTERY_CHARGE_SENSORS: _entity_list(
                 data.get(CONF_BATTERY_CHARGE_SENSORS)
             ),
+            CONF_BATTERY_SIGNED_DISCHARGE_POSITIVE_SENSORS: _entity_list(
+                data.get(CONF_BATTERY_SIGNED_DISCHARGE_POSITIVE_SENSORS)
+            ),
+            CONF_BATTERY_SIGNED_CHARGE_POSITIVE_SENSORS: _entity_list(
+                data.get(CONF_BATTERY_SIGNED_CHARGE_POSITIVE_SENSORS)
+            ),
+            CONF_HOUSE_LOAD_SENSORS: _entity_list(data.get(CONF_HOUSE_LOAD_SENSORS)),
             CONF_GRID_IMPORT_PRICE_SENSOR: data.get(CONF_GRID_IMPORT_PRICE_SENSOR),
             CONF_GRID_EXPORT_PRICE_SENSOR: data.get(CONF_GRID_EXPORT_PRICE_SENSOR),
             CONF_VIRTUAL_BATTERY_CHARGE_SENSOR: data.get(
@@ -546,265 +614,201 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
         }
 
 
+def _energy_source_fields(defaults: dict[str, Any]) -> dict[Any, Any]:
+    return {
+        vol.Optional(
+            CONF_GRID_POWER_SENSOR,
+            default=defaults.get(CONF_GRID_POWER_SENSOR),
+        ): selector.EntitySelector(selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)),
+        vol.Optional(
+            CONF_GRID_IMPORT_POWER_SENSORS,
+            default=defaults.get(CONF_GRID_IMPORT_POWER_SENSORS, []),
+        ): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+        ),
+        vol.Optional(
+            CONF_GRID_EXPORT_POWER_SENSORS,
+            default=defaults.get(CONF_GRID_EXPORT_POWER_SENSORS, []),
+        ): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+        ),
+        vol.Optional(
+            CONF_GRID_SIGNED_IMPORT_POSITIVE_SENSORS,
+            default=defaults.get(CONF_GRID_SIGNED_IMPORT_POSITIVE_SENSORS, []),
+        ): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+        ),
+        vol.Optional(
+            CONF_GRID_SIGNED_EXPORT_POSITIVE_SENSORS,
+            default=defaults.get(CONF_GRID_SIGNED_EXPORT_POSITIVE_SENSORS, []),
+        ): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+        ),
+        vol.Optional(
+            CONF_GRID_AVERAGE_SENSOR,
+            default=defaults.get(CONF_GRID_AVERAGE_SENSOR),
+        ): selector.EntitySelector(selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)),
+        vol.Optional(
+            CONF_PV_POWER_SENSORS,
+            default=defaults.get(CONF_PV_POWER_SENSORS, []),
+        ): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+        ),
+        vol.Optional(
+            CONF_PV_AVERAGE_SENSOR,
+            default=defaults.get(CONF_PV_AVERAGE_SENSOR),
+        ): selector.EntitySelector(selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)),
+        _optional_entity(defaults, CONF_PV_FORECAST_TODAY_SENSOR): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
+        ),
+        _optional_entity(defaults, CONF_PV_FORECAST_NEXT_HOUR_SENSOR): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
+        ),
+        _optional_entity(defaults, CONF_PV_FORECAST_NEXT_3H_SENSOR): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
+        ),
+        _optional_text(defaults, CONF_PV_ARRAY_SPECS): selector.TextSelector(
+            selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT)
+        ),
+        vol.Optional(
+            CONF_BATTERY_SOC_SENSORS,
+            default=defaults.get(CONF_BATTERY_SOC_SENSORS, []),
+        ): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+        ),
+        vol.Optional(
+            CONF_BATTERY_DISCHARGE_SENSORS,
+            default=defaults.get(CONF_BATTERY_DISCHARGE_SENSORS, []),
+        ): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+        ),
+        vol.Optional(
+            CONF_BATTERY_CHARGE_SENSORS,
+            default=defaults.get(CONF_BATTERY_CHARGE_SENSORS, []),
+        ): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+        ),
+        vol.Optional(
+            CONF_BATTERY_SIGNED_DISCHARGE_POSITIVE_SENSORS,
+            default=defaults.get(CONF_BATTERY_SIGNED_DISCHARGE_POSITIVE_SENSORS, []),
+        ): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+        ),
+        vol.Optional(
+            CONF_BATTERY_SIGNED_CHARGE_POSITIVE_SENSORS,
+            default=defaults.get(CONF_BATTERY_SIGNED_CHARGE_POSITIVE_SENSORS, []),
+        ): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+        ),
+        vol.Optional(
+            CONF_HOUSE_LOAD_SENSORS,
+            default=defaults.get(CONF_HOUSE_LOAD_SENSORS, []),
+        ): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+        ),
+        _optional_entity(defaults, CONF_GRID_IMPORT_PRICE_SENSOR): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
+        ),
+        _optional_entity(defaults, CONF_GRID_EXPORT_PRICE_SENSOR): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
+        ),
+        _optional_entity(defaults, CONF_VIRTUAL_BATTERY_CHARGE_SENSOR): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
+        ),
+        _optional_entity(defaults, CONF_VIRTUAL_BATTERY_DISCHARGE_SENSOR): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
+        ),
+    }
+
+
 def _schema(defaults: dict[str, Any]) -> vol.Schema:
-    return vol.Schema(
-        {
-            vol.Optional(CONF_NAME, default=defaults.get(CONF_NAME, NAME)): str,
-            vol.Required(
-                CONF_GRID_POWER_SENSOR,
-                default=defaults.get(CONF_GRID_POWER_SENSOR),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
-            ),
-            vol.Optional(
-                CONF_GRID_AVERAGE_SENSOR,
-                default=defaults.get(CONF_GRID_AVERAGE_SENSOR),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
-            ),
-            vol.Optional(
-                CONF_PV_POWER_SENSORS,
-                default=defaults.get(CONF_PV_POWER_SENSORS, []),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
-            ),
-            vol.Optional(
-                CONF_PV_AVERAGE_SENSOR,
-                default=defaults.get(CONF_PV_AVERAGE_SENSOR),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
-            ),
-            _optional_entity(
-                defaults, CONF_PV_FORECAST_TODAY_SENSOR
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
-            ),
-            _optional_entity(
-                defaults, CONF_PV_FORECAST_NEXT_HOUR_SENSOR
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
-            ),
-            _optional_entity(
-                defaults, CONF_PV_FORECAST_NEXT_3H_SENSOR
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
-            ),
-            _optional_text(defaults, CONF_PV_ARRAY_SPECS): selector.TextSelector(
-                selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT)
-            ),
-            vol.Optional(
-                CONF_BATTERY_SOC_SENSORS,
-                default=defaults.get(CONF_BATTERY_SOC_SENSORS, []),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
-            ),
-            vol.Optional(
-                CONF_BATTERY_DISCHARGE_SENSORS,
-                default=defaults.get(CONF_BATTERY_DISCHARGE_SENSORS, []),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
-            ),
-            vol.Optional(
-                CONF_BATTERY_CHARGE_SENSORS,
-                default=defaults.get(CONF_BATTERY_CHARGE_SENSORS, []),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
-            ),
-            _optional_entity(
-                defaults, CONF_GRID_IMPORT_PRICE_SENSOR
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
-            ),
-            _optional_entity(
-                defaults, CONF_GRID_EXPORT_PRICE_SENSOR
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
-            ),
-            _optional_entity(
-                defaults, CONF_VIRTUAL_BATTERY_CHARGE_SENSOR
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
-            ),
-            _optional_entity(
-                defaults, CONF_VIRTUAL_BATTERY_DISCHARGE_SENSOR
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
-            ),
-            vol.Optional(
-                CONF_WEATHER_STATE_SENSOR,
-                default=defaults.get(CONF_WEATHER_STATE_SENSOR),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=["sensor", "weather"])
-            ),
-            vol.Optional(
-                CONF_CLOUD_SENSOR,
-                default=defaults.get(CONF_CLOUD_SENSOR),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
-            ),
-            vol.Optional(
-                CONF_SUNSHINE_SENSOR,
-                default=defaults.get(CONF_SUNSHINE_SENSOR),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
-            ),
-            vol.Optional(
-                CONF_SUN_ENTITY,
-                default=defaults.get(CONF_SUN_ENTITY),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=["sun"])
-            ),
-            vol.Optional(
-                CONF_FLEXIBLE_LOAD_SWITCHES,
-                default=defaults.get(CONF_FLEXIBLE_LOAD_SWITCHES, []),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=SWITCHABLE_DOMAINS, multiple=True)
-            ),
-            vol.Optional(
-                CONF_FLEXIBLE_LOAD_POWER_SENSORS,
-                default=defaults.get(CONF_FLEXIBLE_LOAD_POWER_SENSORS, []),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
-            ),
-            vol.Optional(
-                CONF_START_ONLY_APPLIANCE_SWITCHES,
-                default=defaults.get(CONF_START_ONLY_APPLIANCE_SWITCHES, []),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=STARTABLE_DOMAINS, multiple=True)
-            ),
-            vol.Optional(
-                CONF_START_ONLY_APPLIANCE_POWER_SENSORS,
-                default=defaults.get(CONF_START_ONLY_APPLIANCE_POWER_SENSORS, []),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
-            ),
-            _optional_text(defaults, CONF_DEVICE_PROFILES): selector.TextSelector(
-                selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT)
-            ),
-            vol.Optional(
-                CONF_WALLBOX_SWITCHES,
-                default=defaults.get(CONF_WALLBOX_SWITCHES, []),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=SWITCHABLE_DOMAINS, multiple=True)
-            ),
-            vol.Optional(
-                CONF_HEAT_PUMP_SWITCHES,
-                default=defaults.get(CONF_HEAT_PUMP_SWITCHES, []),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=SWITCHABLE_DOMAINS, multiple=True)
-            ),
-            vol.Optional(
-                CONF_HEATING_ROD_SWITCHES,
-                default=defaults.get(CONF_HEATING_ROD_SWITCHES, []),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=SWITCHABLE_DOMAINS, multiple=True)
-            ),
-            vol.Optional(
-                CONF_HEATING_ROD_POWER_SENSORS,
-                default=defaults.get(CONF_HEATING_ROD_POWER_SENSORS, []),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
-            ),
-            vol.Optional(
-                CONF_HEATING_ROD_TEMPERATURE_SENSORS,
-                default=defaults.get(CONF_HEATING_ROD_TEMPERATURE_SENSORS, []),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
-            ),
-            _optional_text(
-                defaults, CONF_HEATING_ROD_TARGET_TEMPERATURES
-            ): selector.TextSelector(
-                selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT)
-            ),
-        }
-    )
+    fields: dict[Any, Any] = {
+        vol.Optional(CONF_NAME, default=defaults.get(CONF_NAME, NAME)): str,
+        **_energy_source_fields(defaults),
+        vol.Optional(
+            CONF_WEATHER_STATE_SENSOR,
+            default=defaults.get(CONF_WEATHER_STATE_SENSOR),
+        ): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=["sensor", "weather"])
+        ),
+        vol.Optional(
+            CONF_CLOUD_SENSOR,
+            default=defaults.get(CONF_CLOUD_SENSOR),
+        ): selector.EntitySelector(selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)),
+        vol.Optional(
+            CONF_SUNSHINE_SENSOR,
+            default=defaults.get(CONF_SUNSHINE_SENSOR),
+        ): selector.EntitySelector(selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)),
+        vol.Optional(
+            CONF_SUN_ENTITY,
+            default=defaults.get(CONF_SUN_ENTITY),
+        ): selector.EntitySelector(selector.EntitySelectorConfig(domain=["sun"])),
+        vol.Optional(
+            CONF_FLEXIBLE_LOAD_SWITCHES,
+            default=defaults.get(CONF_FLEXIBLE_LOAD_SWITCHES, []),
+        ): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=SWITCHABLE_DOMAINS, multiple=True)
+        ),
+        vol.Optional(
+            CONF_FLEXIBLE_LOAD_POWER_SENSORS,
+            default=defaults.get(CONF_FLEXIBLE_LOAD_POWER_SENSORS, []),
+        ): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+        ),
+        vol.Optional(
+            CONF_START_ONLY_APPLIANCE_SWITCHES,
+            default=defaults.get(CONF_START_ONLY_APPLIANCE_SWITCHES, []),
+        ): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=STARTABLE_DOMAINS, multiple=True)
+        ),
+        vol.Optional(
+            CONF_START_ONLY_APPLIANCE_POWER_SENSORS,
+            default=defaults.get(CONF_START_ONLY_APPLIANCE_POWER_SENSORS, []),
+        ): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+        ),
+        _optional_text(defaults, CONF_DEVICE_PROFILES): selector.TextSelector(
+            selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT)
+        ),
+        vol.Optional(
+            CONF_WALLBOX_SWITCHES,
+            default=defaults.get(CONF_WALLBOX_SWITCHES, []),
+        ): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=SWITCHABLE_DOMAINS, multiple=True)
+        ),
+        vol.Optional(
+            CONF_HEAT_PUMP_SWITCHES,
+            default=defaults.get(CONF_HEAT_PUMP_SWITCHES, []),
+        ): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=SWITCHABLE_DOMAINS, multiple=True)
+        ),
+        vol.Optional(
+            CONF_HEATING_ROD_SWITCHES,
+            default=defaults.get(CONF_HEATING_ROD_SWITCHES, []),
+        ): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=SWITCHABLE_DOMAINS, multiple=True)
+        ),
+        vol.Optional(
+            CONF_HEATING_ROD_POWER_SENSORS,
+            default=defaults.get(CONF_HEATING_ROD_POWER_SENSORS, []),
+        ): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+        ),
+        vol.Optional(
+            CONF_HEATING_ROD_TEMPERATURE_SENSORS,
+            default=defaults.get(CONF_HEATING_ROD_TEMPERATURE_SENSORS, []),
+        ): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+        ),
+        _optional_text(defaults, CONF_HEATING_ROD_TARGET_TEMPERATURES): selector.TextSelector(
+            selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT)
+        ),
+    }
+    return vol.Schema(fields)
 
 
 def _energy_sources_schema(defaults: dict[str, Any]) -> vol.Schema:
-    return vol.Schema(
-        {
-            vol.Required(
-                CONF_GRID_POWER_SENSOR,
-                default=defaults.get(CONF_GRID_POWER_SENSOR),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
-            ),
-            vol.Optional(
-                CONF_GRID_AVERAGE_SENSOR,
-                default=defaults.get(CONF_GRID_AVERAGE_SENSOR),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
-            ),
-            vol.Optional(
-                CONF_PV_POWER_SENSORS,
-                default=defaults.get(CONF_PV_POWER_SENSORS, []),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
-            ),
-            vol.Optional(
-                CONF_PV_AVERAGE_SENSOR,
-                default=defaults.get(CONF_PV_AVERAGE_SENSOR),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
-            ),
-            _optional_entity(
-                defaults, CONF_PV_FORECAST_TODAY_SENSOR
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
-            ),
-            _optional_entity(
-                defaults, CONF_PV_FORECAST_NEXT_HOUR_SENSOR
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
-            ),
-            _optional_entity(
-                defaults, CONF_PV_FORECAST_NEXT_3H_SENSOR
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
-            ),
-            _optional_text(defaults, CONF_PV_ARRAY_SPECS): selector.TextSelector(
-                selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT)
-            ),
-            vol.Optional(
-                CONF_BATTERY_SOC_SENSORS,
-                default=defaults.get(CONF_BATTERY_SOC_SENSORS, []),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
-            ),
-            vol.Optional(
-                CONF_BATTERY_DISCHARGE_SENSORS,
-                default=defaults.get(CONF_BATTERY_DISCHARGE_SENSORS, []),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
-            ),
-            vol.Optional(
-                CONF_BATTERY_CHARGE_SENSORS,
-                default=defaults.get(CONF_BATTERY_CHARGE_SENSORS, []),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
-            ),
-            _optional_entity(
-                defaults, CONF_GRID_IMPORT_PRICE_SENSOR
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
-            ),
-            _optional_entity(
-                defaults, CONF_GRID_EXPORT_PRICE_SENSOR
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
-            ),
-            _optional_entity(
-                defaults, CONF_VIRTUAL_BATTERY_CHARGE_SENSOR
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
-            ),
-            _optional_entity(
-                defaults, CONF_VIRTUAL_BATTERY_DISCHARGE_SENSOR
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
-            ),
-        }
-    )
+    return vol.Schema(_energy_source_fields(defaults))
 
 
 def _weather_sources_schema(defaults: dict[str, Any]) -> vol.Schema:

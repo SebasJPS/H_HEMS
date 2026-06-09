@@ -29,6 +29,9 @@ This repository contains an initial custom integration scaffold:
 - Sensors for grid power, PV total, battery minimum SoC, battery discharge,
   grid tolerance, energy mode, planned surplus power, shifted energy today and
   estimated savings today.
+- Normalized energy inputs for signed or separate grid sensors, signed or
+  separate battery charge/discharge sensors, multiple PV systems, multiple
+  batteries and optional house-load sensors.
 - Binary sensors for surplus availability, battery protection, weather approval and flexible-load approval.
 - Number entities for editable thresholds.
 - Select entity for HEMS operating mode.
@@ -170,6 +173,8 @@ Suggested mapping from the original automation:
 
 - `sensor.bb_hems_energy_mode`
 - `sensor.bb_hems_grid_power`
+- `sensor.bb_hems_grid_import_power`
+- `sensor.bb_hems_grid_export_power`
 - `sensor.bb_hems_grid_average`
 - `sensor.bb_hems_grid_import_price`
 - `sensor.bb_hems_grid_export_price`
@@ -183,6 +188,7 @@ Suggested mapping from the original automation:
 - `sensor.bb_hems_battery_discharge_total`
 - `sensor.bb_hems_battery_charge_total`
 - `sensor.bb_hems_usable_battery_charge`
+- `sensor.bb_hems_house_load_total`
 - `sensor.bb_hems_virtual_battery_soc`
 - `sensor.bb_hems_virtual_battery_energy`
 - `sensor.bb_hems_virtual_battery_usable_energy`
@@ -220,6 +226,9 @@ Suggested mapping from the original automation:
 - `number.bb_hems_grid_import_limit`
 - `number.bb_hems_grid_hard_import_limit`
 - `number.bb_hems_battery_discharge_limit`
+- `number.bb_hems_battery_charge_share_soc`
+- `number.bb_hems_battery_charge_reserve_good`
+- `number.bb_hems_battery_charge_reserve_cloudy`
 - `number.bb_hems_grid_import_price`
 - `number.bb_hems_grid_export_price`
 - `number.bb_hems_flexible_load_power` fallback/start estimate
@@ -260,14 +269,19 @@ Suggested mapping from the original automation:
 The first controller version evaluates:
 
 - Current grid import/export.
+- Grid sensors as one signed sensor, separate import/export sensors or inverted
+  signed sensors.
 - Optional 15-minute grid average.
 - Total PV power from all configured PV sources.
 - Optional 15-minute PV average.
 - Minimum battery SoC across all configured batteries.
 - Total battery discharge.
-- Total battery charge. From the configured minimum battery SoC and with
-  suitable weather, BB HEMS can conservatively treat part of active battery
-  charging as usable surplus.
+- Battery power as separate charge/discharge sensors or one signed sensor in
+  either direction.
+- Total battery charge. From the configured share SoC, BB HEMS can
+  conservatively treat part of active battery charging as usable surplus while
+  reserving the rest for the battery.
+- Optional house load sensors, for example inverter load or GoodWe load.
 - Weather state, cloud coverage and sunshine.
 - PV forecast for today and PV power forecast for the next hour / next 3 hours when configured.
 - Sun elevation/azimuth from `sun.sun` and configured PV arrays. Each PV surface
@@ -280,6 +294,36 @@ BB HEMS classifies the current PV window as `night`, `low_today`,
 `weak_now`, `rising`, `good_later`, `usable_now`, `peak_now` or `falling`.
 This gives dashboards and automations a stable signal for whether a better PV
 window is likely later or whether the current moment is already suitable.
+
+### Sensor normalization
+
+BB HEMS normalizes common inverter layouts into one internal energy model:
+
+- `grid_import_w`: power currently bought from the grid.
+- `grid_export_w`: power currently exported to the grid.
+- `pv_power_w`: total PV production from all PV sensors.
+- `battery_charge_w`: power currently charging batteries.
+- `battery_discharge_w`: power currently discharged by batteries.
+- `house_load_w`: optional house/load consumption from configured load sensors.
+
+For GoodWe and similar inverters, use whichever sensor shape Home Assistant
+exposes:
+
+- Signed grid sensor with `+` = import and `-` = export:
+  add it to `Grid signed: positive = import`.
+- Signed grid sensor with `+` = export and `-` = import:
+  add it to `Grid signed: positive = export`.
+- Separate import/export sensors:
+  add them to `Grid import sensors` and `Grid export sensors`.
+- Signed battery sensor with `+` = discharge and `-` = charge:
+  add it to `Battery signed: positive = discharge`.
+- Signed battery sensor with `+` = charge and `-` = discharge:
+  add it to `Battery signed: positive = charge`.
+- Separate battery charge/discharge sensors:
+  use `Battery charge sensors` and `Battery discharge sensors`.
+
+All configured sensors are summed, so multiple PV systems, batteries and load
+sensors can be combined.
 For multiple PV arrays, the sun-position score is calculated per configured
 surface and weighted by installed module power. BB HEMS uses the currently best
 matching surface instead of assuming one global roof direction.
@@ -374,10 +418,15 @@ for `auto` and `comfort`. Hard protection rules such as battery protection,
 `eco`, `force_surplus`, `off` and real surplus checks still take priority.
 
 If battery charge sensors are configured, BB HEMS can also use active battery
-charging as a smart surplus signal. This is intentionally conservative: the
-lowest battery SoC must be at least the configured minimum battery SoC, weather
-must be approved and BB HEMS keeps a small charging reserve before flexible
-loads are planned.
+charging as a smart surplus signal. This does not intentionally discharge the
+battery. Instead, once the lowest battery SoC reaches
+`number.bb_hems_battery_charge_share_soc`, BB HEMS can split active charging
+power: with normal weather release it reserves
+`number.bb_hems_battery_charge_reserve_good` for the battery; when it is cloudy
+but not bad weather, it reserves
+`number.bb_hems_battery_charge_reserve_cloudy`. With the defaults, a battery at
+70% charging with 600 W on a cloudy day reserves 50% for the battery and makes
+about 300 W available for small HEMS consumers.
 
 For DIY batteries without a native SoC sensor, BB HEMS can calculate a virtual
 SoC from a charge power sensor, a discharge power sensor and the configured

@@ -18,6 +18,8 @@ from .const import (
     BAD_WEATHER,
     CONF_BATTERY_CHARGE_SENSORS,
     CONF_BATTERY_DISCHARGE_SENSORS,
+    CONF_BATTERY_SIGNED_CHARGE_POSITIVE_SENSORS,
+    CONF_BATTERY_SIGNED_DISCHARGE_POSITIVE_SENSORS,
     CONF_BATTERY_SOC_SENSORS,
     CONF_CLOUD_SENSOR,
     CONF_DEVICE_PROFILES,
@@ -25,13 +27,18 @@ from .const import (
     CONF_FLEXIBLE_LOAD_SWITCHES,
     CONF_GRID_AVERAGE_SENSOR,
     CONF_GRID_EXPORT_PRICE_SENSOR,
+    CONF_GRID_EXPORT_POWER_SENSORS,
     CONF_GRID_IMPORT_PRICE_SENSOR,
+    CONF_GRID_IMPORT_POWER_SENSORS,
     CONF_GRID_POWER_SENSOR,
+    CONF_GRID_SIGNED_EXPORT_POSITIVE_SENSORS,
+    CONF_GRID_SIGNED_IMPORT_POSITIVE_SENSORS,
     CONF_HEAT_PUMP_SWITCHES,
     CONF_HEATING_ROD_POWER_SENSORS,
     CONF_HEATING_ROD_SWITCHES,
     CONF_HEATING_ROD_TARGET_TEMPERATURES,
     CONF_HEATING_ROD_TEMPERATURE_SENSORS,
+    CONF_HOUSE_LOAD_SENSORS,
     CONF_PV_ARRAY_SPECS,
     CONF_PV_AVERAGE_SENSOR,
     CONF_PV_FORECAST_NEXT_3H_SENSOR,
@@ -55,6 +62,9 @@ from .const import (
     MODE_FORCE_SURPLUS,
     MODE_OFF,
     OPT_AUTO_ENABLED,
+    OPT_BATTERY_CHARGE_RESERVE_CLOUDY,
+    OPT_BATTERY_CHARGE_RESERVE_GOOD,
+    OPT_BATTERY_CHARGE_SHARE_SOC,
     OPT_BATTERY_DISCHARGE_LIMIT,
     OPT_BATTERY_PROTECTION_ENABLED,
     OPT_DASHBOARD_ENABLED,
@@ -144,6 +154,8 @@ class HemsData:
 
     grid_power: float
     grid_average: float
+    grid_import: float
+    grid_export: float
     grid_import_price: float
     grid_export_price: float
     savings_price: float
@@ -163,6 +175,7 @@ class HemsData:
     battery_soc_min: float | None
     battery_discharge: float
     battery_charge: float
+    house_load: float
     usable_battery_charge: float
     virtual_battery_enabled: bool
     virtual_battery_used: bool
@@ -358,7 +371,9 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         data = self.config_entry.data
         opts = self.opts
 
-        grid_power = self._float_state(data.get(CONF_GRID_POWER_SENSOR), 0.0)
+        legacy_grid_power = self._float_state(data.get(CONF_GRID_POWER_SENSOR), 0.0)
+        grid_import, grid_export = self._grid_flow(data, legacy_grid_power)
+        grid_power = grid_import - grid_export
         grid_average = self._float_state(
             data.get(CONF_GRID_AVERAGE_SENSOR), grid_power
         )
@@ -379,8 +394,6 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         )
         pv_sources = data.get(CONF_PV_POWER_SENSORS, [])
         battery_soc_sources = data.get(CONF_BATTERY_SOC_SENSORS, [])
-        battery_discharge_sources = data.get(CONF_BATTERY_DISCHARGE_SENSORS, [])
-        battery_charge_sources = data.get(CONF_BATTERY_CHARGE_SENSORS, [])
         flexible_loads = data.get(CONF_FLEXIBLE_LOAD_SWITCHES, [])
         wallboxes = data.get(CONF_WALLBOX_SWITCHES, [])
         heat_pumps = data.get(CONF_HEAT_PUMP_SWITCHES, [])
@@ -419,14 +432,8 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         ]
         battery_socs = [value for value in battery_socs if value is not None]
         battery_soc_min = min(battery_socs) if battery_socs else None
-        battery_discharge = sum(
-            self._float_state(entity_id, 0.0)
-            for entity_id in battery_discharge_sources
-        )
-        battery_charge = sum(
-            self._float_state(entity_id, 0.0)
-            for entity_id in battery_charge_sources
-        )
+        battery_charge, battery_discharge = self._battery_flow(data)
+        house_load = self._positive_sum(data.get(CONF_HOUSE_LOAD_SENSORS, []))
         virtual_battery = self._update_virtual_battery()
         if virtual_battery["used"]:
             if virtual_battery["soc"] is not None:
@@ -455,6 +462,8 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         usable_battery_charge = self._usable_battery_charge(
             battery_soc_min, battery_charge, min_battery_soc, good_weather, bad_weather
         )
+        battery_charge_release = usable_battery_charge > 0
+        weather_release = good_weather or battery_charge_release
 
         auto_enabled = bool(opts[OPT_AUTO_ENABLED])
         battery_protect = self._battery_protect(
@@ -502,12 +511,12 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                     and pv_average >= pv_avg_threshold
                     and (
                         grid_power <= grid_limit
-                        or (grid_average < 50 and good_weather)
+                        or (grid_average < 50 and weather_release)
                     )
                 )
                 or (
                     usable_battery_charge >= float(opts[OPT_FLEXIBLE_LOAD_POWER])
-                    and grid_power <= grid_limit
+                    and grid_power <= max(grid_limit, float(opts[OPT_GRID_IMPORT_LIMIT]))
                 )
             )
             surplus_reason = self._surplus_reason(
@@ -519,21 +528,22 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                 pv_threshold,
                 pv_avg_threshold,
                 usable_battery_charge,
-                good_weather,
+                weather_release,
                 surplus_available,
             )
             flexible_loads_allowed = (
                 surplus_available
-                and good_weather
+                and weather_release
                 and not battery_protect
                 and self._battery_soc_ok(battery_soc_min)
             )
             load_reason = self._load_reason(
                 surplus_available,
-                good_weather,
+                weather_release,
                 battery_protect,
                 battery_soc_min,
                 flexible_loads_allowed,
+                battery_charge_release,
             )
             energy_mode = self._energy_mode(
                 mode,
@@ -541,7 +551,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                 pv_power,
                 surplus_available,
                 battery_protect,
-                good_weather,
+                weather_release,
             )
 
         active_flexible_loads = sum(
@@ -604,6 +614,8 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         return HemsData(
             grid_power=grid_power,
             grid_average=grid_average,
+            grid_import=grid_import,
+            grid_export=grid_export,
             grid_import_price=grid_import_price,
             grid_export_price=grid_export_price,
             savings_price=savings_price,
@@ -623,6 +635,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             battery_soc_min=battery_soc_min,
             battery_discharge=battery_discharge,
             battery_charge=battery_charge,
+            house_load=house_load,
             usable_battery_charge=usable_battery_charge,
             virtual_battery_enabled=virtual_battery["enabled"],
             virtual_battery_used=virtual_battery["used"],
@@ -645,8 +658,10 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             configured_pv_sources=len(pv_sources),
             configured_batteries=max(
                 len(battery_soc_sources),
-                len(battery_discharge_sources),
-                len(battery_charge_sources),
+                len(data.get(CONF_BATTERY_DISCHARGE_SENSORS, [])),
+                len(data.get(CONF_BATTERY_CHARGE_SENSORS, [])),
+                len(data.get(CONF_BATTERY_SIGNED_DISCHARGE_POSITIVE_SENSORS, [])),
+                len(data.get(CONF_BATTERY_SIGNED_CHARGE_POSITIVE_SENSORS, [])),
             ),
             configured_flexible_loads=len(flexible_loads),
             configured_start_only_appliances=len(
@@ -1116,6 +1131,66 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         if isinstance(value, str):
             return value.strip().lower() not in {"0", "false", "no", "off", "nein"}
         return bool(value)
+
+    def _positive_sum(self, entity_ids: list[str]) -> float:
+        """Sum positive power values from a list of sensors."""
+        return sum(max(0.0, self._float_state(entity_id, 0.0)) for entity_id in entity_ids)
+
+    def _signed_split(
+        self, entity_ids: list[str], *, positive_is_first: bool
+    ) -> tuple[float, float]:
+        """Split signed sensors into two positive buckets."""
+        first = 0.0
+        second = 0.0
+        for entity_id in entity_ids:
+            value = self._float_state(entity_id, 0.0)
+            if positive_is_first:
+                first += max(0.0, value)
+                second += max(0.0, -value)
+            else:
+                first += max(0.0, -value)
+                second += max(0.0, value)
+        return first, second
+
+    def _grid_flow(self, data: dict[str, Any], legacy_grid_power: float) -> tuple[float, float]:
+        """Normalize grid sensors into import and export power."""
+        grid_import = max(0.0, legacy_grid_power)
+        grid_export = max(0.0, -legacy_grid_power)
+        grid_import += self._positive_sum(data.get(CONF_GRID_IMPORT_POWER_SENSORS, []))
+        grid_export += self._positive_sum(data.get(CONF_GRID_EXPORT_POWER_SENSORS, []))
+        signed_import, signed_export = self._signed_split(
+            data.get(CONF_GRID_SIGNED_IMPORT_POSITIVE_SENSORS, []),
+            positive_is_first=True,
+        )
+        grid_import += signed_import
+        grid_export += signed_export
+        signed_import, signed_export = self._signed_split(
+            data.get(CONF_GRID_SIGNED_EXPORT_POSITIVE_SENSORS, []),
+            positive_is_first=False,
+        )
+        grid_import += signed_import
+        grid_export += signed_export
+        return grid_import, grid_export
+
+    def _battery_flow(self, data: dict[str, Any]) -> tuple[float, float]:
+        """Normalize battery sensors into charge and discharge power."""
+        battery_charge = self._positive_sum(data.get(CONF_BATTERY_CHARGE_SENSORS, []))
+        battery_discharge = self._positive_sum(
+            data.get(CONF_BATTERY_DISCHARGE_SENSORS, [])
+        )
+        signed_discharge, signed_charge = self._signed_split(
+            data.get(CONF_BATTERY_SIGNED_DISCHARGE_POSITIVE_SENSORS, []),
+            positive_is_first=True,
+        )
+        battery_discharge += signed_discharge
+        battery_charge += signed_charge
+        signed_charge, signed_discharge = self._signed_split(
+            data.get(CONF_BATTERY_SIGNED_CHARGE_POSITIVE_SENSORS, []),
+            positive_is_first=True,
+        )
+        battery_charge += signed_charge
+        battery_discharge += signed_discharge
+        return battery_charge, battery_discharge
 
     async def _async_apply_flexible_load_control(self, data: HemsData) -> bool:
         """Switch configured flexible loads according to the current HEMS decision."""
@@ -1731,24 +1806,33 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                 f"Batterie lädt {battery_charge:.0f} W, davon nutzbar 0 W, weil SoC {battery_soc:.1f}% unter Mindest-SoC {min_battery_soc:.1f}% liegt",
                 f"battery charges {battery_charge:.0f} W, usable 0 W because SoC {battery_soc:.1f}% is below minimum SoC {min_battery_soc:.1f}%",
             )
+        share_soc = max(
+            min_battery_soc,
+            float(self.opts[OPT_BATTERY_CHARGE_SHARE_SOC]),
+        )
+        if battery_soc < share_soc:
+            return self._txt(
+                f"Batterie lädt {battery_charge:.0f} W, davon nutzbar 0 W, weil SoC {battery_soc:.1f}% unter Freigabe-SoC {share_soc:.1f}% liegt",
+                f"battery charges {battery_charge:.0f} W, usable 0 W because SoC {battery_soc:.1f}% is below charge-share SoC {share_soc:.1f}%",
+            )
         if bad_weather:
             return self._txt(
                 f"Batterie lädt {battery_charge:.0f} W, davon nutzbar 0 W, weil schlechte Wetterlage erkannt wurde",
                 f"battery charges {battery_charge:.0f} W, usable 0 W because bad weather was detected",
             )
-        if not good_weather:
-            return self._txt(
-                f"Batterie lädt {battery_charge:.0f} W, davon nutzbar 0 W, weil die Wetterfreigabe fehlt",
-                f"battery charges {battery_charge:.0f} W, usable 0 W because weather release is missing",
-            )
+        reserve_percent = (
+            float(self.opts[OPT_BATTERY_CHARGE_RESERVE_GOOD])
+            if good_weather
+            else float(self.opts[OPT_BATTERY_CHARGE_RESERVE_CLOUDY])
+        )
         if usable_battery_charge <= 0:
             return self._txt(
-                f"Batterie lädt {battery_charge:.0f} W, davon nutzbar 0 W nach Sicherheitsreserve",
-                f"battery charges {battery_charge:.0f} W, usable 0 W after safety reserve",
+                f"Batterie lädt {battery_charge:.0f} W, davon nutzbar 0 W nach {reserve_percent:.0f}% Batteriereserve",
+                f"battery charges {battery_charge:.0f} W, usable 0 W after {reserve_percent:.0f}% battery reserve",
             )
         return self._txt(
-            f"Batterie lädt {battery_charge:.0f} W, davon nutzbar {usable_battery_charge:.0f} W",
-            f"battery charges {battery_charge:.0f} W, usable {usable_battery_charge:.0f} W",
+            f"Batterie lädt {battery_charge:.0f} W, davon nutzbar {usable_battery_charge:.0f} W; {reserve_percent:.0f}% bleiben für die Batterie reserviert",
+            f"battery charges {battery_charge:.0f} W, usable {usable_battery_charge:.0f} W; {reserve_percent:.0f}% remains reserved for the battery",
         )
 
     def _flexible_load_decision_is_stable(
@@ -1882,6 +1966,9 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         """Return a readable option label for the dashboard history."""
         labels_de = {
             OPT_AUTO_ENABLED: "Automatik",
+            OPT_BATTERY_CHARGE_RESERVE_CLOUDY: "Batteriereserve bei Bewölkung",
+            OPT_BATTERY_CHARGE_RESERVE_GOOD: "Batteriereserve bei Wetterfreigabe",
+            OPT_BATTERY_CHARGE_SHARE_SOC: "Batterieladung teilen ab SoC",
             OPT_BATTERY_DISCHARGE_LIMIT: "Entladegrenze Batterie",
             OPT_BATTERY_PROTECTION_ENABLED: "Batterieschutz",
             OPT_DASHBOARD_ENABLED: "Dashboard",
@@ -1908,6 +1995,9 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         }
         labels_en = {
             OPT_AUTO_ENABLED: "Automation",
+            OPT_BATTERY_CHARGE_RESERVE_CLOUDY: "Battery reserve when cloudy",
+            OPT_BATTERY_CHARGE_RESERVE_GOOD: "Battery reserve with weather release",
+            OPT_BATTERY_CHARGE_SHARE_SOC: "Share battery charging from SoC",
             OPT_BATTERY_DISCHARGE_LIMIT: "Battery discharge limit",
             OPT_BATTERY_PROTECTION_ENABLED: "Battery protection",
             OPT_DASHBOARD_ENABLED: "Dashboard",
@@ -2284,15 +2374,24 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         bad_weather: bool,
     ) -> float:
         """Return battery charge power that may be shifted to flexible loads."""
+        share_soc = max(
+            min_battery_soc,
+            float(self.opts[OPT_BATTERY_CHARGE_SHARE_SOC]),
+        )
         if (
             battery_soc is None
             or battery_soc < min_battery_soc
-            or not good_weather
+            or battery_soc < share_soc
             or bad_weather
         ):
             return 0.0
-        reserve = 100.0 if battery_soc < 75 else 50.0
-        return max(0.0, battery_charge - reserve)
+        reserve_percent = (
+            float(self.opts[OPT_BATTERY_CHARGE_RESERVE_GOOD])
+            if good_weather
+            else float(self.opts[OPT_BATTERY_CHARGE_RESERVE_CLOUDY])
+        )
+        usable_percent = max(0.0, min(100.0, 100.0 - reserve_percent))
+        return max(0.0, battery_charge * usable_percent / 100.0)
 
     def _battery_reason(
         self,
@@ -2358,9 +2457,12 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
     ) -> str:
         if surplus_available:
             if usable_battery_charge > 0:
+                charge_grid_limit = max(
+                    grid_limit, float(self.opts[OPT_GRID_IMPORT_LIMIT])
+                )
                 return self._txt(
-                    f"Überschuss erfüllt: zusätzlich zur PV ist nutzbare Batterieladung {usable_battery_charge:.1f} W verfügbar; Netz {grid_power:.1f} W <= {grid_limit:.1f} W.",
-                    f"Surplus fulfilled: in addition to PV, usable battery charge {usable_battery_charge:.1f} W is available; grid {grid_power:.1f} W <= {grid_limit:.1f} W.",
+                    f"Überschuss erfüllt: zusätzlich zur PV ist nutzbare Batterieladung {usable_battery_charge:.1f} W verfügbar; Netz {grid_power:.1f} W <= {charge_grid_limit:.1f} W.",
+                    f"Surplus fulfilled: in addition to PV, usable battery charge {usable_battery_charge:.1f} W is available; grid {grid_power:.1f} W <= {charge_grid_limit:.1f} W.",
                 )
             return self._txt(
                 f"Überschuss erfüllt: PV {pv_power:.1f} W >= {pv_threshold:.1f} W, PV 15 min {pv_average:.1f} W >= {pv_avg_threshold:.1f} W und Netz {grid_power:.1f} W <= {grid_limit:.1f} W oder Netzmittel {grid_average:.1f} W < 50 W bei Wetterfreigabe.",
@@ -2389,12 +2491,18 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
     def _load_reason(
         self,
         surplus_available: bool,
-        good_weather: bool,
+        weather_release: bool,
         battery_protect: bool,
         battery_soc: float | None,
         flexible_loads_allowed: bool,
+        battery_charge_release: bool = False,
     ) -> str:
         if flexible_loads_allowed:
+            if battery_charge_release:
+                return self._txt(
+                    "Flexible Verbraucher sind erlaubt, weil die Batterie sicher geladen ist und ein Teil der aktiven Batterieladung für HEMS freigegeben wird.",
+                    "Flexible loads are allowed because the battery is safely charged and part of the active battery charging power is released for HEMS.",
+                )
             if not bool(self.opts[OPT_BATTERY_PROTECTION_ENABLED]):
                 return self._txt(
                     "Flexible Verbraucher sind erlaubt, weil Überschuss und Wetterfreigabe passen; Batterieschutz ist deaktiviert.",
@@ -2407,7 +2515,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         blockers: list[str] = []
         if not surplus_available:
             blockers.append(self._txt("kein Überschuss", "no surplus"))
-        if not good_weather:
+        if not weather_release:
             blockers.append(self._txt("keine Wetterfreigabe", "no weather release"))
         if battery_protect:
             blockers.append(self._txt("Batterieschutz aktiv", "battery protection active"))

@@ -19,6 +19,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import (
     CONF_BATTERY_CHARGE_SENSORS,
     CONF_BATTERY_DISCHARGE_SENSORS,
+    CONF_BATTERY_SIGNED_CHARGE_POSITIVE_SENSORS,
+    CONF_BATTERY_SIGNED_DISCHARGE_POSITIVE_SENSORS,
     CONF_BATTERY_SOC_SENSORS,
     CONF_CLOUD_SENSOR,
     CONF_DEVICE_PROFILES,
@@ -26,13 +28,18 @@ from .const import (
     CONF_FLEXIBLE_LOAD_SWITCHES,
     CONF_GRID_AVERAGE_SENSOR,
     CONF_GRID_EXPORT_PRICE_SENSOR,
+    CONF_GRID_EXPORT_POWER_SENSORS,
     CONF_GRID_IMPORT_PRICE_SENSOR,
+    CONF_GRID_IMPORT_POWER_SENSORS,
     CONF_GRID_POWER_SENSOR,
+    CONF_GRID_SIGNED_EXPORT_POSITIVE_SENSORS,
+    CONF_GRID_SIGNED_IMPORT_POSITIVE_SENSORS,
     CONF_HEAT_PUMP_SWITCHES,
     CONF_HEATING_ROD_POWER_SENSORS,
     CONF_HEATING_ROD_SWITCHES,
     CONF_HEATING_ROD_TARGET_TEMPERATURES,
     CONF_HEATING_ROD_TEMPERATURE_SENSORS,
+    CONF_HOUSE_LOAD_SENSORS,
     CONF_PV_ARRAY_SPECS,
     CONF_PV_AVERAGE_SENSOR,
     CONF_PV_FORECAST_NEXT_3H_SENSOR,
@@ -73,6 +80,22 @@ SENSORS: tuple[HemsSensorDescription, ...] = (
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda data: round(data.grid_power, 1),
+    ),
+    HemsSensorDescription(
+        key="grid_import_power",
+        translation_key="grid_import_power",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: round(data.grid_import, 1),
+    ),
+    HemsSensorDescription(
+        key="grid_export_power",
+        translation_key="grid_export_power",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: round(data.grid_export, 1),
     ),
     HemsSensorDescription(
         key="grid_average",
@@ -174,6 +197,14 @@ SENSORS: tuple[HemsSensorDescription, ...] = (
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda data: round(data.usable_battery_charge, 1),
+    ),
+    HemsSensorDescription(
+        key="house_load_total",
+        translation_key="house_load_total",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: round(data.house_load, 1),
     ),
     HemsSensorDescription(
         key="virtual_battery_soc",
@@ -372,7 +403,14 @@ class HemsSensor(HemsEntity, SensorEntity):
             "weather_reason": data.weather_reason,
             "surplus_reason": data.surplus_reason,
             "battery_reason": data.battery_reason,
+            "grid_import": data.grid_import,
+            "grid_export": data.grid_export,
+            "grid_power": data.grid_power,
+            "pv_power": data.pv_power,
             "battery_charge": data.battery_charge,
+            "battery_discharge": data.battery_discharge,
+            "battery_soc_min": data.battery_soc_min,
+            "house_load": data.house_load,
             "usable_battery_charge": data.usable_battery_charge,
             "grid_import_price": data.grid_import_price,
             "grid_export_price": data.grid_export_price,
@@ -416,6 +454,18 @@ class HemsSensor(HemsEntity, SensorEntity):
             "seasonal_recommendation": data.seasonal_recommendation,
             "scheduler_reason": data.scheduler_reason,
             "grid_power_sensor": config.get(CONF_GRID_POWER_SENSOR),
+            "grid_import_power_sensors": config.get(
+                CONF_GRID_IMPORT_POWER_SENSORS, []
+            ),
+            "grid_export_power_sensors": config.get(
+                CONF_GRID_EXPORT_POWER_SENSORS, []
+            ),
+            "grid_signed_import_positive_sensors": config.get(
+                CONF_GRID_SIGNED_IMPORT_POSITIVE_SENSORS, []
+            ),
+            "grid_signed_export_positive_sensors": config.get(
+                CONF_GRID_SIGNED_EXPORT_POSITIVE_SENSORS, []
+            ),
             "grid_average_sensor": config.get(CONF_GRID_AVERAGE_SENSOR),
             "grid_import_price_sensor": config.get(CONF_GRID_IMPORT_PRICE_SENSOR),
             "grid_export_price_sensor": config.get(CONF_GRID_EXPORT_PRICE_SENSOR),
@@ -432,6 +482,13 @@ class HemsSensor(HemsEntity, SensorEntity):
                 CONF_BATTERY_DISCHARGE_SENSORS, []
             ),
             "battery_charge_sensors": config.get(CONF_BATTERY_CHARGE_SENSORS, []),
+            "battery_signed_discharge_positive_sensors": config.get(
+                CONF_BATTERY_SIGNED_DISCHARGE_POSITIVE_SENSORS, []
+            ),
+            "battery_signed_charge_positive_sensors": config.get(
+                CONF_BATTERY_SIGNED_CHARGE_POSITIVE_SENSORS, []
+            ),
+            "house_load_sensors": config.get(CONF_HOUSE_LOAD_SENSORS, []),
             "virtual_battery_charge_sensor": config.get(
                 CONF_VIRTUAL_BATTERY_CHARGE_SENSOR
             ),

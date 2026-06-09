@@ -12,6 +12,10 @@ PLATFORMS = ["sensor", "binary_sensor", "number", "select", "switch"]
 SCAN_INTERVAL = timedelta(seconds=10)
 
 CONF_GRID_POWER_SENSOR = "grid_power_sensor"
+CONF_GRID_IMPORT_POWER_SENSORS = "grid_import_power_sensors"
+CONF_GRID_EXPORT_POWER_SENSORS = "grid_export_power_sensors"
+CONF_GRID_SIGNED_IMPORT_POSITIVE_SENSORS = "grid_signed_import_positive_sensors"
+CONF_GRID_SIGNED_EXPORT_POSITIVE_SENSORS = "grid_signed_export_positive_sensors"
 CONF_GRID_AVERAGE_SENSOR = "grid_average_sensor"
 CONF_PV_POWER_SENSORS = "pv_power_sensors"
 CONF_PV_AVERAGE_SENSOR = "pv_average_sensor"
@@ -22,6 +26,11 @@ CONF_PV_ARRAY_SPECS = "pv_array_specs"
 CONF_BATTERY_SOC_SENSORS = "battery_soc_sensors"
 CONF_BATTERY_DISCHARGE_SENSORS = "battery_discharge_sensors"
 CONF_BATTERY_CHARGE_SENSORS = "battery_charge_sensors"
+CONF_BATTERY_SIGNED_DISCHARGE_POSITIVE_SENSORS = (
+    "battery_signed_discharge_positive_sensors"
+)
+CONF_BATTERY_SIGNED_CHARGE_POSITIVE_SENSORS = "battery_signed_charge_positive_sensors"
+CONF_HOUSE_LOAD_SENSORS = "house_load_sensors"
 CONF_GRID_IMPORT_PRICE_SENSOR = "grid_import_price_sensor"
 CONF_GRID_EXPORT_PRICE_SENSOR = "grid_export_price_sensor"
 CONF_WEATHER_STATE_SENSOR = "weather_state_sensor"
@@ -65,6 +74,9 @@ OPT_PV_AVG_THRESHOLD = "pv_avg_threshold"
 OPT_GRID_IMPORT_LIMIT = "grid_import_limit"
 OPT_GRID_HARD_IMPORT_LIMIT = "grid_hard_import_limit"
 OPT_BATTERY_DISCHARGE_LIMIT = "battery_discharge_limit"
+OPT_BATTERY_CHARGE_SHARE_SOC = "battery_charge_share_soc"
+OPT_BATTERY_CHARGE_RESERVE_GOOD = "battery_charge_reserve_good"
+OPT_BATTERY_CHARGE_RESERVE_CLOUDY = "battery_charge_reserve_cloudy"
 OPT_FLEXIBLE_LOAD_POWER = "flexible_load_power"
 OPT_START_ONLY_APPLIANCE_POWER = "start_only_appliance_power"
 OPT_HEATING_ROD_POWER = "heating_rod_power"
@@ -111,6 +123,9 @@ DEFAULTS = {
     OPT_GRID_IMPORT_LIMIT: 100.0,
     OPT_GRID_HARD_IMPORT_LIMIT: 350.0,
     OPT_BATTERY_DISCHARGE_LIMIT: 250.0,
+    OPT_BATTERY_CHARGE_SHARE_SOC: 70.0,
+    OPT_BATTERY_CHARGE_RESERVE_GOOD: 25.0,
+    OPT_BATTERY_CHARGE_RESERVE_CLOUDY: 50.0,
     OPT_FLEXIBLE_LOAD_POWER: 250.0,
     OPT_START_ONLY_APPLIANCE_POWER: 1200.0,
     OPT_HEATING_ROD_POWER: 1000.0,

@@ -97,7 +97,7 @@
         "description": "Choose which source group you want to edit.",
         "menu_options": {
           "energy_sources": "Grid, PV and battery",
-          "weather_sources": "Weather and sun",
+          "weather_sources": "Sun",
           "load_flexible": "Flexible loads",
           "load_start_only": "Start-only appliances",
           "load_heating_rods": "Heating rods",
@@ -106,8 +106,8 @@
           "load_advanced": "Advanced device profiles"
         },
         "menu_option_descriptions": {
-          "energy_sources": "Edit grid power, PV power, PV forecasts, PV arrays, battery SoC, battery discharge and battery charging.",
-          "weather_sources": "Edit weather state, cloud coverage, sunshine and sun position so BB HEMS can evaluate PV windows better.",
+          "energy_sources": "Edit grid, PV sources, short PV forecasts, battery, house load and prices.",
+          "weather_sources": "Edit cloud coverage and sun position so BB HEMS can evaluate PV windows better.",
           "load_flexible": "Edit normal loads that BB HEMS may turn on during surplus and turn off again when surplus is gone.",
           "load_start_only": "Edit appliances BB HEMS may only start, such as washing machines, dishwashers or dryers.",
           "load_heating_rods": "Edit heating rods, power sensors, temperature sensors and target temperatures.",
@@ -195,18 +195,14 @@
         }
       },
       "weather_sources": {
-        "title": "Weather and sun",
-        "description": "These sensors help BB HEMS evaluate PV surplus using weather, clouds, sunshine and sun position.",
+        "title": "Sun",
+        "description": "These sensors help BB HEMS evaluate PV surplus using clouds and sun position.",
         "data": {
-          "weather_state_sensor": "Weather state",
           "cloud_sensor": "Cloud coverage",
-          "sunshine_sensor": "Sunshine duration",
           "sun_entity": "Sun position"
         },
         "data_description": {
-          "weather_state_sensor": "Weather state as a sensor or weather entity, for example sunny, partlycloudy or rainy.",
           "cloud_sensor": "Cloud coverage in percent. Lower values make PV surplus more likely.",
-          "sunshine_sensor": "Sunshine duration or sunshine indicator. The value should increase when sunshine is currently available.",
           "sun_entity": "Home Assistant sun entity, usually sun.sun. BB HEMS uses elevation and azimuth for the PV window."
         }
       },
@@ -310,69 +306,183 @@
   },
   "entity": {
     "sensor": {
-      "energy_mode": { "name": "Energy mode" },
-      "grid_power": { "name": "Current grid power" },
-      "grid_import_power": { "name": "Grid import" },
-      "grid_export_power": { "name": "Grid export" },
-      "grid_average": { "name": "Grid power 15 min" },
-      "pv_power_total": { "name": "PV power total" },
-      "pv_average": { "name": "PV power 15 min" },
-      "pv_window": { "name": "PV window" },
-      "pv_forecast_next_3h": { "name": "PV forecast next 3 h" },
-      "sun_elevation": { "name": "Sun elevation" },
-      "battery_soc_min": { "name": "Battery SoC minimum" },
-      "battery_discharge_total": { "name": "Battery discharge total" },
-      "battery_charge_total": { "name": "Battery charge total" },
-      "usable_battery_charge": { "name": "Usable battery charge" },
-      "house_load_total": { "name": "House load total" },
-      "grid_import_price": { "name": "Grid import price" },
-      "grid_export_price": { "name": "Grid export price" },
-      "savings_price": { "name": "HEMS savings per kWh" },
-      "virtual_battery_soc": { "name": "Virtual battery SoC" },
-      "virtual_battery_energy": { "name": "Virtual battery energy" },
-      "virtual_battery_usable_energy": { "name": "Virtual battery usable energy" },
-      "virtual_battery_confidence": { "name": "Virtual battery confidence" },
-      "available_surplus_budget": { "name": "Available surplus budget" },
-      "scheduled_surplus_power": { "name": "Scheduled surplus power" },
-      "shifted_energy_today": { "name": "HEMS shifted energy today" },
-      "estimated_savings_today": { "name": "HEMS savings today" },
-      "shifted_energy_total": { "name": "HEMS shifted energy total" },
-      "learning_samples": { "name": "HEMS learning samples" },
-      "seasonal_success_rate": { "name": "HEMS seasonal success rate" }
+      "energy_mode": {
+        "name": "Energy mode"
+      },
+      "grid_power": {
+        "name": "Current grid power"
+      },
+      "grid_import_power": {
+        "name": "Grid import"
+      },
+      "grid_export_power": {
+        "name": "Grid export"
+      },
+      "grid_average": {
+        "name": "Grid power 15 min"
+      },
+      "pv_power_total": {
+        "name": "PV power total"
+      },
+      "pv_average": {
+        "name": "PV power 15 min"
+      },
+      "pv_window": {
+        "name": "PV window"
+      },
+      "pv_forecast_next_3h": {
+        "name": "PV forecast next 3 h"
+      },
+      "sun_elevation": {
+        "name": "Sun elevation"
+      },
+      "battery_soc_min": {
+        "name": "Battery SoC minimum"
+      },
+      "battery_discharge_total": {
+        "name": "Battery discharge total"
+      },
+      "battery_charge_total": {
+        "name": "Battery charge total"
+      },
+      "usable_battery_charge": {
+        "name": "Usable battery charge"
+      },
+      "house_load_total": {
+        "name": "House load total"
+      },
+      "grid_import_price": {
+        "name": "Grid import price"
+      },
+      "grid_export_price": {
+        "name": "Grid export price"
+      },
+      "savings_price": {
+        "name": "HEMS savings per kWh"
+      },
+      "virtual_battery_soc": {
+        "name": "Virtual battery SoC"
+      },
+      "virtual_battery_energy": {
+        "name": "Virtual battery energy"
+      },
+      "virtual_battery_usable_energy": {
+        "name": "Virtual battery usable energy"
+      },
+      "virtual_battery_confidence": {
+        "name": "Virtual battery confidence"
+      },
+      "available_surplus_budget": {
+        "name": "Available surplus budget"
+      },
+      "scheduled_surplus_power": {
+        "name": "Scheduled surplus power"
+      },
+      "shifted_energy_today": {
+        "name": "HEMS shifted energy today"
+      },
+      "estimated_savings_today": {
+        "name": "HEMS savings today"
+      },
+      "shifted_energy_total": {
+        "name": "HEMS shifted energy total"
+      },
+      "learning_samples": {
+        "name": "HEMS learning samples"
+      },
+      "seasonal_success_rate": {
+        "name": "HEMS seasonal success rate"
+      }
     },
     "number": {
-      "min_battery_soc": { "name": "Minimum SoC" },
-      "protect_battery_soc": { "name": "Battery protection SoC" },
-      "battery_charge_share_soc": { "name": "Share battery charging from SoC" },
-      "battery_charge_reserve_good": { "name": "Battery reserve with weather release" },
-      "battery_charge_reserve_cloudy": { "name": "Battery reserve when cloudy" },
-      "pv_threshold": { "name": "Current PV threshold" },
-      "pv_avg_threshold": { "name": "PV threshold 15 min" },
-      "grid_import_limit": { "name": "Grid import tolerance" },
-      "grid_hard_import_limit": { "name": "Hard grid import" },
-      "battery_discharge_limit": { "name": "Battery discharge limit" },
-      "flexible_load_power": { "name": "Fallback flexible load power" },
-      "start_only_appliance_power": { "name": "Fallback start-only appliance power" },
-      "heating_rod_power": { "name": "Fallback heating rod power" },
-      "grid_import_price": { "name": "Fallback grid import price" },
-      "grid_export_price": { "name": "Fallback grid export price" },
-      "heating_rod_temperature_hysteresis": { "name": "Heating rod temperature hysteresis" },
-      "virtual_battery_capacity": { "name": "Virtual battery capacity" },
-      "virtual_battery_min_soc": { "name": "Virtual battery min SoC" },
-      "virtual_battery_max_soc": { "name": "Virtual battery max SoC" },
-      "virtual_battery_manual_soc": { "name": "Virtual battery manual SoC" },
-      "virtual_battery_charge_efficiency": { "name": "Virtual battery charge efficiency" },
-      "virtual_battery_discharge_efficiency": { "name": "Virtual battery discharge efficiency" }
+      "min_battery_soc": {
+        "name": "Minimum SoC"
+      },
+      "protect_battery_soc": {
+        "name": "Battery protection SoC"
+      },
+      "battery_charge_share_soc": {
+        "name": "Share battery charging from SoC"
+      },
+      "battery_charge_reserve_good": {
+        "name": "Battery reserve with weather release"
+      },
+      "battery_charge_reserve_cloudy": {
+        "name": "Battery reserve when cloudy"
+      },
+      "pv_threshold": {
+        "name": "Current PV threshold"
+      },
+      "pv_avg_threshold": {
+        "name": "PV threshold 15 min"
+      },
+      "grid_import_limit": {
+        "name": "Grid import tolerance"
+      },
+      "grid_hard_import_limit": {
+        "name": "Hard grid import"
+      },
+      "battery_discharge_limit": {
+        "name": "Battery discharge limit"
+      },
+      "flexible_load_power": {
+        "name": "Fallback flexible load power"
+      },
+      "start_only_appliance_power": {
+        "name": "Fallback start-only appliance power"
+      },
+      "heating_rod_power": {
+        "name": "Fallback heating rod power"
+      },
+      "grid_import_price": {
+        "name": "Fallback grid import price"
+      },
+      "grid_export_price": {
+        "name": "Fallback grid export price"
+      },
+      "heating_rod_temperature_hysteresis": {
+        "name": "Heating rod temperature hysteresis"
+      },
+      "virtual_battery_capacity": {
+        "name": "Virtual battery capacity"
+      },
+      "virtual_battery_min_soc": {
+        "name": "Virtual battery min SoC"
+      },
+      "virtual_battery_max_soc": {
+        "name": "Virtual battery max SoC"
+      },
+      "virtual_battery_manual_soc": {
+        "name": "Virtual battery manual SoC"
+      },
+      "virtual_battery_charge_efficiency": {
+        "name": "Virtual battery charge efficiency"
+      },
+      "virtual_battery_discharge_efficiency": {
+        "name": "Virtual battery discharge efficiency"
+      }
     },
     "select": {
-      "mode": { "name": "Operating mode" },
-      "response_profile": { "name": "Response profile" }
+      "mode": {
+        "name": "Operating mode"
+      },
+      "response_profile": {
+        "name": "Response profile"
+      }
     },
     "switch": {
-      "battery_protection_enabled": { "name": "Battery protection enabled" },
-      "dashboard_enabled": { "name": "Dashboard enabled" },
-      "virtual_battery_enabled": { "name": "Virtual battery enabled" },
-      "use_virtual_battery": { "name": "Use virtual battery in HEMS" }
+      "battery_protection_enabled": {
+        "name": "Battery protection enabled"
+      },
+      "dashboard_enabled": {
+        "name": "Dashboard enabled"
+      },
+      "virtual_battery_enabled": {
+        "name": "Virtual battery enabled"
+      },
+      "use_virtual_battery": {
+        "name": "Use virtual battery in HEMS"
+      }
     }
   }
 }

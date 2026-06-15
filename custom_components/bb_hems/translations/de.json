@@ -97,7 +97,7 @@
         "description": "Wähle, welche Quellgruppe du bearbeiten möchtest.",
         "menu_options": {
           "energy_sources": "Netz, PV und Batterie",
-          "weather_sources": "Wetter und Sonne",
+          "weather_sources": "Sonne",
           "load_flexible": "Flexible Verbraucher",
           "load_start_only": "Nur starten: Waschmaschine, Geschirrspüler, Trockner",
           "load_heating_rods": "Heizstäbe",
@@ -106,8 +106,8 @@
           "load_advanced": "Erweiterte Geräteprofile"
         },
         "menu_option_descriptions": {
-          "energy_sources": "Netzleistung, PV-Leistung, PV-Forecast, PV-Flächen, Batterie-SoC, Batterie-Entladung und Batterie-Ladung bearbeiten.",
-          "weather_sources": "Wetterzustand, Bewölkung, Sonnenschein und Sonnenstand bearbeiten, damit BB HEMS PV-Fenster besser einschätzen kann.",
+          "energy_sources": "Netz, PV-Quellen, kurze PV-Forecasts, Batterie, Hauslast und Preise bearbeiten.",
+          "weather_sources": "Bewölkung und Sonnenstand bearbeiten, damit BB HEMS PV-Fenster besser einschätzen kann.",
           "load_flexible": "Normale Verbraucher bearbeiten, die BB HEMS bei Überschuss einschalten und bei fehlendem Überschuss wieder ausschalten darf.",
           "load_start_only": "Geräte bearbeiten, die BB HEMS nur starten darf. Geeignet für Waschmaschine, Geschirrspüler oder Trockner.",
           "load_heating_rods": "Heizstäbe, Leistungssensoren, Temperatursensoren und Zieltemperaturen bearbeiten.",
@@ -195,18 +195,14 @@
         }
       },
       "weather_sources": {
-        "title": "Wetter und Sonne",
-        "description": "Diese Sensoren helfen BB HEMS, PV-Überschuss nach Wetter, Bewölkung, Sonnenschein und Sonnenstand besser einzuschätzen.",
+        "title": "Sonne",
+        "description": "Diese Sensoren helfen BB HEMS, PV-Überschuss nach Bewölkung und Sonnenstand besser einzuschätzen.",
         "data": {
-          "weather_state_sensor": "Wetterzustand",
           "cloud_sensor": "Bewölkungsgrad",
-          "sunshine_sensor": "Sonnenscheindauer",
           "sun_entity": "Sonnenstand"
         },
         "data_description": {
-          "weather_state_sensor": "Wetterzustand als Sensor oder Weather-Entität, z.B. sunny, partlycloudy, rainy oder deutsche Zustände.",
           "cloud_sensor": "Bewölkung in Prozent. Niedrige Werte machen PV-Überschuss wahrscheinlicher.",
-          "sunshine_sensor": "Sonnenscheindauer oder Sonnenindikator. Der Wert sollte größer werden, wenn aktuell Sonne verfügbar ist.",
           "sun_entity": "Home-Assistant-Sonne, meist sun.sun. BB HEMS nutzt Elevation und Azimut für das PV-Fenster."
         }
       },
@@ -310,81 +306,215 @@
   },
   "entity": {
     "sensor": {
-      "energy_mode": { "name": "Energiemodus" },
-      "grid_power": { "name": "Netzleistung aktuell" },
-      "grid_import_power": { "name": "Netzbezug" },
-      "grid_export_power": { "name": "Einspeisung" },
-      "grid_average": { "name": "Netzleistung 15 min" },
-      "grid_import_price": { "name": "Stromkosten Netzbezug" },
-      "grid_export_price": { "name": "Einspeisevergütung" },
-      "savings_price": { "name": "HEMS Ersparnis je kWh" },
-      "pv_power_total": { "name": "PV-Leistung gesamt" },
-      "pv_average": { "name": "PV-Leistung 15 min" },
-      "pv_window": { "name": "PV-Fenster" },
-      "pv_forecast_next_3h": { "name": "PV-Forecast nächste 3 h" },
-      "sun_elevation": { "name": "Sonnenhöhe" },
-      "battery_soc_min": { "name": "Batterie-SoC Minimum" },
-      "battery_discharge_total": { "name": "Batterie-Entladung gesamt" },
-      "battery_charge_total": { "name": "Batterie-Ladung gesamt" },
-      "usable_battery_charge": { "name": "Nutzbare Batterie-Ladung" },
-      "house_load_total": { "name": "Hauslast gesamt" },
-      "virtual_battery_soc": { "name": "Virtuelle Batterie SoC" },
-      "virtual_battery_energy": { "name": "Virtuelle Batterie Energie" },
-      "virtual_battery_usable_energy": { "name": "Virtuelle Batterie nutzbare Energie" },
-      "virtual_battery_confidence": { "name": "Virtuelle Batterie Vertrauen" },
-      "grid_tolerance": { "name": "Netztoleranz" },
-      "cloud_coverage": { "name": "Bewölkung" },
-      "sunshine_minutes": { "name": "Sonnenschein" },
-      "active_flexible_loads": { "name": "Aktive flexible Verbraucher" },
-      "available_surplus_budget": { "name": "Verfügbares Überschussbudget" },
-      "scheduled_surplus_power": { "name": "Geplante Überschussleistung" },
-      "shifted_energy_today": { "name": "HEMS verschobene Energie heute" },
-      "estimated_savings_today": { "name": "HEMS Ersparnis heute" },
-      "shifted_energy_total": { "name": "HEMS verschobene Energie gesamt" },
-      "learning_samples": { "name": "HEMS Erfahrungswerte" },
-      "seasonal_success_rate": { "name": "HEMS Jahreszeit-Trefferquote" },
-      "configured_assets": { "name": "Konfigurierte Anlagen" }
+      "energy_mode": {
+        "name": "Energiemodus"
+      },
+      "grid_power": {
+        "name": "Netzleistung aktuell"
+      },
+      "grid_import_power": {
+        "name": "Netzbezug"
+      },
+      "grid_export_power": {
+        "name": "Einspeisung"
+      },
+      "grid_average": {
+        "name": "Netzleistung 15 min"
+      },
+      "grid_import_price": {
+        "name": "Stromkosten Netzbezug"
+      },
+      "grid_export_price": {
+        "name": "Einspeisevergütung"
+      },
+      "savings_price": {
+        "name": "HEMS Ersparnis je kWh"
+      },
+      "pv_power_total": {
+        "name": "PV-Leistung gesamt"
+      },
+      "pv_average": {
+        "name": "PV-Leistung 15 min"
+      },
+      "pv_window": {
+        "name": "PV-Fenster"
+      },
+      "pv_forecast_next_3h": {
+        "name": "PV-Forecast nächste 3 h"
+      },
+      "sun_elevation": {
+        "name": "Sonnenhöhe"
+      },
+      "battery_soc_min": {
+        "name": "Batterie-SoC Minimum"
+      },
+      "battery_discharge_total": {
+        "name": "Batterie-Entladung gesamt"
+      },
+      "battery_charge_total": {
+        "name": "Batterie-Ladung gesamt"
+      },
+      "usable_battery_charge": {
+        "name": "Nutzbare Batterie-Ladung"
+      },
+      "house_load_total": {
+        "name": "Hauslast gesamt"
+      },
+      "virtual_battery_soc": {
+        "name": "Virtuelle Batterie SoC"
+      },
+      "virtual_battery_energy": {
+        "name": "Virtuelle Batterie Energie"
+      },
+      "virtual_battery_usable_energy": {
+        "name": "Virtuelle Batterie nutzbare Energie"
+      },
+      "virtual_battery_confidence": {
+        "name": "Virtuelle Batterie Vertrauen"
+      },
+      "grid_tolerance": {
+        "name": "Netztoleranz"
+      },
+      "cloud_coverage": {
+        "name": "Bewölkung"
+      },
+      "sunshine_minutes": {
+        "name": "Sonnenschein"
+      },
+      "active_flexible_loads": {
+        "name": "Aktive flexible Verbraucher"
+      },
+      "available_surplus_budget": {
+        "name": "Verfügbares Überschussbudget"
+      },
+      "scheduled_surplus_power": {
+        "name": "Geplante Überschussleistung"
+      },
+      "shifted_energy_today": {
+        "name": "HEMS verschobene Energie heute"
+      },
+      "estimated_savings_today": {
+        "name": "HEMS Ersparnis heute"
+      },
+      "shifted_energy_total": {
+        "name": "HEMS verschobene Energie gesamt"
+      },
+      "learning_samples": {
+        "name": "HEMS Erfahrungswerte"
+      },
+      "seasonal_success_rate": {
+        "name": "HEMS Jahreszeit-Trefferquote"
+      },
+      "configured_assets": {
+        "name": "Konfigurierte Anlagen"
+      }
     },
     "binary_sensor": {
-      "surplus_available": { "name": "Überschuss verfügbar" },
-      "battery_protect": { "name": "Batterieschutz" },
-      "good_weather": { "name": "Wetterfreigabe" },
-      "flexible_loads_allowed": { "name": "Flexible Verbraucher erlaubt" }
+      "surplus_available": {
+        "name": "Überschuss verfügbar"
+      },
+      "battery_protect": {
+        "name": "Batterieschutz"
+      },
+      "good_weather": {
+        "name": "Wetterfreigabe"
+      },
+      "flexible_loads_allowed": {
+        "name": "Flexible Verbraucher erlaubt"
+      }
     },
     "number": {
-      "min_battery_soc": { "name": "Mindest-SoC" },
-      "protect_battery_soc": { "name": "Batterieschutz-SoC" },
-      "battery_charge_share_soc": { "name": "Batterieladung teilen ab SoC" },
-      "battery_charge_reserve_good": { "name": "Batteriereserve bei Wetterfreigabe" },
-      "battery_charge_reserve_cloudy": { "name": "Batteriereserve bei Bewölkung" },
-      "pv_threshold": { "name": "PV-Schwellwert aktuell" },
-      "pv_avg_threshold": { "name": "PV-Schwellwert 15 min" },
-      "grid_import_limit": { "name": "Netzbezug-Toleranz" },
-      "grid_hard_import_limit": { "name": "Netzbezug hart" },
-      "battery_discharge_limit": { "name": "Entladegrenze Batterie" },
-      "grid_import_price": { "name": "Fallback Stromkosten Netzbezug" },
-      "grid_export_price": { "name": "Fallback Einspeisevergütung" },
-      "flexible_load_power": { "name": "Fallback-Leistung flexible Verbraucher" },
-      "start_only_appliance_power": { "name": "Fallback-Leistung Nur-starten-Geräte" },
-      "heating_rod_power": { "name": "Fallback-Leistung Heizstab" },
-      "heating_rod_temperature_hysteresis": { "name": "Heizstab Temperatur-Hysterese" },
-      "virtual_battery_capacity": { "name": "Virtuelle Batterie Kapazität" },
-      "virtual_battery_min_soc": { "name": "Virtuelle Batterie min SoC" },
-      "virtual_battery_max_soc": { "name": "Virtuelle Batterie max SoC" },
-      "virtual_battery_manual_soc": { "name": "Virtuelle Batterie manueller SoC" },
-      "virtual_battery_charge_efficiency": { "name": "Virtuelle Batterie Lade-Wirkungsgrad" },
-      "virtual_battery_discharge_efficiency": { "name": "Virtuelle Batterie Entlade-Wirkungsgrad" }
+      "min_battery_soc": {
+        "name": "Mindest-SoC"
+      },
+      "protect_battery_soc": {
+        "name": "Batterieschutz-SoC"
+      },
+      "battery_charge_share_soc": {
+        "name": "Batterieladung teilen ab SoC"
+      },
+      "battery_charge_reserve_good": {
+        "name": "Batteriereserve bei Wetterfreigabe"
+      },
+      "battery_charge_reserve_cloudy": {
+        "name": "Batteriereserve bei Bewölkung"
+      },
+      "pv_threshold": {
+        "name": "PV-Schwellwert aktuell"
+      },
+      "pv_avg_threshold": {
+        "name": "PV-Schwellwert 15 min"
+      },
+      "grid_import_limit": {
+        "name": "Netzbezug-Toleranz"
+      },
+      "grid_hard_import_limit": {
+        "name": "Netzbezug hart"
+      },
+      "battery_discharge_limit": {
+        "name": "Entladegrenze Batterie"
+      },
+      "grid_import_price": {
+        "name": "Fallback Stromkosten Netzbezug"
+      },
+      "grid_export_price": {
+        "name": "Fallback Einspeisevergütung"
+      },
+      "flexible_load_power": {
+        "name": "Fallback-Leistung flexible Verbraucher"
+      },
+      "start_only_appliance_power": {
+        "name": "Fallback-Leistung Nur-starten-Geräte"
+      },
+      "heating_rod_power": {
+        "name": "Fallback-Leistung Heizstab"
+      },
+      "heating_rod_temperature_hysteresis": {
+        "name": "Heizstab Temperatur-Hysterese"
+      },
+      "virtual_battery_capacity": {
+        "name": "Virtuelle Batterie Kapazität"
+      },
+      "virtual_battery_min_soc": {
+        "name": "Virtuelle Batterie min SoC"
+      },
+      "virtual_battery_max_soc": {
+        "name": "Virtuelle Batterie max SoC"
+      },
+      "virtual_battery_manual_soc": {
+        "name": "Virtuelle Batterie manueller SoC"
+      },
+      "virtual_battery_charge_efficiency": {
+        "name": "Virtuelle Batterie Lade-Wirkungsgrad"
+      },
+      "virtual_battery_discharge_efficiency": {
+        "name": "Virtuelle Batterie Entlade-Wirkungsgrad"
+      }
     },
     "select": {
-      "mode": { "name": "Betriebsart" },
-      "response_profile": { "name": "Reaktionsmodus" }
+      "mode": {
+        "name": "Betriebsart"
+      },
+      "response_profile": {
+        "name": "Reaktionsmodus"
+      }
     },
     "switch": {
-      "auto_enabled": { "name": "Automatik aktiv" },
-      "battery_protection_enabled": { "name": "Batterieschutz aktiv" },
-      "dashboard_enabled": { "name": "Dashboard aktiv" },
-      "virtual_battery_enabled": { "name": "Virtuelle Batterie aktiv" },
-      "use_virtual_battery": { "name": "Virtuelle Batterie im HEMS nutzen" }
+      "auto_enabled": {
+        "name": "Automatik aktiv"
+      },
+      "battery_protection_enabled": {
+        "name": "Batterieschutz aktiv"
+      },
+      "dashboard_enabled": {
+        "name": "Dashboard aktiv"
+      },
+      "virtual_battery_enabled": {
+        "name": "Virtuelle Batterie aktiv"
+      },
+      "use_virtual_battery": {
+        "name": "Virtuelle Batterie im HEMS nutzen"
+      }
     }
   }
 }

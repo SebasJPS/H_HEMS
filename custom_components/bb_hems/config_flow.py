@@ -70,8 +70,8 @@ def _options_menu_labels(language: str | None) -> dict[str, str]:
     """Return robust labels for the options menu."""
     if _is_german(language):
         return {
-            "energy_sources": "Netz, PV und Batterie - Messwerte und Forecasts",
-            "weather_sources": "Wetter und Sonne - Wetterzustand, Bewölkung, Sonnenstand",
+            "energy_sources": "Netz, PV und Batterie - wichtige Messwerte",
+            "weather_sources": "Sonne - Bewölkung und Sonnenstand",
             "load_flexible": "Flexible Verbraucher - darf HEMS ein- und ausschalten",
             "load_start_only": "Nur starten - Waschmaschine, Geschirrspüler, Trockner",
             "load_heating_rods": "Heizstäbe - mit optionaler Zieltemperatur",
@@ -80,8 +80,8 @@ def _options_menu_labels(language: str | None) -> dict[str, str]:
             "load_advanced": "Erweiterte Geräteprofile - Priorität und Verhalten",
         }
     return {
-        "energy_sources": "Grid, PV and battery - meters and forecasts",
-        "weather_sources": "Weather and sun - state, clouds and sun position",
+        "energy_sources": "Grid, PV and battery - important meters",
+        "weather_sources": "Sun - clouds and sun position",
         "load_flexible": "Flexible loads - HEMS may turn on and off",
         "load_start_only": "Start only - washing machine, dishwasher, dryer",
         "load_heating_rods": "Heating rods - with optional target temperature",
@@ -153,22 +153,16 @@ class BbHemsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_GRID_SIGNED_EXPORT_POSITIVE_SENSORS: _entity_list(
                     user_input.get(CONF_GRID_SIGNED_EXPORT_POSITIVE_SENSORS)
                 ),
-                CONF_GRID_AVERAGE_SENSOR: user_input.get(CONF_GRID_AVERAGE_SENSOR),
-                CONF_PV_POWER_SENSORS: _entity_list(
-                    user_input.get(CONF_PV_POWER_SENSORS)
-                ),
-                CONF_PV_SOURCE_PROFILES: user_input.get(CONF_PV_SOURCE_PROFILES),
-                CONF_PV_AVERAGE_SENSOR: user_input.get(CONF_PV_AVERAGE_SENSOR),
-                CONF_PV_FORECAST_TODAY_SENSOR: user_input.get(
-                    CONF_PV_FORECAST_TODAY_SENSOR
-                ),
-                CONF_PV_FORECAST_NEXT_HOUR_SENSOR: user_input.get(
-                    CONF_PV_FORECAST_NEXT_HOUR_SENSOR
-                ),
-                CONF_PV_FORECAST_NEXT_3H_SENSOR: user_input.get(
-                    CONF_PV_FORECAST_NEXT_3H_SENSOR
-                ),
-                CONF_PV_ARRAY_SPECS: user_input.get(CONF_PV_ARRAY_SPECS),
+                    CONF_PV_POWER_SENSORS: _entity_list(
+                        user_input.get(CONF_PV_POWER_SENSORS)
+                    ),
+                    CONF_PV_SOURCE_PROFILES: user_input.get(CONF_PV_SOURCE_PROFILES),
+                    CONF_PV_FORECAST_NEXT_HOUR_SENSOR: user_input.get(
+                        CONF_PV_FORECAST_NEXT_HOUR_SENSOR
+                    ),
+                    CONF_PV_FORECAST_NEXT_3H_SENSOR: user_input.get(
+                        CONF_PV_FORECAST_NEXT_3H_SENSOR
+                    ),
                 CONF_BATTERY_SOC_SENSORS: _entity_list(
                     user_input.get(CONF_BATTERY_SOC_SENSORS)
                 ),
@@ -199,9 +193,7 @@ class BbHemsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_VIRTUAL_BATTERY_DISCHARGE_SENSOR: user_input.get(
                     CONF_VIRTUAL_BATTERY_DISCHARGE_SENSOR
                 ),
-                CONF_WEATHER_STATE_SENSOR: user_input.get(CONF_WEATHER_STATE_SENSOR),
                 CONF_CLOUD_SENSOR: user_input.get(CONF_CLOUD_SENSOR),
-                CONF_SUNSHINE_SENSOR: user_input.get(CONF_SUNSHINE_SENSOR),
                 CONF_SUN_ENTITY: user_input.get(CONF_SUN_ENTITY),
                 CONF_FLEXIBLE_LOAD_SWITCHES: _entity_list(
                     user_input.get(CONF_FLEXIBLE_LOAD_SWITCHES)
@@ -288,22 +280,16 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
                     CONF_GRID_SIGNED_EXPORT_POSITIVE_SENSORS: _entity_list(
                         user_input.get(CONF_GRID_SIGNED_EXPORT_POSITIVE_SENSORS)
                     ),
-                    CONF_GRID_AVERAGE_SENSOR: user_input.get(CONF_GRID_AVERAGE_SENSOR),
-                    CONF_PV_POWER_SENSORS: _entity_list(
-                        user_input.get(CONF_PV_POWER_SENSORS)
-                    ),
-                    CONF_PV_SOURCE_PROFILES: user_input.get(CONF_PV_SOURCE_PROFILES),
-                    CONF_PV_AVERAGE_SENSOR: user_input.get(CONF_PV_AVERAGE_SENSOR),
-                    CONF_PV_FORECAST_TODAY_SENSOR: user_input.get(
-                        CONF_PV_FORECAST_TODAY_SENSOR
-                    ),
-                    CONF_PV_FORECAST_NEXT_HOUR_SENSOR: user_input.get(
-                        CONF_PV_FORECAST_NEXT_HOUR_SENSOR
-                    ),
-                    CONF_PV_FORECAST_NEXT_3H_SENSOR: user_input.get(
-                        CONF_PV_FORECAST_NEXT_3H_SENSOR
-                    ),
-                    CONF_PV_ARRAY_SPECS: user_input.get(CONF_PV_ARRAY_SPECS),
+                CONF_PV_POWER_SENSORS: _entity_list(
+                    user_input.get(CONF_PV_POWER_SENSORS)
+                ),
+                CONF_PV_SOURCE_PROFILES: user_input.get(CONF_PV_SOURCE_PROFILES),
+                CONF_PV_FORECAST_NEXT_HOUR_SENSOR: user_input.get(
+                    CONF_PV_FORECAST_NEXT_HOUR_SENSOR
+                ),
+                CONF_PV_FORECAST_NEXT_3H_SENSOR: user_input.get(
+                    CONF_PV_FORECAST_NEXT_3H_SENSOR
+                ),
                     CONF_BATTERY_SOC_SENSORS: _entity_list(
                         user_input.get(CONF_BATTERY_SOC_SENSORS)
                     ),
@@ -349,11 +335,7 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             self._update_data(
                 {
-                    CONF_WEATHER_STATE_SENSOR: user_input.get(
-                        CONF_WEATHER_STATE_SENSOR
-                    ),
                     CONF_CLOUD_SENSOR: user_input.get(CONF_CLOUD_SENSOR),
-                    CONF_SUNSHINE_SENSOR: user_input.get(CONF_SUNSHINE_SENSOR),
                     CONF_SUN_ENTITY: user_input.get(CONF_SUN_ENTITY),
                 }
             )
@@ -649,10 +631,6 @@ def _energy_source_fields(defaults: dict[str, Any]) -> dict[Any, Any]:
             selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
         ),
         vol.Optional(
-            CONF_GRID_AVERAGE_SENSOR,
-            default=defaults.get(CONF_GRID_AVERAGE_SENSOR),
-        ): selector.EntitySelector(selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)),
-        vol.Optional(
             CONF_PV_POWER_SENSORS,
             default=defaults.get(CONF_PV_POWER_SENSORS, []),
         ): selector.EntitySelector(
@@ -661,21 +639,11 @@ def _energy_source_fields(defaults: dict[str, Any]) -> dict[Any, Any]:
         _optional_text(defaults, CONF_PV_SOURCE_PROFILES): selector.TextSelector(
             selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT)
         ),
-        vol.Optional(
-            CONF_PV_AVERAGE_SENSOR,
-            default=defaults.get(CONF_PV_AVERAGE_SENSOR),
-        ): selector.EntitySelector(selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)),
-        _optional_entity(defaults, CONF_PV_FORECAST_TODAY_SENSOR): selector.EntitySelector(
-            selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
-        ),
         _optional_entity(defaults, CONF_PV_FORECAST_NEXT_HOUR_SENSOR): selector.EntitySelector(
             selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
         ),
         _optional_entity(defaults, CONF_PV_FORECAST_NEXT_3H_SENSOR): selector.EntitySelector(
             selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
-        ),
-        _optional_text(defaults, CONF_PV_ARRAY_SPECS): selector.TextSelector(
-            selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT)
         ),
         vol.Optional(
             CONF_BATTERY_SOC_SENSORS,
@@ -733,18 +701,8 @@ def _schema(defaults: dict[str, Any]) -> vol.Schema:
         vol.Optional(CONF_NAME, default=defaults.get(CONF_NAME, NAME)): str,
         **_energy_source_fields(defaults),
         vol.Optional(
-            CONF_WEATHER_STATE_SENSOR,
-            default=defaults.get(CONF_WEATHER_STATE_SENSOR),
-        ): selector.EntitySelector(
-            selector.EntitySelectorConfig(domain=["sensor", "weather"])
-        ),
-        vol.Optional(
             CONF_CLOUD_SENSOR,
             default=defaults.get(CONF_CLOUD_SENSOR),
-        ): selector.EntitySelector(selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)),
-        vol.Optional(
-            CONF_SUNSHINE_SENSOR,
-            default=defaults.get(CONF_SUNSHINE_SENSOR),
         ): selector.EntitySelector(selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)),
         vol.Optional(
             CONF_SUN_ENTITY,
@@ -822,20 +780,8 @@ def _weather_sources_schema(defaults: dict[str, Any]) -> vol.Schema:
     return vol.Schema(
         {
             vol.Optional(
-                CONF_WEATHER_STATE_SENSOR,
-                default=defaults.get(CONF_WEATHER_STATE_SENSOR),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=["sensor", "weather"])
-            ),
-            vol.Optional(
                 CONF_CLOUD_SENSOR,
                 default=defaults.get(CONF_CLOUD_SENSOR),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
-            ),
-            vol.Optional(
-                CONF_SUNSHINE_SENSOR,
-                default=defaults.get(CONF_SUNSHINE_SENSOR),
             ): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)
             ),

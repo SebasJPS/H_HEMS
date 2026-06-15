@@ -141,22 +141,16 @@ Suggested mapping from the original automation:
 | HEMS Field | Home Assistant Entity |
 |---|---|
 | Grid power | `sensor.power_shelly_gesamt` |
-| Grid average | `sensor.grid_average_15m` |
 | PV power sources | `sensor.shellyplusplugs_b0b21c105338_switch_0_power` |
 | PV source profiles | `[{"name":"GoodWe Dach","sensor":"sensor.goodwe_pv_power","peak":5200,"azimuth":180,"tilt":30,"category":"roof"},{"name":"BKW Garten","sensor":"sensor.bkw_garten_power","peak":800,"azimuth":220,"tilt":15,"category":"balcony"}]` |
-| PV average | `sensor.pv_average_15m` |
-| PV forecast today | `sensor.pv_forecast_today` |
 | PV forecast next hour | `sensor.pv_forecast_next_hour` |
 | PV forecast next 3 hours | `sensor.pv_forecast_next_3h` |
-| PV arrays | `Sued=180:30:4x430, Garage Ost=90:10:2x400` |
 | Battery SoC | `sensor.batterie_geschatzt_soc` |
 | Battery discharge | `sensor.batterie_discharge` |
 | Battery charge | `sensor.batterie_charge` |
 | Grid import price | `sensor.energy_import_price` |
 | Grid export price | `sensor.energy_export_price` |
-| Weather state | `sensor.berlin_tempelhof_wetterzustand` |
 | Cloud coverage | `sensor.berlin_tempelhof_bewolkungsgrad` |
-| Sunshine duration | `sensor.berlin_tempelhof_sonnenscheindauer` |
 | Sun position | `sun.sun` |
 | Flexible loads | `switch.a8m` |
 | Flexible load power sensors | `sensor.a8m_power` |
@@ -276,7 +270,6 @@ The first controller version evaluates:
 - Total PV power from all configured PV sources.
 - Optional named PV source profiles for multiple inverters, roof arrays and
   balcony power plants.
-- Optional 15-minute PV average.
 - Minimum battery SoC across all configured batteries.
 - Total battery discharge.
 - Battery power as separate charge/discharge sensors or one signed sensor in
@@ -285,12 +278,10 @@ The first controller version evaluates:
   conservatively treat part of active battery charging as usable surplus while
   reserving the rest for the battery.
 - Optional house load sensors, for example inverter load or GoodWe load.
-- Weather state, cloud coverage and sunshine.
-- PV forecast for today and PV power forecast for the next hour / next 3 hours when configured.
-- Sun elevation/azimuth from `sun.sun` and configured PV arrays. Each PV surface
-  can have its own name, azimuth, tilt and module size, for example
-  `Sued=180:30:4x430, Garage Ost=90:10:2x400`. `180:30:800` remains valid as a
-  simple 800 Wp surface.
+- Cloud coverage.
+- PV power forecast for the next hour / next 3 hours when configured.
+- Sun elevation/azimuth from `sun.sun` and named PV source profiles. Each source
+  can have its own name, azimuth, tilt and module size.
 - Configured thresholds and operating mode.
 
 BB HEMS classifies the current PV window as `night`, `low_today`,
@@ -327,9 +318,9 @@ exposes:
 
 All configured sensors are summed, so multiple PV systems, batteries and load
 sensors can be combined.
-For multiple PV arrays, the sun-position score is calculated per configured
-surface and weighted by installed module power. BB HEMS uses the currently best
-matching surface instead of assuming one global roof direction.
+For multiple named PV sources, the sun-position score is calculated per
+configured source and weighted by installed module power. BB HEMS uses the
+currently best matching source instead of assuming one global roof direction.
 
 ### PV source registry
 

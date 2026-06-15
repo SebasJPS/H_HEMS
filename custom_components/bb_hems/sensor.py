@@ -17,6 +17,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
+    CONF_AC_BATTERY_PROFILES,
     CONF_BATTERY_CHARGE_SENSORS,
     CONF_BATTERY_DISCHARGE_SENSORS,
     CONF_BATTERY_SIGNED_CHARGE_POSITIVE_SENSORS,
@@ -413,6 +414,8 @@ class HemsSensor(HemsEntity, SensorEntity):
             "battery_discharge": data.battery_discharge,
             "battery_soc_min": data.battery_soc_min,
             "house_load": data.house_load,
+            "ac_battery_details": data.ac_battery_details,
+            "ac_battery_reason": data.ac_battery_reason,
             "usable_battery_charge": data.usable_battery_charge,
             "grid_import_price": data.grid_import_price,
             "grid_export_price": data.grid_export_price,
@@ -429,6 +432,7 @@ class HemsSensor(HemsEntity, SensorEntity):
             "action_history": data.action_history,
             "configured_pv_sources": data.configured_pv_sources,
             "configured_batteries": data.configured_batteries,
+            "configured_ac_batteries": data.configured_ac_batteries,
             "configured_flexible_loads": data.configured_flexible_loads,
             "configured_start_only_appliances": data.configured_start_only_appliances,
             "configured_wallboxes": data.configured_wallboxes,
@@ -492,6 +496,7 @@ class HemsSensor(HemsEntity, SensorEntity):
                 CONF_BATTERY_SIGNED_CHARGE_POSITIVE_SENSORS, []
             ),
             "house_load_sensors": config.get(CONF_HOUSE_LOAD_SENSORS, []),
+            "ac_battery_profiles": config.get(CONF_AC_BATTERY_PROFILES),
             "virtual_battery_charge_sensor": config.get(
                 CONF_VIRTUAL_BATTERY_CHARGE_SENSOR
             ),

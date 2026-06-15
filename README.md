@@ -148,6 +148,7 @@ Suggested mapping from the original automation:
 | Battery SoC | `sensor.batterie_geschatzt_soc` |
 | Battery discharge | `sensor.batterie_discharge` |
 | Battery charge | `sensor.batterie_charge` |
+| AC battery profiles | `[{"name":"EcoFlow Stream","soc_sensor":"sensor.ecoflow_soc","charge_power_sensor":"sensor.ecoflow_charge_power","discharge_power_sensor":"sensor.ecoflow_discharge_power","charge_power_number":"number.ecoflow_charge_w","discharge_power_number":"number.ecoflow_discharge_w","min_soc":15,"max_soc":90,"reserve_soc":40,"max_charge_power":800,"max_discharge_power":800,"control_interval_seconds":2,"direction_switch_delay_seconds":1}]` |
 | Grid import price | `sensor.energy_import_price` |
 | Grid export price | `sensor.energy_export_price` |
 | Cloud coverage | `sensor.berlin_tempelhof_bewolkungsgrad` |
@@ -277,6 +278,8 @@ The first controller version evaluates:
 - Total battery charge. From the configured share SoC, BB HEMS can
   conservatively treat part of active battery charging as usable surplus while
   reserving the rest for the battery.
+- Optional controllable AC batteries, for example EcoFlow Stream, with fast
+  charge/discharge power control.
 - Optional house load sensors, for example inverter load or GoodWe load.
 - Cloud coverage.
 - PV power forecast for the next hour / next 3 hours when configured.
@@ -354,6 +357,41 @@ BB HEMS sums all named sources into the total PV value, uses their orientation
 for the PV window when `azimuth` and `tilt` are present, and shows the strongest
 sources in the HEMS dashboard. Do not enter the same sensor both in `PV power
 sources` and `PV source profiles`, otherwise it is intentionally counted twice.
+
+### Controllable AC batteries
+
+EcoFlow Stream and similar AC-coupled batteries can be added through `AC battery
+profiles`. These are not treated like passive inverter batteries. BB HEMS can
+actively set their charge and discharge power using Home Assistant number
+entities.
+
+```json
+[
+  {
+    "name": "EcoFlow Stream",
+    "soc_sensor": "sensor.ecoflow_soc",
+    "charge_power_sensor": "sensor.ecoflow_charge_power",
+    "discharge_power_sensor": "sensor.ecoflow_discharge_power",
+    "charge_power_number": "number.ecoflow_charge_w",
+    "discharge_power_number": "number.ecoflow_discharge_w",
+    "min_soc": 15,
+    "max_soc": 90,
+    "reserve_soc": 40,
+    "max_charge_power": 800,
+    "max_discharge_power": 800,
+    "step_power": 50,
+    "control_interval_seconds": 2,
+    "direction_switch_delay_seconds": 1
+  }
+]
+```
+
+The fast AC-battery controller runs independently from the normal 10-second HEMS
+coordinator. It checks configured AC batteries every 2 seconds by default. When
+the direction changes, BB HEMS first sets the opposite direction to `0 W`, waits
+1 second, and then sets the new charge or discharge power. Charging uses
+remaining HEMS surplus budget; discharging is used to reduce grid import down to
+the configured `reserve_soc`.
 
 After the central surplus decision, the smart scheduler estimates the real
 surplus budget and selects only the configured loads that fit. It uses current

@@ -32,6 +32,7 @@ CONF_BATTERY_SIGNED_DISCHARGE_POSITIVE_SENSORS = (
 )
 CONF_BATTERY_SIGNED_CHARGE_POSITIVE_SENSORS = "battery_signed_charge_positive_sensors"
 CONF_HOUSE_LOAD_SENSORS = "house_load_sensors"
+CONF_AC_BATTERY_PROFILES = "ac_battery_profiles"
 CONF_GRID_IMPORT_PRICE_SENSOR = "grid_import_price_sensor"
 CONF_GRID_EXPORT_PRICE_SENSOR = "grid_export_price_sensor"
 CONF_WEATHER_STATE_SENSOR = "weather_state_sensor"

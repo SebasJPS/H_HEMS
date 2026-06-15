@@ -12,6 +12,7 @@ from homeassistant.core import callback
 from homeassistant.helpers import selector
 
 from .const import (
+    CONF_AC_BATTERY_PROFILES,
     CONF_BATTERY_CHARGE_SENSORS,
     CONF_BATTERY_DISCHARGE_SENSORS,
     CONF_BATTERY_SIGNED_CHARGE_POSITIVE_SENSORS,
@@ -181,6 +182,7 @@ class BbHemsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_HOUSE_LOAD_SENSORS: _entity_list(
                     user_input.get(CONF_HOUSE_LOAD_SENSORS)
                 ),
+                CONF_AC_BATTERY_PROFILES: user_input.get(CONF_AC_BATTERY_PROFILES),
                 CONF_GRID_IMPORT_PRICE_SENSOR: user_input.get(
                     CONF_GRID_IMPORT_PRICE_SENSOR
                 ),
@@ -308,6 +310,7 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
                     CONF_HOUSE_LOAD_SENSORS: _entity_list(
                         user_input.get(CONF_HOUSE_LOAD_SENSORS)
                     ),
+                    CONF_AC_BATTERY_PROFILES: user_input.get(CONF_AC_BATTERY_PROFILES),
                     CONF_GRID_IMPORT_PRICE_SENSOR: user_input.get(
                         CONF_GRID_IMPORT_PRICE_SENSOR
                     ),
@@ -558,6 +561,7 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
                 data.get(CONF_BATTERY_SIGNED_CHARGE_POSITIVE_SENSORS)
             ),
             CONF_HOUSE_LOAD_SENSORS: _entity_list(data.get(CONF_HOUSE_LOAD_SENSORS)),
+            CONF_AC_BATTERY_PROFILES: data.get(CONF_AC_BATTERY_PROFILES),
             CONF_GRID_IMPORT_PRICE_SENSOR: data.get(CONF_GRID_IMPORT_PRICE_SENSOR),
             CONF_GRID_EXPORT_PRICE_SENSOR: data.get(CONF_GRID_EXPORT_PRICE_SENSOR),
             CONF_VIRTUAL_BATTERY_CHARGE_SENSOR: data.get(
@@ -680,6 +684,9 @@ def _energy_source_fields(defaults: dict[str, Any]) -> dict[Any, Any]:
             default=defaults.get(CONF_HOUSE_LOAD_SENSORS, []),
         ): selector.EntitySelector(
             selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+        ),
+        _optional_text(defaults, CONF_AC_BATTERY_PROFILES): selector.TextSelector(
+            selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT)
         ),
         _optional_entity(defaults, CONF_GRID_IMPORT_PRICE_SENSOR): selector.EntitySelector(
             selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS)

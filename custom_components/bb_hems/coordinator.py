@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 import json
@@ -16,6 +17,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
     BAD_WEATHER,
+    CONF_AC_BATTERY_PROFILES,
     CONF_BATTERY_CHARGE_SENSORS,
     CONF_BATTERY_DISCHARGE_SENSORS,
     CONF_BATTERY_SIGNED_CHARGE_POSITIVE_SENSORS,
@@ -104,6 +106,8 @@ LEARNING_SAVE_INTERVAL = timedelta(minutes=5)
 LEARNING_MIN_SAMPLES = 12
 LEARNING_DECISION_MIN_SAMPLES = 72
 DAILY_HISTORY_DAYS = 90
+AC_BATTERY_DEFAULT_INTERVAL = 2.0
+AC_BATTERY_DEFAULT_DIRECTION_DELAY = 1.0
 
 
 @dataclass(frozen=True)
@@ -164,6 +168,30 @@ class PvSourceProfile:
 
 
 @dataclass(frozen=True)
+class AcBatteryProfile:
+    """A controllable AC battery such as EcoFlow Stream."""
+
+    name: str
+    soc_sensor: str
+    charge_power_sensor: str | None
+    discharge_power_sensor: str | None
+    charge_power_number: str
+    discharge_power_number: str
+    min_soc: float
+    max_soc: float
+    reserve_soc: float
+    max_charge_power: float
+    max_discharge_power: float
+    step_power: float
+    control_interval: float
+    direction_switch_delay: float
+    priority: int
+    soc: float | None = None
+    charge_power: float = 0.0
+    discharge_power: float = 0.0
+
+
+@dataclass(frozen=True)
 class HemsData:
     """Computed HEMS state."""
 
@@ -192,6 +220,8 @@ class HemsData:
     battery_discharge: float
     battery_charge: float
     house_load: float
+    ac_battery_details: list[dict[str, Any]]
+    ac_battery_reason: str
     usable_battery_charge: float
     virtual_battery_enabled: bool
     virtual_battery_used: bool
@@ -213,6 +243,7 @@ class HemsData:
     active_flexible_loads: int
     configured_pv_sources: int
     configured_batteries: int
+    configured_ac_batteries: int
     configured_flexible_loads: int
     configured_start_only_appliances: int
     configured_wallboxes: int
@@ -274,6 +305,10 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         self._virtual_battery_manual_reference: float | None = None
         self._virtual_battery_corrections: int = 0
         self._device_runtime_state: dict[str, dict[str, str]] = {}
+        self._ac_battery_runtime_state: dict[str, dict[str, Any]] = {}
+        self._ac_battery_task: asyncio.Task | None = self.hass.async_create_task(
+            self._async_ac_battery_fast_loop()
+        )
         self._learning_store = Store(
             hass, LEARNING_STORE_VERSION, f"{DOMAIN}_{entry.entry_id}_learning"
         )
@@ -356,6 +391,16 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         if action_added:
             return replace(data, action_history=list(self._action_history))
         return data
+
+    async def async_shutdown(self) -> None:
+        """Stop background control loops before unloading."""
+        if self._ac_battery_task is not None:
+            self._ac_battery_task.cancel()
+            try:
+                await self._ac_battery_task
+            except asyncio.CancelledError:
+                pass
+            self._ac_battery_task = None
 
     @property
     def opts(self) -> dict[str, Any]:
@@ -456,6 +501,9 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         battery_soc_min = min(battery_socs) if battery_socs else None
         battery_charge, battery_discharge = self._battery_flow(data)
         house_load = self._positive_sum(data.get(CONF_HOUSE_LOAD_SENSORS, []))
+        ac_batteries = self._ac_battery_profiles(data)
+        ac_battery_details = self._ac_battery_details(ac_batteries)
+        ac_battery_reason = self._ac_battery_summary(ac_battery_details)
         virtual_battery = self._update_virtual_battery()
         if virtual_battery["used"]:
             if virtual_battery["soc"] is not None:
@@ -659,6 +707,8 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             battery_discharge=battery_discharge,
             battery_charge=battery_charge,
             house_load=house_load,
+            ac_battery_details=ac_battery_details,
+            ac_battery_reason=ac_battery_reason,
             usable_battery_charge=usable_battery_charge,
             virtual_battery_enabled=virtual_battery["enabled"],
             virtual_battery_used=virtual_battery["used"],
@@ -686,6 +736,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                 len(data.get(CONF_BATTERY_SIGNED_DISCHARGE_POSITIVE_SENSORS, [])),
                 len(data.get(CONF_BATTERY_SIGNED_CHARGE_POSITIVE_SENSORS, [])),
             ),
+            configured_ac_batteries=len(ac_batteries),
             configured_flexible_loads=len(flexible_loads),
             configured_start_only_appliances=len(
                 data.get(CONF_START_ONLY_APPLIANCE_SWITCHES, [])
@@ -1214,6 +1265,327 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         battery_charge += signed_charge
         battery_discharge += signed_discharge
         return battery_charge, battery_discharge
+
+    async def _async_ac_battery_fast_loop(self) -> None:
+        """Control AC batteries faster than the regular HEMS coordinator loop."""
+        while True:
+            profiles = self._ac_battery_profiles(self.config_entry.data)
+            interval = min(
+                (profile.control_interval for profile in profiles),
+                default=AC_BATTERY_DEFAULT_INTERVAL,
+            )
+            try:
+                if profiles:
+                    if bool(self.opts[OPT_AUTO_ENABLED]):
+                        await self._async_apply_ac_battery_control(profiles)
+                    else:
+                        await self._async_stop_ac_batteries(profiles)
+                await asyncio.sleep(max(1.0, interval))
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                _LOGGER.exception("Failed to control AC battery")
+                await asyncio.sleep(max(5.0, interval))
+
+    async def _async_apply_ac_battery_control(
+        self, profiles: list[AcBatteryProfile]
+    ) -> bool:
+        """Set AC battery charge/discharge numbers from current HEMS state."""
+        action_added = False
+        data = self.data
+        grid_import = data.grid_import if data is not None else self._grid_flow(
+            self.config_entry.data,
+            self._float_state(self.config_entry.data.get(CONF_GRID_POWER_SENSOR), 0.0),
+        )[0]
+        grid_export = data.grid_export if data is not None else self._grid_flow(
+            self.config_entry.data,
+            self._float_state(self.config_entry.data.get(CONF_GRID_POWER_SENSOR), 0.0),
+        )[1]
+        base_budget = (
+            max(0.0, data.available_surplus_budget - data.scheduled_surplus_power)
+            if data is not None and data.flexible_loads_allowed
+            else max(0.0, grid_export)
+        )
+
+        for profile in sorted(profiles, key=lambda item: item.priority):
+            charge_target, discharge_target, reason = self._ac_battery_target(
+                profile,
+                base_budget,
+                grid_import,
+            )
+            state = self._ac_battery_runtime_state.setdefault(profile.name, {})
+            state.update(
+                {
+                    "target_charge": charge_target,
+                    "target_discharge": discharge_target,
+                    "reason": reason,
+                    "soc": profile.soc,
+                    "charge_power": profile.charge_power,
+                    "discharge_power": profile.discharge_power,
+                }
+            )
+            if charge_target > 0:
+                base_budget = max(0.0, base_budget - charge_target)
+            if await self._async_set_ac_battery_numbers(
+                profile, charge_target, discharge_target, reason
+            ):
+                action_added = True
+        return action_added
+
+    async def _async_stop_ac_batteries(
+        self, profiles: list[AcBatteryProfile]
+    ) -> bool:
+        """Set controllable AC batteries to idle when HEMS automation is off."""
+        changed = False
+        for profile in profiles:
+            state = self._ac_battery_runtime_state.setdefault(profile.name, {})
+            state.update(
+                {
+                    "target_charge": 0.0,
+                    "target_discharge": 0.0,
+                    "reason": self._txt(
+                        "HEMS-Automatik ist ausgeschaltet.",
+                        "HEMS automation is switched off.",
+                    ),
+                    "soc": profile.soc,
+                    "charge_power": profile.charge_power,
+                    "discharge_power": profile.discharge_power,
+                }
+            )
+            if await self._async_set_ac_battery_numbers(
+                profile,
+                0.0,
+                0.0,
+                state["reason"],
+            ):
+                changed = True
+        return changed
+
+    def _ac_battery_target(
+        self,
+        profile: AcBatteryProfile,
+        surplus_budget: float,
+        grid_import: float,
+    ) -> tuple[float, float, str]:
+        """Return target charge/discharge power and reason for one AC battery."""
+        if profile.soc is None:
+            return 0.0, 0.0, self._txt(
+                f"{profile.name}: kein SoC verfügbar.",
+                f"{profile.name}: no SoC available.",
+            )
+        discharge_floor = max(profile.min_soc, profile.reserve_soc)
+        if profile.soc >= profile.max_soc:
+            if grid_import > 50 and profile.soc > discharge_floor:
+                target = self._round_ac_power(
+                    min(grid_import, profile.max_discharge_power), profile.step_power
+                )
+                return 0.0, target, self._txt(
+                    f"{profile.name}: SoC {profile.soc:.1f}% ist voll genug, entlädt gegen Netzbezug.",
+                    f"{profile.name}: SoC {profile.soc:.1f}% is high enough, discharging against grid import.",
+                )
+            return 0.0, 0.0, self._txt(
+                f"{profile.name}: max SoC {profile.max_soc:.1f}% erreicht.",
+                f"{profile.name}: max SoC {profile.max_soc:.1f}% reached.",
+            )
+        if surplus_budget > 50 and profile.soc < profile.max_soc:
+            target = self._round_ac_power(
+                min(surplus_budget, profile.max_charge_power), profile.step_power
+            )
+            return target, 0.0, self._txt(
+                f"{profile.name}: lädt mit PV-/Überschussbudget.",
+                f"{profile.name}: charging from PV/surplus budget.",
+            )
+        if grid_import > 50 and profile.soc > discharge_floor:
+            target = self._round_ac_power(
+                min(grid_import, profile.max_discharge_power), profile.step_power
+            )
+            return 0.0, target, self._txt(
+                f"{profile.name}: entlädt gegen Netzbezug bis Schutz-SoC {discharge_floor:.1f}%.",
+                f"{profile.name}: discharging against grid import down to protection SoC {discharge_floor:.1f}%.",
+            )
+        if profile.soc <= discharge_floor:
+            return 0.0, 0.0, self._txt(
+                f"{profile.name}: Schutz-SoC {discharge_floor:.1f}% blockiert Entladung.",
+                f"{profile.name}: protection SoC {discharge_floor:.1f}% blocks discharge.",
+            )
+        return 0.0, 0.0, self._txt(
+            f"{profile.name}: kein nutzbarer Überschuss oder Netzbezug.",
+            f"{profile.name}: no usable surplus or grid import.",
+        )
+
+    async def _async_set_ac_battery_numbers(
+        self,
+        profile: AcBatteryProfile,
+        charge_target: float,
+        discharge_target: float,
+        reason: str,
+    ) -> bool:
+        """Apply AC battery targets with a delay between direction changes."""
+        current_charge = self._positive_float_state(profile.charge_power_number) or 0.0
+        current_discharge = (
+            self._positive_float_state(profile.discharge_power_number) or 0.0
+        )
+        changed = False
+        if charge_target > 0 and current_discharge > 0:
+            changed |= await self._async_set_number(profile.discharge_power_number, 0.0)
+            await asyncio.sleep(profile.direction_switch_delay)
+            current_discharge = 0.0
+        if discharge_target > 0 and current_charge > 0:
+            changed |= await self._async_set_number(profile.charge_power_number, 0.0)
+            await asyncio.sleep(profile.direction_switch_delay)
+            current_charge = 0.0
+
+        if self._number_changed(current_charge, charge_target):
+            changed |= await self._async_set_number(
+                profile.charge_power_number, charge_target
+            )
+        if self._number_changed(current_discharge, discharge_target):
+            changed |= await self._async_set_number(
+                profile.discharge_power_number, discharge_target
+            )
+        if changed:
+            self._add_action(
+                self._txt("AC-Akku geregelt", "AC battery controlled"),
+                self._txt(
+                    f"{profile.name}: Laden {charge_target:.0f} W, Entladen {discharge_target:.0f} W. {reason}",
+                    f"{profile.name}: charge {charge_target:.0f} W, discharge {discharge_target:.0f} W. {reason}",
+                ),
+                "battery",
+            )
+        return changed
+
+    async def _async_set_number(self, entity_id: str, value: float) -> bool:
+        state = self.hass.states.get(entity_id)
+        if state is None or state.state in {STATE_UNAVAILABLE, STATE_UNKNOWN}:
+            return False
+        await self.hass.services.async_call(
+            "number",
+            "set_value",
+            {"entity_id": entity_id, "value": round(max(0.0, value), 1)},
+            blocking=False,
+        )
+        return True
+
+    def _number_changed(self, current: float, target: float) -> bool:
+        return abs(float(current) - float(target)) >= 1.0
+
+    def _round_ac_power(self, value: float, step: float) -> float:
+        step = max(1.0, step)
+        return max(0.0, round(value / step) * step)
+
+    def _ac_battery_profiles(self, data: dict[str, Any]) -> list[AcBatteryProfile]:
+        """Return configured controllable AC batteries."""
+        profiles: list[AcBatteryProfile] = []
+        for index, item in enumerate(self._json_items(data.get(CONF_AC_BATTERY_PROFILES))):
+            soc_sensor = str(item.get("soc_sensor") or "").strip()
+            charge_number = str(
+                item.get("charge_power_number") or item.get("charge_number") or ""
+            ).strip()
+            discharge_number = str(
+                item.get("discharge_power_number")
+                or item.get("discharge_number")
+                or ""
+            ).strip()
+            if not soc_sensor or not charge_number or not discharge_number:
+                continue
+            charge_sensor = str(item.get("charge_power_sensor") or "").strip() or None
+            discharge_sensor = (
+                str(item.get("discharge_power_sensor") or "").strip() or None
+            )
+            min_soc = self._safe_float(item.get("min_soc"), 10.0)
+            reserve_soc = self._safe_float(item.get("reserve_soc"), 40.0)
+            max_soc = self._safe_float(item.get("max_soc"), 90.0)
+            profiles.append(
+                AcBatteryProfile(
+                    name=str(item.get("name") or f"AC Battery {index + 1}"),
+                    soc_sensor=soc_sensor,
+                    charge_power_sensor=charge_sensor,
+                    discharge_power_sensor=discharge_sensor,
+                    charge_power_number=charge_number,
+                    discharge_power_number=discharge_number,
+                    min_soc=max(0.0, min(100.0, min_soc)),
+                    max_soc=max(0.0, min(100.0, max_soc)),
+                    reserve_soc=max(0.0, min(100.0, reserve_soc)),
+                    max_charge_power=max(
+                        0.0, self._safe_float(item.get("max_charge_power"), 800.0)
+                    ),
+                    max_discharge_power=max(
+                        0.0, self._safe_float(item.get("max_discharge_power"), 800.0)
+                    ),
+                    step_power=max(
+                        1.0,
+                        self._safe_float(
+                            item.get("step_power") or item.get("power_step"), 50.0
+                        ),
+                    ),
+                    control_interval=max(
+                        1.0,
+                        self._safe_float(
+                            item.get("control_interval_seconds"),
+                            AC_BATTERY_DEFAULT_INTERVAL,
+                        ),
+                    ),
+                    direction_switch_delay=max(
+                        0.0,
+                        self._safe_float(
+                            item.get("direction_switch_delay_seconds"),
+                            AC_BATTERY_DEFAULT_DIRECTION_DELAY,
+                        ),
+                    ),
+                    priority=int(self._safe_float(item.get("priority"), 60 + index)),
+                    soc=self._float_state(soc_sensor, None),
+                    charge_power=self._positive_float_state(charge_sensor) or 0.0,
+                    discharge_power=self._positive_float_state(discharge_sensor) or 0.0,
+                )
+            )
+        return profiles
+
+    def _ac_battery_details(
+        self, profiles: list[AcBatteryProfile]
+    ) -> list[dict[str, Any]]:
+        """Return dashboard-friendly AC battery rows."""
+        rows: list[dict[str, Any]] = []
+        for profile in profiles:
+            runtime = self._ac_battery_runtime_state.get(profile.name, {})
+            rows.append(
+                {
+                    "name": profile.name,
+                    "soc": profile.soc,
+                    "charge_power": round(profile.charge_power, 1),
+                    "discharge_power": round(profile.discharge_power, 1),
+                    "target_charge": runtime.get("target_charge", 0.0),
+                    "target_discharge": runtime.get("target_discharge", 0.0),
+                    "min_soc": profile.min_soc,
+                    "max_soc": profile.max_soc,
+                    "reserve_soc": profile.reserve_soc,
+                    "reason": runtime.get("reason")
+                    or self._txt("Wartet auf schnelle Regelung.", "Waiting for fast control."),
+                }
+            )
+        return rows
+
+    def _ac_battery_summary(self, rows: list[dict[str, Any]]) -> str:
+        if not rows:
+            return self._txt(
+                "Kein steuerbarer AC-Akku konfiguriert.",
+                "No controllable AC battery configured.",
+            )
+        active = [
+            row
+            for row in rows
+            if float(row.get("target_charge") or 0) > 0
+            or float(row.get("target_discharge") or 0) > 0
+        ]
+        if not active:
+            return self._txt(
+                f"{len(rows)} AC-Akku(s) konfiguriert, aktuell keine Lade-/Entladefreigabe.",
+                f"{len(rows)} AC battery/batteries configured, no charge/discharge release right now.",
+            )
+        names = ", ".join(str(row["name"]) for row in active)
+        return self._txt(
+            f"AC-Akku Schnellregelung aktiv: {names}.",
+            f"AC battery fast control active: {names}.",
+        )
 
     async def _async_apply_flexible_load_control(self, data: HemsData) -> bool:
         """Switch configured flexible loads according to the current HEMS decision."""

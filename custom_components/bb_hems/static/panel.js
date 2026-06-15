@@ -26,7 +26,7 @@ const ALIASES = {
   mode_select: ["select.bb_hems_mode", "betriebsart", "operating mode"],
 };
 
-const BB_HEMS_VERSION = "0.12.1";
+const BB_HEMS_VERSION = "0.13.0";
 const I18N = {
   de: {
     subtitle: "Was HEMS gerade entscheidet, schaltet und einspart",
@@ -37,6 +37,7 @@ const I18N = {
     energyStatusNote: "Normalisierte Werte aus Wechselrichter, Batterie, Netz und Hauslast",
     pv: "PV",
     pvSources: "PV-Quellen",
+    acBattery: "AC-Akku",
     battery: "Batterie",
     grid: "Netz",
     house: "Hauslast",
@@ -97,6 +98,7 @@ const I18N = {
     hemsUse: "HEMS-Nutzung",
     confidence: "Vertrauen",
     calculatedSoc: "Berechneter SoC",
+    target: "Ziel",
     blockers: "Blocker & Freigaben",
     batteryFree: "Batterieschutz frei",
     weatherRelease: "Wetterfreigabe",
@@ -131,6 +133,7 @@ const I18N = {
     energyStatusNote: "Normalized values from inverter, battery, grid and house load",
     pv: "PV",
     pvSources: "PV sources",
+    acBattery: "AC battery",
     battery: "Battery",
     grid: "Grid",
     house: "House load",
@@ -191,6 +194,7 @@ const I18N = {
     hemsUse: "HEMS use",
     confidence: "Confidence",
     calculatedSoc: "Calculated SoC",
+    target: "Target",
     blockers: "Blockers & releases",
     batteryFree: "Battery protection free",
     weatherRelease: "Weather release",
@@ -583,6 +587,7 @@ class BbHemsPanel extends HTMLElement {
 
           <aside class="stack">
             ${pvSourceCard(attrs, tr)}
+            ${acBatteryCard(attrs, tr)}
             ${blockerCard(states, attrs, tr)}
             ${virtualBatteryCard(states, attrs, tr)}
           </aside>
@@ -718,6 +723,21 @@ function pvSourceCard(attrs, tr) {
         row.orientation_score !== null && row.orientation_score !== undefined ? `Score ${Number(row.orientation_score).toLocaleString("de-DE", { maximumFractionDigits: 2 })}` : "",
       ].filter(Boolean).join(" · ");
       return blockerItem(Number(row.power || 0) > 0, `${row.name}: ${powerValue(Number(row.power || 0))}`, meta || row.sensor);
+    }).join("")}
+  </section>`;
+}
+
+function acBatteryCard(attrs, tr) {
+  const rows = Array.isArray(attrs.ac_battery_details) ? attrs.ac_battery_details : [];
+  if (!rows.length) return "";
+  return `<section class="next-card">
+    <h2>${esc(tr.acBattery)}</h2>
+    ${rows.map((row) => {
+      const soc = row.soc === null || row.soc === undefined ? "-" : `${Number(row.soc).toLocaleString("de-DE", { maximumFractionDigits: 1 })}%`;
+      const targetCharge = powerValue(Number(row.target_charge || 0));
+      const targetDischarge = powerValue(Number(row.target_discharge || 0));
+      const active = Number(row.target_charge || 0) > 0 || Number(row.target_discharge || 0) > 0;
+      return blockerItem(active, `${row.name}: ${soc}`, `${tr.target}: ${tr.charging} ${targetCharge} · ${tr.discharging} ${targetDischarge}. ${row.reason || attrs.ac_battery_reason || ""}`);
     }).join("")}
   </section>`;
 }

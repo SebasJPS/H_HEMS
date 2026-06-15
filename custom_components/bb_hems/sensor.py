@@ -46,6 +46,7 @@ from .const import (
     CONF_PV_FORECAST_NEXT_HOUR_SENSOR,
     CONF_PV_FORECAST_TODAY_SENSOR,
     CONF_PV_POWER_SENSORS,
+    CONF_PV_SOURCE_PROFILES,
     CONF_START_ONLY_APPLIANCE_POWER_SENSORS,
     CONF_START_ONLY_APPLIANCE_SWITCHES,
     CONF_SUN_ENTITY,
@@ -398,6 +399,7 @@ class HemsSensor(HemsEntity, SensorEntity):
             "pv_array_count": data.pv_array_count,
             "pv_best_array": data.pv_best_array,
             "pv_orientation_score": data.pv_orientation_score,
+            "pv_source_details": data.pv_source_details,
             "pv_window": data.pv_window,
             "pv_window_reason": data.pv_window_reason,
             "weather_reason": data.weather_reason,
@@ -470,6 +472,7 @@ class HemsSensor(HemsEntity, SensorEntity):
             "grid_import_price_sensor": config.get(CONF_GRID_IMPORT_PRICE_SENSOR),
             "grid_export_price_sensor": config.get(CONF_GRID_EXPORT_PRICE_SENSOR),
             "pv_power_sensors": config.get(CONF_PV_POWER_SENSORS, []),
+            "pv_source_profiles": config.get(CONF_PV_SOURCE_PROFILES),
             "pv_average_sensor": config.get(CONF_PV_AVERAGE_SENSOR),
             "pv_forecast_today_sensor": config.get(CONF_PV_FORECAST_TODAY_SENSOR),
             "pv_forecast_next_hour_sensor": config.get(

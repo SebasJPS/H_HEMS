@@ -143,6 +143,7 @@ Suggested mapping from the original automation:
 | Grid power | `sensor.power_shelly_gesamt` |
 | Grid average | `sensor.grid_average_15m` |
 | PV power sources | `sensor.shellyplusplugs_b0b21c105338_switch_0_power` |
+| PV source profiles | `[{"name":"GoodWe Dach","sensor":"sensor.goodwe_pv_power","peak":5200,"azimuth":180,"tilt":30,"category":"roof"},{"name":"BKW Garten","sensor":"sensor.bkw_garten_power","peak":800,"azimuth":220,"tilt":15,"category":"balcony"}]` |
 | PV average | `sensor.pv_average_15m` |
 | PV forecast today | `sensor.pv_forecast_today` |
 | PV forecast next hour | `sensor.pv_forecast_next_hour` |
@@ -273,6 +274,8 @@ The first controller version evaluates:
   signed sensors.
 - Optional 15-minute grid average.
 - Total PV power from all configured PV sources.
+- Optional named PV source profiles for multiple inverters, roof arrays and
+  balcony power plants.
 - Optional 15-minute PV average.
 - Minimum battery SoC across all configured batteries.
 - Total battery discharge.
@@ -327,6 +330,39 @@ sensors can be combined.
 For multiple PV arrays, the sun-position score is calculated per configured
 surface and weighted by installed module power. BB HEMS uses the currently best
 matching surface instead of assuming one global roof direction.
+
+### PV source registry
+
+For simple setups, `PV power sources` can still contain a comma-separated list
+of PV power sensors. For larger setups, use `PV source profiles` instead. Each
+profile gives one PV or balcony source a name, live power sensor, optional peak
+power and optional orientation:
+
+```json
+[
+  {
+    "name": "GoodWe Dach",
+    "sensor": "sensor.goodwe_pv_power",
+    "peak": 5200,
+    "azimuth": 180,
+    "tilt": 30,
+    "category": "roof"
+  },
+  {
+    "name": "BKW Garten",
+    "sensor": "sensor.bkw_garten_power",
+    "peak": 800,
+    "azimuth": 220,
+    "tilt": 15,
+    "category": "balcony"
+  }
+]
+```
+
+BB HEMS sums all named sources into the total PV value, uses their orientation
+for the PV window when `azimuth` and `tilt` are present, and shows the strongest
+sources in the HEMS dashboard. Do not enter the same sensor both in `PV power
+sources` and `PV source profiles`, otherwise it is intentionally counted twice.
 
 After the central surplus decision, the smart scheduler estimates the real
 surplus budget and selects only the configured loads that fit. It uses current

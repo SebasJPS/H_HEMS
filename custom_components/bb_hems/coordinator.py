@@ -45,6 +45,7 @@ from .const import (
     CONF_PV_FORECAST_NEXT_HOUR_SENSOR,
     CONF_PV_FORECAST_TODAY_SENSOR,
     CONF_PV_POWER_SENSORS,
+    CONF_PV_SOURCE_PROFILES,
     CONF_START_ONLY_APPLIANCE_POWER_SENSORS,
     CONF_START_ONLY_APPLIANCE_SWITCHES,
     CONF_SUN_ENTITY,
@@ -149,6 +150,20 @@ class PvArrayProfile:
 
 
 @dataclass(frozen=True)
+class PvSourceProfile:
+    """A named PV or balcony power source."""
+
+    name: str
+    sensor: str
+    category: str
+    peak_power: float | None = None
+    azimuth: float | None = None
+    tilt: float | None = None
+    power: float = 0.0
+    orientation_score: float | None = None
+
+
+@dataclass(frozen=True)
 class HemsData:
     """Computed HEMS state."""
 
@@ -161,6 +176,7 @@ class HemsData:
     savings_price: float
     price_reason: str
     pv_power: float
+    pv_source_details: list[dict[str, Any]]
     pv_average: float
     pv_forecast_today: float | None
     pv_forecast_next_hour: float | None
@@ -393,6 +409,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             )
         )
         pv_sources = data.get(CONF_PV_POWER_SENSORS, [])
+        pv_source_profiles = self._pv_source_profiles(data)
         battery_soc_sources = data.get(CONF_BATTERY_SOC_SENSORS, [])
         flexible_loads = data.get(CONF_FLEXIBLE_LOAD_SWITCHES, [])
         wallboxes = data.get(CONF_WALLBOX_SWITCHES, [])
@@ -400,7 +417,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         heating_rods = data.get(CONF_HEATING_ROD_SWITCHES, [])
         controlled_loads = self._controlled_surplus_load_profiles()
 
-        pv_power = sum(self._float_state(entity_id, 0.0) for entity_id in pv_sources)
+        pv_power = self._pv_total_power(pv_sources, pv_source_profiles)
         pv_average = self._float_state(data.get(CONF_PV_AVERAGE_SENSOR), pv_power)
         pv_forecast_today = self._float_state(
             data.get(CONF_PV_FORECAST_TODAY_SENSOR), None
@@ -411,11 +428,16 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         pv_forecast_next_3h = self._float_state(
             data.get(CONF_PV_FORECAST_NEXT_3H_SENSOR), None
         )
-        pv_arrays = self._pv_arrays(data.get(CONF_PV_ARRAY_SPECS))
+        pv_arrays = self._pv_arrays(data.get(CONF_PV_ARRAY_SPECS), pv_source_profiles)
         sun_entity = data.get(CONF_SUN_ENTITY) or "sun.sun"
         sun_elevation = self._float_attr(sun_entity, "elevation", None)
         sun_azimuth = self._float_attr(sun_entity, "azimuth", None)
         pv_orientation = self._pv_orientation(pv_arrays, sun_elevation, sun_azimuth)
+        pv_source_details = self._pv_source_details(
+            pv_source_profiles,
+            sun_elevation,
+            sun_azimuth,
+        )
         pv_window, pv_window_reason = self._pv_window(
             pv_power,
             pv_average,
@@ -621,6 +643,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             savings_price=savings_price,
             price_reason=price_reason,
             pv_power=pv_power,
+            pv_source_details=pv_source_details,
             pv_average=pv_average,
             pv_forecast_today=pv_forecast_today,
             pv_forecast_next_hour=pv_forecast_next_hour,
@@ -655,7 +678,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             energy_mode=energy_mode,
             grid_tolerance=grid_tolerance,
             active_flexible_loads=active_flexible_loads,
-            configured_pv_sources=len(pv_sources),
+            configured_pv_sources=len(pv_sources) + len(pv_source_profiles),
             configured_batteries=max(
                 len(battery_soc_sources),
                 len(data.get(CONF_BATTERY_DISCHARGE_SENSORS, [])),
@@ -1634,6 +1657,9 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         return load
 
     def _device_profile_items(self, value: Any) -> list[dict[str, Any]]:
+        return self._json_items(value)
+
+    def _json_items(self, value: Any) -> list[dict[str, Any]]:
         if not value:
             return []
         if isinstance(value, list):
@@ -2072,9 +2098,109 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             value = value / 100
         return max(0.0, value)
 
-    def _pv_arrays(self, specs: str | None) -> list[PvArrayProfile]:
+    def _pv_total_power(
+        self,
+        legacy_sources: list[str],
+        source_profiles: list[PvSourceProfile],
+    ) -> float:
+        """Return total PV power from legacy sensors and named sources."""
+        legacy_total = sum(
+            self._float_state(entity_id, 0.0) for entity_id in legacy_sources
+        )
+        profile_total = sum(source.power for source in source_profiles)
+        return max(0.0, legacy_total + profile_total)
+
+    def _pv_source_profiles(self, data: dict[str, Any]) -> list[PvSourceProfile]:
+        """Return named PV/BKW sources from JSON configuration."""
+        raw_profiles = self._json_items(data.get(CONF_PV_SOURCE_PROFILES))
+        profiles: list[PvSourceProfile] = []
+        for item in raw_profiles:
+            sensor = str(item.get("sensor") or item.get("entity_id") or "").strip()
+            if not sensor:
+                continue
+            name = str(item.get("name") or sensor).strip()
+            category = str(item.get("category") or "pv").strip().lower()
+            peak = (
+                self._safe_float(item.get("peak") or item.get("peak_power"), 0.0)
+                if item.get("peak") is not None or item.get("peak_power") is not None
+                else None
+            )
+            azimuth = (
+                self._safe_float(item.get("azimuth"), 0.0)
+                if item.get("azimuth") is not None
+                else None
+            )
+            tilt = (
+                self._safe_float(item.get("tilt"), 0.0)
+                if item.get("tilt") is not None
+                else None
+            )
+            profiles.append(
+                PvSourceProfile(
+                    name=name,
+                    sensor=sensor,
+                    category=category,
+                    peak_power=max(0.0, peak) if peak is not None else None,
+                    azimuth=azimuth % 360 if azimuth is not None else None,
+                    tilt=max(0.0, min(90.0, tilt)) if tilt is not None else None,
+                    power=max(0.0, self._float_state(sensor, 0.0)),
+                )
+            )
+        return profiles
+
+    def _pv_source_details(
+        self,
+        source_profiles: list[PvSourceProfile],
+        sun_elevation: float | None,
+        sun_azimuth: float | None,
+    ) -> list[dict[str, Any]]:
+        """Return dashboard-friendly PV source rows."""
+        rows: list[dict[str, Any]] = []
+        for source in source_profiles:
+            score = None
+            if (
+                source.azimuth is not None
+                and source.tilt is not None
+                and sun_elevation is not None
+                and sun_azimuth is not None
+                and sun_elevation > 0
+            ):
+                score = self._pv_surface_score(
+                    source.azimuth,
+                    source.tilt,
+                    sun_elevation,
+                    sun_azimuth,
+                )
+            rows.append(
+                {
+                    "name": source.name,
+                    "sensor": source.sensor,
+                    "category": source.category,
+                    "power": round(source.power, 1),
+                    "peak_power": source.peak_power,
+                    "azimuth": source.azimuth,
+                    "tilt": source.tilt,
+                    "orientation_score": None if score is None else round(score, 3),
+                }
+            )
+        return sorted(rows, key=lambda row: row["power"], reverse=True)
+
+    def _pv_arrays(
+        self, specs: str | None, sources: list[PvSourceProfile] | None = None
+    ) -> list[PvArrayProfile]:
         """Parse PV surfaces from azimuth:tilt[:Wp|modules x Wp] items."""
         arrays: list[PvArrayProfile] = []
+        for source in sources or []:
+            if source.azimuth is None or source.tilt is None:
+                continue
+            arrays.append(
+                PvArrayProfile(
+                    azimuth=source.azimuth,
+                    tilt=source.tilt,
+                    peak_power=max(0.1, source.peak_power or 1.0),
+                    name=source.name,
+                )
+            )
         if specs:
             normalized = specs.replace(";", ",").replace("\n", ",")
             for raw_item in normalized.split(","):
@@ -2137,6 +2263,20 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             return peak_power, None, None
         return 1.0, None, None
 
+    def _pv_surface_score(
+        self,
+        array_azimuth: float,
+        array_tilt: float,
+        sun_elevation: float,
+        sun_azimuth: float,
+    ) -> float:
+        azimuth_delta = self._angle_delta(sun_azimuth, array_azimuth)
+        azimuth_score = max(0.0, 1.0 - azimuth_delta / 90.0)
+        ideal_elevation = max(10.0, 90.0 - array_tilt)
+        elevation_delta = abs(sun_elevation - ideal_elevation)
+        elevation_score = max(0.0, 1.0 - elevation_delta / 75.0)
+        return azimuth_score * 0.7 + elevation_score * 0.3
+
     def _pv_orientation(
         self,
         arrays: list[PvArrayProfile],
@@ -2154,14 +2294,11 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
 
         for array in arrays:
             azimuth_delta = self._angle_delta(sun_azimuth, array.azimuth)
-            azimuth_score = max(0.0, 1.0 - azimuth_delta / 90.0)
-            ideal_elevation = max(10.0, 90.0 - array.tilt)
-            elevation_delta = abs(sun_elevation - ideal_elevation)
-            elevation_score = max(0.0, 1.0 - elevation_delta / 75.0)
-            size_score = array.peak_power / total_peak_power
-            score = (azimuth_score * 0.7 + elevation_score * 0.3) * (
-                0.7 + size_score * 0.3
+            surface_score = self._pv_surface_score(
+                array.azimuth, array.tilt, sun_elevation, sun_azimuth
             )
+            size_score = array.peak_power / total_peak_power
+            score = surface_score * (0.7 + size_score * 0.3)
             if score > best_score:
                 best_score = score
                 best_array = array

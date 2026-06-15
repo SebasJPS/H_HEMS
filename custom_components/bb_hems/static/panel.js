@@ -26,7 +26,7 @@ const ALIASES = {
   mode_select: ["select.bb_hems_mode", "betriebsart", "operating mode"],
 };
 
-const BB_HEMS_VERSION = "0.11.0";
+const BB_HEMS_VERSION = "0.12.0";
 const I18N = {
   de: {
     subtitle: "Was HEMS gerade entscheidet, schaltet und einspart",
@@ -36,6 +36,7 @@ const I18N = {
     energyStatus: "Energiezustand",
     energyStatusNote: "Normalisierte Werte aus Wechselrichter, Batterie, Netz und Hauslast",
     pv: "PV",
+    pvSources: "PV-Quellen",
     battery: "Batterie",
     grid: "Netz",
     house: "Hauslast",
@@ -129,6 +130,7 @@ const I18N = {
     energyStatus: "Energy status",
     energyStatusNote: "Normalized values from inverter, battery, grid and house load",
     pv: "PV",
+    pvSources: "PV sources",
     battery: "Battery",
     grid: "Grid",
     house: "House load",
@@ -527,7 +529,7 @@ class BbHemsPanel extends HTMLElement {
             </div>
           </div>
           <div class="tile-grid">
-            ${energyStatusTile(tr.pv, powerValue(Number(attrs.pv_power || numericState(byKey(states, "pv_power_total")))), `${attrs.pv_window_reason || tr.pvWindow}`, "☀", "good")}
+            ${energyStatusTile(tr.pv, powerValue(Number(attrs.pv_power || numericState(byKey(states, "pv_power_total")))), pvStatusNote(attrs, tr), "☀", "good")}
             ${energyStatusTile(tr.battery, batteryValue(attrs, states, tr), batteryNote(attrs, tr), "🔋", batteryClass(attrs))}
             ${energyStatusTile(tr.grid, gridValue(attrs, states, tr), gridNote(attrs, tr), "↔", gridClass(attrs))}
             ${energyStatusTile(tr.house, powerValue(Number(attrs.house_load || numericState(byKey(states, "house_load_total")))), `${tr.hemsBudget}: ${powerValue(Number(attrs.available_surplus_budget || numericState(byKey(states, "available_surplus_budget"))))}`, "⌂", "info")}
@@ -580,6 +582,7 @@ class BbHemsPanel extends HTMLElement {
           </div>
 
           <aside class="stack">
+            ${pvSourceCard(attrs, tr)}
             ${blockerCard(states, attrs, tr)}
             ${virtualBatteryCard(states, attrs, tr)}
           </aside>
@@ -692,6 +695,31 @@ function gridClass(attrs) {
   if (gridImport > 300) return "bad";
   if (gridImport > 0) return "warn";
   return "info";
+}
+
+function pvStatusNote(attrs, tr) {
+  const rows = Array.isArray(attrs.pv_source_details) ? attrs.pv_source_details : [];
+  if (rows.length) {
+    const top = rows.slice(0, 3).map((row) => `${row.name}: ${powerValue(Number(row.power || 0))}`).join(" · ");
+    return `${top}${rows.length > 3 ? ` · +${rows.length - 3}` : ""}`;
+  }
+  return attrs.pv_window_reason || tr.pvWindow;
+}
+
+function pvSourceCard(attrs, tr) {
+  const rows = Array.isArray(attrs.pv_source_details) ? attrs.pv_source_details.slice(0, 8) : [];
+  if (!rows.length) return "";
+  return `<section class="next-card">
+    <h2>${esc(tr.pvSources)}</h2>
+    ${rows.map((row) => {
+      const meta = [
+        row.category,
+        row.peak_power ? `${Number(row.peak_power).toLocaleString("de-DE", { maximumFractionDigits: 0 })} Wp` : "",
+        row.orientation_score !== null && row.orientation_score !== undefined ? `Score ${Number(row.orientation_score).toLocaleString("de-DE", { maximumFractionDigits: 2 })}` : "",
+      ].filter(Boolean).join(" · ");
+      return blockerItem(Number(row.power || 0) > 0, `${row.name}: ${powerValue(Number(row.power || 0))}`, meta || row.sensor);
+    }).join("")}
+  </section>`;
 }
 
 function decisionStatusTile(states, attrs, tr) {

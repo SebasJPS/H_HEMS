@@ -41,6 +41,7 @@ from .const import (
     CONF_PV_FORECAST_NEXT_HOUR_SENSOR,
     CONF_PV_FORECAST_TODAY_SENSOR,
     CONF_PV_POWER_SENSORS,
+    CONF_PV_SOURCE_PROFILES,
     CONF_START_ONLY_APPLIANCE_POWER_SENSORS,
     CONF_START_ONLY_APPLIANCE_SWITCHES,
     CONF_SUN_ENTITY,
@@ -156,6 +157,7 @@ class BbHemsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_PV_POWER_SENSORS: _entity_list(
                     user_input.get(CONF_PV_POWER_SENSORS)
                 ),
+                CONF_PV_SOURCE_PROFILES: user_input.get(CONF_PV_SOURCE_PROFILES),
                 CONF_PV_AVERAGE_SENSOR: user_input.get(CONF_PV_AVERAGE_SENSOR),
                 CONF_PV_FORECAST_TODAY_SENSOR: user_input.get(
                     CONF_PV_FORECAST_TODAY_SENSOR
@@ -290,6 +292,7 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
                     CONF_PV_POWER_SENSORS: _entity_list(
                         user_input.get(CONF_PV_POWER_SENSORS)
                     ),
+                    CONF_PV_SOURCE_PROFILES: user_input.get(CONF_PV_SOURCE_PROFILES),
                     CONF_PV_AVERAGE_SENSOR: user_input.get(CONF_PV_AVERAGE_SENSOR),
                     CONF_PV_FORECAST_TODAY_SENSOR: user_input.get(
                         CONF_PV_FORECAST_TODAY_SENSOR
@@ -551,6 +554,7 @@ class BbHemsOptionsFlow(config_entries.OptionsFlow):
             ),
             CONF_GRID_AVERAGE_SENSOR: data.get(CONF_GRID_AVERAGE_SENSOR),
             CONF_PV_POWER_SENSORS: _entity_list(data.get(CONF_PV_POWER_SENSORS)),
+            CONF_PV_SOURCE_PROFILES: data.get(CONF_PV_SOURCE_PROFILES),
             CONF_PV_AVERAGE_SENSOR: data.get(CONF_PV_AVERAGE_SENSOR),
             CONF_PV_FORECAST_TODAY_SENSOR: data.get(CONF_PV_FORECAST_TODAY_SENSOR),
             CONF_PV_FORECAST_NEXT_HOUR_SENSOR: data.get(
@@ -653,6 +657,9 @@ def _energy_source_fields(defaults: dict[str, Any]) -> dict[Any, Any]:
             default=defaults.get(CONF_PV_POWER_SENSORS, []),
         ): selector.EntitySelector(
             selector.EntitySelectorConfig(domain=NUMERIC_DOMAINS, multiple=True)
+        ),
+        _optional_text(defaults, CONF_PV_SOURCE_PROFILES): selector.TextSelector(
+            selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT)
         ),
         vol.Optional(
             CONF_PV_AVERAGE_SENSOR,

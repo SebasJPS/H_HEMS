@@ -7,6 +7,7 @@ from datetime import timedelta
 DOMAIN = "bb_hems"
 NAME = "BB HEMS"
 PANEL_URL = "bb-hems"
+CONFIG_ENTRY_VERSION = 2
 
 PLATFORMS = ["sensor", "binary_sensor", "number", "select", "switch"]
 SCAN_INTERVAL = timedelta(seconds=10)

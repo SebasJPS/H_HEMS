@@ -28,6 +28,7 @@ from .const import (
     CONF_PV_POWER_SENSORS,
     CONF_START_ONLY_APPLIANCE_POWER_SENSORS,
     CONF_START_ONLY_APPLIANCE_SWITCHES,
+    CONFIG_ENTRY_VERSION,
     DEFAULTS,
     DOMAIN,
     NAME,
@@ -73,7 +74,7 @@ def _menu_labels(language: str | None) -> dict[str, str]:
 class BbHemsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Create a BB HEMS config entry."""
 
-    VERSION = 2
+    VERSION = CONFIG_ENTRY_VERSION
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None

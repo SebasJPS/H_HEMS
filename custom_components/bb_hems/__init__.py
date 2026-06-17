@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 
 from homeassistant.components import frontend
@@ -10,8 +11,17 @@ from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import DEFAULTS, NAME, OPT_DASHBOARD_ENABLED, PANEL_URL, PLATFORMS
+from .const import (
+    CONFIG_ENTRY_VERSION,
+    DEFAULTS,
+    NAME,
+    OPT_DASHBOARD_ENABLED,
+    PANEL_URL,
+    PLATFORMS,
+)
 from .coordinator import HemsCoordinator
+
+_LOGGER = logging.getLogger(__name__)
 
 PANEL_COMPONENT_NAME = "bb-hems-panel"
 STATIC_URL = "/api/bb_hems/static"
@@ -42,6 +52,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await _async_register_dashboard(hass)
     else:
         frontend.async_remove_panel(hass, PANEL_URL)
+    return True
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Migrate old config entries."""
+    if entry.version > CONFIG_ENTRY_VERSION:
+        _LOGGER.error(
+            "Cannot migrate config entry %s from version %s to %s",
+            entry.title,
+            entry.version,
+            CONFIG_ENTRY_VERSION,
+        )
+        return False
+
+    options = {**DEFAULTS, **dict(entry.options)}
+    hass.config_entries.async_update_entry(
+        entry,
+        options=options,
+        version=CONFIG_ENTRY_VERSION,
+    )
     return True
 
 

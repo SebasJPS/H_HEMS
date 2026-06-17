@@ -1,374 +1,49 @@
 # BB HEMS
 
-Modular Home Energy Management System for Home Assistant.
+BB HEMS is a slim Home Assistant energy manager for one job:
 
-BB HEMS turns existing Home Assistant sensors and switches into one central energy decision layer. It is designed for homes with balcony power plants, PV inverters, batteries, wallboxes, heat pumps and flexible consumers such as dehumidifiers, boilers or appliances.
+**release flexible loads only when there is real surplus at the smart meter.**
 
-[BB HEMS energy dashboard mockup](docs/mockups/energy-dashboard.html)
+This v1 line intentionally removes the old broad model with virtual batteries,
+weather decisions, learning values, PV forecasts, advanced JSON device profiles,
+wallbox control and heat-pump control. PV inverter and PV battery remain in
+their own native control loops. BB HEMS observes them and only decides whether
+selected loads may run.
 
-![BB HEMS heating rod temperature mockup](docs/mockups/heating-rod-temperature.svg)
+## What v1 controls
 
-![BB HEMS virtual battery mockup](docs/mockups/virtual-battery.svg)
+- Pool pump / pool heating
+- Dehumidifier
+- Start-only releases for appliances such as dishwasher or washing machine
+- AC battery charge/discharge setpoints
 
-## Goals
+## Core rules
 
-- Use the sensors you already have in Home Assistant.
-- Aggregate multiple PV or balcony power plant sources.
-- Support several batteries and use the lowest SoC for conservative protection.
-- Provide one central HEMS state instead of repeating the same YAML logic per device.
-- Expose settings directly as Home Assistant entities.
-- Add a sidebar energy dashboard with period-based HEMS benefit, HEMS controls,
-  switching history and estimated savings.
-- Prepare the model for many controllable consumers with priorities and categories.
+- Default grid tolerance: `50 W`
+- Pool has first surplus priority
+- Dehumidifier runs only on free surplus, not from grid and not from battery
+- Start-only appliances are released/started, then not switched off by HEMS
+- Manual stop pauses that load for the configured pause duration
+- AC battery charges only from BKW/PV export surplus
+- AC battery charges only after PV battery SoC reaches the configured threshold
+- AC battery uses a fixed night discharge value for base load coverage
 
-## Current Status
+## Required inputs
 
-This repository contains an initial custom integration scaffold:
+- Smart meter power, either signed or separate import/export sensors
+- PV/BKW power sensors
+- PV battery SoC
+- PV battery discharge power
+- Pool/dehumidifier/start-release entities
+- Optional power sensors for controlled loads
+- Optional AC battery profile
 
-- Config flow for selecting Home Assistant entities.
-- Sensors for grid power, PV total, battery minimum SoC, battery discharge,
-  grid tolerance, energy mode, planned surplus power, shifted energy today and
-  estimated savings today.
-- Normalized energy inputs for signed or separate grid sensors, signed or
-  separate battery charge/discharge sensors, multiple PV systems, multiple
-  batteries and optional house-load sensors.
-- Binary sensors for surplus availability, battery protection, weather approval and flexible-load approval.
-- Number entities for editable thresholds.
-- Select entity for HEMS operating mode.
-- Switch entity for enabling or disabling automatic HEMS decisions.
-- Direct control of configured flexible loads and heating rods when the HEMS decision allows or blocks them.
-- Energy-style sidebar dashboard served by the integration.
-- Persistent daily HEMS history for today, yesterday, the day before and rolling
-  7/30 day dashboard views.
-- Persistent HEMS learning values that survive Home Assistant restarts and
-  group experience by season and time of day.
-- Optional target temperatures for heating rods, so pool/boiler heating stops
-  even when surplus is still available.
-- Optional virtual battery helper for DIY batteries without a native SoC sensor.
-- Optional grid import and export price sensors for more realistic HEMS savings.
-- Dashboard language follows Home Assistant and can be toggled between German
-  and English.
-- Decision reasons, scheduler messages, blockers and HEMS history are generated
-  in German or English based on the Home Assistant language.
-- Category-specific setup pages for flexible loads, start-only appliances,
-  heating rods, wallboxes, heat pumps and advanced profiles.
-- Advanced per-device profiles with name, category, switch, power estimate,
-  priority, minimum runtime, cooldown and battery usage.
-
-The current version calculates central decisions, directly switches configured
-flexible loads and heating rods, estimates the energy shifted into surplus
-periods today, remembers seasonal/time-of-day HEMS experience across restarts,
-can stop heating rods at configured target temperatures, can estimate a virtual
-battery SoC from charge/discharge power, and shows the result in an
-energy-dashboard style sidebar. Savings are estimated from the configured grid
-import price minus export compensation.
-
-## Sidebar HEMS Dashboard
-
-The bundled `BB HEMS` sidebar panel is intended as an operational HEMS
-dashboard, not as a second general energy dashboard and not as a configuration
-page.
-
-It shows:
-
-- Home Assistant-style tiles focused on HEMS decisions and benefit.
-- Quick controls for `select.bb_hems_mode` and `switch.bb_hems_auto_enabled`.
-- HEMS benefit by period: today, yesterday, the day before, 7 days and 30 days,
-  with comparison against the previous period.
-- The current decision: surplus status, usable budget, next candidate and the
-  relevant reason text.
-- Managed consumer groups such as flexible loads, heating rods, wallboxes and
-  heat pumps.
-- Blockers and approvals such as battery protection, weather approval, PV
-  window and surplus budget.
-- HEMS switching history explaining when and why devices were allowed, blocked
-  or switched.
-
-Configuration is intentionally reduced to links from the dashboard. Detailed
-setup remains in Home Assistant's integration options and entity settings.
-
-## Feature Mockups
-
-### Heating rod target temperature
-
-![BB HEMS heating rod temperature mockup](docs/mockups/heating-rod-temperature.svg)
-
-This mockup shows how a heating rod can be treated as a normal HEMS surplus
-load while still respecting a target temperature. A pool or boiler heating rod
-is stopped when the configured temperature is reached, independent of current
-surplus.
-
-### Virtual battery
-
-![BB HEMS virtual battery mockup](docs/mockups/virtual-battery.svg)
-
-This mockup shows the virtual battery helper for DIY batteries without a native
-SoC sensor. BB HEMS calculates SoC from charge/discharge power and lets the user
-calibrate the value manually. The virtual battery can be displayed only or
-explicitly enabled for HEMS decisions.
-
-Useful real screenshots for replacing these mockups later:
-
-- BB HEMS dashboard with at least one heating rod blocked by temperature.
-- Integration options page showing heating rod switch, temperature sensor and
-  target temperature.
-- BB HEMS dashboard with virtual battery enabled.
-- Entity list showing the virtual battery sensors, numbers and switches.
-
-## System Model
-
-![BB HEMS system model](docs/mockups/system-model.svg)
-
-BB HEMS is split into three layers:
-
-1. **Sources**  
-   Grid meter, PV power, balcony power plants, battery SoC, battery discharge, weather and device states.
-
-2. **Controller**  
-   Central HEMS logic calculates energy mode, surplus availability, grid tolerance, weather approval and battery protection.
-
-3. **Consumers**  
-   Flexible loads, wallboxes, heat pumps and future device categories consume the central HEMS decisions.
-
-## Configuration Preview
-
-![BB HEMS configuration preview](docs/mockups/config-flow.svg)
-
-The integration setup asks for entity IDs. Multiple entities can be entered comma-separated where useful.
-
-Suggested mapping from the original automation:
-
-| HEMS Field | Home Assistant Entity |
-|---|---|
-| Grid power | `sensor.power_shelly_gesamt` |
-| PV power sources | `sensor.shellyplusplugs_b0b21c105338_switch_0_power` |
-| PV source profiles | `[{"name":"GoodWe Dach","sensor":"sensor.goodwe_pv_power","peak":5200,"azimuth":180,"tilt":30,"category":"roof"},{"name":"BKW Garten","sensor":"sensor.bkw_garten_power","peak":800,"azimuth":220,"tilt":15,"category":"balcony"}]` |
-| PV forecast next hour | `sensor.pv_forecast_next_hour` |
-| PV forecast next 3 hours | `sensor.pv_forecast_next_3h` |
-| Battery SoC | `sensor.batterie_geschatzt_soc` |
-| Battery discharge | `sensor.batterie_discharge` |
-| Battery charge | `sensor.batterie_charge` |
-| AC battery profiles | `[{"name":"EcoFlow Stream","soc_sensor":"sensor.ecoflow_soc","charge_power_sensor":"sensor.ecoflow_charge_power","discharge_power_sensor":"sensor.ecoflow_discharge_power","charge_power_number":"number.ecoflow_charge_w","discharge_power_number":"number.ecoflow_discharge_w","min_soc":15,"max_soc":90,"reserve_soc":40,"max_charge_power":800,"max_discharge_power":800,"control_interval_seconds":2,"direction_switch_delay_seconds":1}]` |
-| Grid import price | `sensor.energy_import_price` |
-| Grid export price | `sensor.energy_export_price` |
-| Cloud coverage | `sensor.berlin_tempelhof_bewolkungsgrad` |
-| Sun position | `sun.sun` |
-| Flexible loads | `switch.a8m` |
-| Flexible load power sensors | `sensor.a8m_power` |
-| Device profiles | `[{"name":"Pool","switch":"switch.pool","category":"heating_rod","power":1200,"priority":20,"min_runtime":10,"cooldown":15,"allow_battery":false}]` |
-| Heating rods | `switch.boiler_heating_rod` |
-| Heating rod power sensors | `sensor.boiler_heating_rod_power` |
-| Heating rod temperature sensors | `sensor.pool_temperature` |
-| Heating rod target temperatures | `28` |
-| Virtual battery charge | `sensor.diy_battery_charge_power` |
-| Virtual battery discharge | `sensor.diy_battery_discharge_power` |
-
-## Entities
-
-### Sensors
-
-- `sensor.bb_hems_energy_mode`
-- `sensor.bb_hems_grid_power`
-- `sensor.bb_hems_grid_import_power`
-- `sensor.bb_hems_grid_export_power`
-- `sensor.bb_hems_grid_average`
-- `sensor.bb_hems_grid_import_price`
-- `sensor.bb_hems_grid_export_price`
-- `sensor.bb_hems_savings_price`
-- `sensor.bb_hems_pv_power_total`
-- `sensor.bb_hems_pv_average`
-- `sensor.bb_hems_pv_window`
-- `sensor.bb_hems_pv_forecast_next_3h`
-- `sensor.bb_hems_sun_elevation`
-- `sensor.bb_hems_battery_soc_min`
-- `sensor.bb_hems_battery_discharge_total`
-- `sensor.bb_hems_battery_charge_total`
-- `sensor.bb_hems_usable_battery_charge`
-- `sensor.bb_hems_house_load_total`
-- `sensor.bb_hems_virtual_battery_soc`
-- `sensor.bb_hems_virtual_battery_energy`
-- `sensor.bb_hems_virtual_battery_usable_energy`
-- `sensor.bb_hems_virtual_battery_confidence`
-- `sensor.bb_hems_grid_tolerance`
-- `sensor.bb_hems_cloud_coverage`
-- `sensor.bb_hems_sunshine_minutes`
-- `sensor.bb_hems_active_flexible_loads`
-- `sensor.bb_hems_available_surplus_budget`
-- `sensor.bb_hems_scheduled_surplus_power`
-- `sensor.bb_hems_shifted_energy_today`
-- `sensor.bb_hems_estimated_savings_today`
-- `sensor.bb_hems_shifted_energy_total`
-- `sensor.bb_hems_learning_samples`
-- `sensor.bb_hems_seasonal_success_rate`
-- `sensor.bb_hems_configured_assets`
-
-### Binary Sensors
-
-- `binary_sensor.bb_hems_surplus_available`
-- `binary_sensor.bb_hems_battery_protect`
-- `binary_sensor.bb_hems_good_weather`
-- `binary_sensor.bb_hems_flexible_loads_allowed`
-
-### Settings
-
-- `select.bb_hems_mode`
-- `switch.bb_hems_auto_enabled`
-- `switch.bb_hems_battery_protection_enabled`
-- `switch.bb_hems_dashboard_enabled`
-- `number.bb_hems_min_battery_soc`
-- `number.bb_hems_protect_battery_soc`
-- `number.bb_hems_pv_threshold`
-- `number.bb_hems_pv_avg_threshold`
-- `number.bb_hems_grid_import_limit`
-- `number.bb_hems_grid_hard_import_limit`
-- `number.bb_hems_battery_discharge_limit`
-- `number.bb_hems_battery_charge_share_soc`
-- `number.bb_hems_battery_charge_reserve_good`
-- `number.bb_hems_battery_charge_reserve_cloudy`
-- `number.bb_hems_grid_import_price`
-- `number.bb_hems_grid_export_price`
-- `number.bb_hems_flexible_load_power` fallback/start estimate
-- `number.bb_hems_start_only_appliance_power` fallback/start estimate
-- `number.bb_hems_heating_rod_power` fallback/start estimate
-- `number.bb_hems_heating_rod_temperature_hysteresis`
-- `number.bb_hems_virtual_battery_capacity`
-- `number.bb_hems_virtual_battery_min_soc`
-- `number.bb_hems_virtual_battery_max_soc`
-- `number.bb_hems_virtual_battery_manual_soc`
-- `number.bb_hems_virtual_battery_charge_efficiency`
-- `number.bb_hems_virtual_battery_discharge_efficiency`
-- `select.bb_hems_response_profile`
-- `switch.bb_hems_virtual_battery_enabled`
-- `switch.bb_hems_use_virtual_battery`
-
-## Operating Modes
-
-| Mode | Behavior |
-|---|---|
-| `auto` | Balanced default mode. Uses PV, grid, battery and weather logic. |
-| `eco` | More conservative. Avoids tolerated grid import where possible. |
-| `comfort` | Allows more grid tolerance when the house should favor comfort. |
-| `force_surplus` | Treats surplus as available unless battery protection blocks it. |
-| `off` | Disables HEMS decisions. |
-
-## Response Profiles
-
-| Profile | Behavior |
-|---|---|
-| `auto` | Default. Near real-time where sensible: critical protection switches off immediately, normal surplus switching uses short second-level stability. |
-| `realtime` | Switches on the next 10-second coordinator update without additional stability delay. |
-| `seconds` | Uses short delays: 60 seconds before switching on, 30 seconds before switching off. |
-| `minutes` | Conservative legacy behavior: 10 minutes before switching on, 5 minutes before switching off. |
-
-## Decision Logic
-
-The first controller version evaluates:
-
-- Current grid import/export.
-- Grid sensors as one signed sensor, separate import/export sensors or inverted
-  signed sensors.
-- Optional 15-minute grid average.
-- Total PV power from all configured PV sources.
-- Optional named PV source profiles for multiple inverters, roof arrays and
-  balcony power plants.
-- Minimum battery SoC across all configured batteries.
-- Total battery discharge.
-- Battery power as separate charge/discharge sensors or one signed sensor in
-  either direction.
-- Total battery charge. From the configured share SoC, BB HEMS can
-  conservatively treat part of active battery charging as usable surplus while
-  reserving the rest for the battery.
-- Optional controllable AC batteries, for example EcoFlow Stream, with fast
-  charge/discharge power control.
-- Optional house load sensors, for example inverter load or GoodWe load.
-- Cloud coverage.
-- PV power forecast for the next hour / next 3 hours when configured.
-- Sun elevation/azimuth from `sun.sun` and named PV source profiles. Each source
-  can have its own name, azimuth, tilt and module size.
-- Configured thresholds and operating mode.
-
-BB HEMS classifies the current PV window as `night`, `low_today`,
-`weak_now`, `rising`, `good_later`, `usable_now`, `peak_now` or `falling`.
-This gives dashboards and automations a stable signal for whether a better PV
-window is likely later or whether the current moment is already suitable.
-
-### Sensor normalization
-
-BB HEMS normalizes common inverter layouts into one internal energy model:
-
-- `grid_import_w`: power currently bought from the grid.
-- `grid_export_w`: power currently exported to the grid.
-- `pv_power_w`: total PV production from all PV sensors.
-- `battery_charge_w`: power currently charging batteries.
-- `battery_discharge_w`: power currently discharged by batteries.
-- `house_load_w`: optional house/load consumption from configured load sensors.
-
-For GoodWe and similar inverters, use whichever sensor shape Home Assistant
-exposes:
-
-- Signed grid sensor with `+` = import and `-` = export:
-  add it to `Grid signed: positive = import`.
-- Signed grid sensor with `+` = export and `-` = import:
-  add it to `Grid signed: positive = export`.
-- Separate import/export sensors:
-  add them to `Grid import sensors` and `Grid export sensors`.
-- Signed battery sensor with `+` = discharge and `-` = charge:
-  add it to `Battery signed: positive = discharge`.
-- Signed battery sensor with `+` = charge and `-` = discharge:
-  add it to `Battery signed: positive = charge`.
-- Separate battery charge/discharge sensors:
-  use `Battery charge sensors` and `Battery discharge sensors`.
-
-All configured sensors are summed, so multiple PV systems, batteries and load
-sensors can be combined.
-For multiple named PV sources, the sun-position score is calculated per
-configured source and weighted by installed module power. BB HEMS uses the
-currently best matching source instead of assuming one global roof direction.
-
-### PV source registry
-
-For simple setups, `PV power sources` can still contain a comma-separated list
-of PV power sensors. For larger setups, use `PV source profiles` instead. Each
-profile gives one PV or balcony source a name, live power sensor, optional peak
-power and optional orientation:
+## AC battery profile example
 
 ```json
 [
   {
-    "name": "GoodWe Dach",
-    "sensor": "sensor.goodwe_pv_power",
-    "peak": 5200,
-    "azimuth": 180,
-    "tilt": 30,
-    "category": "roof"
-  },
-  {
-    "name": "BKW Garten",
-    "sensor": "sensor.bkw_garten_power",
-    "peak": 800,
-    "azimuth": 220,
-    "tilt": 15,
-    "category": "balcony"
-  }
-]
-```
-
-BB HEMS sums all named sources into the total PV value, uses their orientation
-for the PV window when `azimuth` and `tilt` are present, and shows the strongest
-sources in the HEMS dashboard. Do not enter the same sensor both in `PV power
-sources` and `PV source profiles`, otherwise it is intentionally counted twice.
-
-### Controllable AC batteries
-
-EcoFlow Stream and similar AC-coupled batteries can be added through `AC battery
-profiles`. These are not treated like passive inverter batteries. BB HEMS can
-actively set their charge and discharge power using Home Assistant number
-entities.
-
-```json
-[
-  {
-    "name": "EcoFlow Stream",
+    "name": "EcoFlow",
     "soc_sensor": "sensor.ecoflow_soc",
     "charge_power_sensor": "sensor.ecoflow_charge_power",
     "discharge_power_sensor": "sensor.ecoflow_discharge_power",
@@ -376,181 +51,59 @@ entities.
     "discharge_power_number": "number.ecoflow_discharge_w",
     "min_soc": 15,
     "max_soc": 90,
-    "reserve_soc": 40,
     "max_charge_power": 800,
     "max_discharge_power": 800,
-    "step_power": 50,
-    "control_interval_seconds": 2,
+    "step_power": 10,
+    "control_interval_seconds": 30,
     "direction_switch_delay_seconds": 1
   }
 ]
 ```
 
-The fast AC-battery controller runs independently from the normal 10-second HEMS
-coordinator. It checks configured AC batteries every 2 seconds by default. When
-the direction changes, BB HEMS first sets the opposite direction to `0 W`, waits
-1 second, and then sets the new charge or discharge power. Charging uses
-remaining HEMS surplus budget; discharging is used to reduce grid import down to
-the configured `reserve_soc`.
+## Main entities
 
-After the central surplus decision, the smart scheduler estimates the real
-surplus budget and selects only the configured loads that fit. It uses current
-grid export plus the measured or estimated power of already running managed
-loads, then subtracts measured battery discharge. Optional power sensors can be
-assigned in the integration options in the same order as their switches. While a
-load is running, BB HEMS uses that live power sensor. When a load is off or no
-power sensor is configured, it falls back to `number.bb_hems_flexible_load_power`
-or `number.bb_hems_heating_rod_power` as a start estimate. In the bundled
-dashboard these fallback settings are hidden when matching real power sensors
-are configured, but the entities remain available for custom dashboards. This
-avoids switching all surplus consumers at once and also turns running loads off
-when their actual power is no longer covered by real surplus.
+Sensors:
 
-The setup separates load categories into their own Home Assistant option pages,
-so common devices can be configured without JSON:
+- `sensor.bb_hems_energy_mode`
+- `sensor.bb_hems_grid_power`
+- `sensor.bb_hems_grid_import_power`
+- `sensor.bb_hems_grid_export_power`
+- `sensor.bb_hems_pv_power_total`
+- `sensor.bb_hems_battery_soc_min`
+- `sensor.bb_hems_battery_discharge_total`
+- `sensor.bb_hems_available_surplus_budget`
+- `sensor.bb_hems_scheduled_surplus_power`
 
-- Flexible loads: BB HEMS may turn them on and off according to surplus.
-- Start-only appliances: washing machines, dishwashers or dryers. BB HEMS may
-  start them via switch/input_boolean/button, but does not turn them off after a
-  start. Optional power sensors in the same order detect whether the program is
-  running. The start estimate comes from
-  `number.bb_hems_start_only_appliance_power`.
-- Heating rods: surplus consumers with optional temperature sensor and target
-  temperature.
-- Wallboxes and heat pumps: currently stored as their own groups for dedicated
-  strategies in later releases.
+Controls:
 
-Advanced device profiles can be configured as JSON in the load options. They
-are optional and exist alongside the simple switch lists. A profile can define
-`name`, `switch`, `category`, `power`, `power_sensor`, `priority`,
-`min_runtime`, `cooldown`, `allow_battery`, `control_mode`,
-`start_power_threshold`, `start_timeout`, `temperature_sensor` and
-`target_temperature`. `min_runtime`, `cooldown` and `start_timeout` are minutes.
-Lower priority numbers are scheduled first. If `allow_battery` is `false`, BB
-HEMS only plans that device from real export/running loads and not from usable
-battery charge.
+- `switch.bb_hems_auto_enabled`
+- `switch.bb_hems_dashboard_enabled`
+- `select.bb_hems_mode`
+- `number.bb_hems_grid_tolerance_w`
+- `number.bb_hems_pv_battery_ac_charge_threshold_soc`
+- `number.bb_hems_manual_pause_hours`
+- `number.bb_hems_ac_battery_night_discharge_w`
+- `number.bb_hems_pool_power`
+- `number.bb_hems_dehumidifier_power`
+- `number.bb_hems_start_only_appliance_power`
 
-`control_mode` defaults to `managed`, which means BB HEMS may turn the device on
-and off according to the current surplus decision. Use `start_only` for
-appliances such as washing machines, dishwashers or dryers. In `start_only`
-mode, BB HEMS may start the device when surplus is available, but it will not
-turn the device off after a program has started. If a `power_sensor` reaches
-`start_power_threshold`, the appliance is treated as running. If no run is
-detected within `start_timeout`, BB HEMS can release the start switch again and
-then respects `cooldown` before another start. Without a `power_sensor`, BB HEMS
-cannot safely detect a running program and therefore does not use the timeout
-turn-off path. For `start_only`, `switch` may also point to a Home Assistant
-`button` entity; BB HEMS then calls `button.press`.
+Binary sensors:
 
-Example start-only appliance:
-`[{"name":"Dishwasher","switch":"switch.dishwasher_start","category":"appliance","power":1200,"power_sensor":"sensor.dishwasher_power","priority":40,"control_mode":"start_only","start_power_threshold":20,"start_timeout":30,"cooldown":720,"allow_battery":false}]`
+- `binary_sensor.bb_hems_surplus_available`
+- `binary_sensor.bb_hems_flexible_loads_allowed`
 
-Simple start-only setup without JSON: open the integration options, choose
-`Start-only appliances` / `Nur starten`, add
-`switch.geschirrspuler_einschalter` under the start-only appliances and leave
-the power sensor empty if no power sensor exists. BB HEMS will only start that
-entity and will not turn it off afterwards.
+## Removed from v1
 
-Heating rods can additionally use optional temperature sensors and target
-temperatures. Both lists must follow the same order as the heating rod switches.
-Example: two heating rods with target temperatures `55, 28` means the first
-heats up to 55 °C and the second, for example a pool, up to 28 °C. When a target
-is reached, BB HEMS turns that heating rod off immediately, regardless of
-surplus. The hysteresis number prevents immediate restart just below the target.
+- Virtual battery
+- Weather approval
+- PV forecast logic
+- PV array/orientation model
+- Seasonal learning
+- Advanced device profile JSON
+- Heating-rod target temperature logic
+- Wallbox control
+- Heat-pump control
+- Comfort/Eco/force-surplus modes
 
-BB HEMS also estimates how much energy it has shifted into surplus periods
-today. The estimate integrates the planned HEMS surplus load while flexible
-loads are allowed. `sensor.bb_hems_shifted_energy_today` exposes this value in
-kWh. `sensor.bb_hems_estimated_savings_today` multiplies it by the configured
-net benefit: grid import price minus export compensation. If no price sensors
-are configured, BB HEMS uses the fallback number entities. These values are
-estimates for the dashboard, not a replacement for metered utility billing.
-The dashboard also stores a compact daily HEMS history for up to 90 days, so it
-can show yesterday, the day before, 7 day and 30 day HEMS benefit even after a
-Home Assistant restart.
-
-BB HEMS now persists its own learning data in Home Assistant storage. It records
-HEMS experience by season and time of day, including how often flexible loads
-were allowed, the typical available budget and the estimated energy shifted in
-that phase. This data survives Home Assistant restarts and is exposed through
-`sensor.bb_hems_learning_samples`,
-`sensor.bb_hems_seasonal_success_rate` and attributes on
-`sensor.bb_hems_energy_mode`. The dashboard uses this to show whether the
-current season/time window has historically been useful for HEMS decisions.
-The learning layer is intentionally conservative. After enough samples in the
-current season/time window, it may slightly relax or tighten the grid tolerance
-for `auto` and `comfort`. Hard protection rules such as battery protection,
-`eco`, `force_surplus`, `off` and real surplus checks still take priority.
-
-If battery charge sensors are configured, BB HEMS can also use active battery
-charging as a smart surplus signal. This does not intentionally discharge the
-battery. Instead, once the lowest battery SoC reaches
-`number.bb_hems_battery_charge_share_soc`, BB HEMS can split active charging
-power: with normal weather release it reserves
-`number.bb_hems_battery_charge_reserve_good` for the battery; when it is cloudy
-but not bad weather, it reserves
-`number.bb_hems_battery_charge_reserve_cloudy`. With the defaults, a battery at
-70% charging with 600 W on a cloudy day reserves 50% for the battery and makes
-about 300 W available for small HEMS consumers.
-
-For DIY batteries without a native SoC sensor, BB HEMS can calculate a virtual
-SoC from a charge power sensor, a discharge power sensor and the configured
-capacity. The user can correct `number.bb_hems_virtual_battery_manual_soc` from
-time to time; BB HEMS then recalibrates the internal energy value and raises the
-confidence value as more corrections are made. Min/max SoC define the usable
-range, for example 10% to 90%. The virtual battery is only used for HEMS
-decisions when both `switch.bb_hems_virtual_battery_enabled` and
-`switch.bb_hems_use_virtual_battery` are on.
-
-The main output is still exposed for dashboards and optional automations:
-
-```yaml
-binary_sensor.bb_hems_flexible_loads_allowed
-```
-
-Configured flexible loads and heating rods are switched by the integration itself:
-
-- In `auto`, critical protection cases switch off immediately; normal switching uses short second-level stability.
-- In `realtime`, the next 10-second coordinator update can switch devices.
-- In `seconds`, configured surplus loads switch on after 60 seconds and off after 30 seconds.
-- In `minutes`, configured surplus loads switch on after 10 minutes and off after 5 minutes.
-- When `switch.bb_hems_auto_enabled` is off, BB HEMS does not switch devices automatically.
-
-`switch.bb_hems_battery_protection_enabled` can disable the battery protection
-layer. When disabled, SoC, minimum SoC and battery discharge protection no
-longer block HEMS decisions. Surplus, weather, scheduler and hard grid logic
-still apply.
-
-To avoid using the battery for surplus consumers, set
-`number.bb_hems_battery_discharge_limit` to `0`. Any positive configured battery
-discharge then activates battery protection and switches planned surplus loads
-off. Higher values intentionally tolerate that many watts of battery discharge.
-
-## Installation
-
-Copy this folder into Home Assistant:
-
-```text
-custom_components/bb_hems
-```
-
-Restart Home Assistant, then add the integration:
-
-```text
-Settings -> Devices & services -> Add integration -> BB HEMS
-```
-
-After setup, a `BB HEMS` entry appears in the Home Assistant sidebar. The
-sidebar opens the energy dashboard and provides quick links to configuration,
-entities and devices. The sidebar dashboard can be hidden with
-`switch.bb_hems_dashboard_enabled`. All HEMS functions remain available as
-normal Home Assistant entities for users who prefer building their own
-dashboards.
-
-## Support
-
-Home Health Overview ist kostenlos und bleibt kostenlos.
-
-Home Health Overview is free and will remain free.
-
-[Buy me a coffee](https://buymeacoffee.com/sebasbe)
+These can return later as separate, explicit modules once the strict surplus
+core is stable.

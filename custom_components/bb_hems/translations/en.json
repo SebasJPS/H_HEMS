@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Set up BB HEMS",
-        "description": "Select sensors and switchable devices.",
+        "description": "Slim v1: smart meter, PV/BKW, PV battery, AC battery, pool, dehumidifier and start releases.",
         "data": {
           "name": "Name",
           "grid_power_sensor": "Current grid power",
@@ -12,82 +12,29 @@
           "grid_export_power_sensors": "Grid export sensors",
           "grid_signed_import_positive_sensors": "Grid signed: positive = import",
           "grid_signed_export_positive_sensors": "Grid signed: positive = export",
-          "grid_average_sensor": "15-minute grid average",
-          "grid_import_price_sensor": "Grid import price sensor",
-          "grid_export_price_sensor": "Grid export price sensor",
-          "pv_power_sensors": "PV / balcony power sensors",
-          "pv_source_profiles": "PV source profiles",
-          "pv_average_sensor": "15-minute PV average",
-          "pv_forecast_today_sensor": "PV forecast today",
-          "pv_forecast_next_hour_sensor": "PV forecast next hour",
-          "pv_forecast_next_3h_sensor": "PV forecast next 3 hours",
-          "pv_array_specs": "PV arrays",
-          "battery_soc_sensors": "Battery SoC sensors",
-          "battery_discharge_sensors": "Battery discharge sensors",
-          "battery_charge_sensors": "Battery charge sensors",
-          "battery_signed_discharge_positive_sensors": "Battery signed: positive = discharge",
-          "battery_signed_charge_positive_sensors": "Battery signed: positive = charge",
+          "pv_power_sensors": "PV/BKW power sensors",
+          "battery_soc_sensors": "PV battery SoC sensors",
+          "battery_discharge_sensors": "PV battery discharge sensors",
           "house_load_sensors": "House load sensors",
-          "ac_battery_profiles": "AC battery profiles",
-          "virtual_battery_charge_sensor": "Virtual battery charge",
-          "virtual_battery_discharge_sensor": "Virtual battery discharge",
-          "weather_state_sensor": "Weather state",
-          "cloud_sensor": "Cloud coverage",
-          "sunshine_sensor": "Sunshine duration",
-          "sun_entity": "Sun position",
-          "flexible_load_switches": "Flexible loads",
-          "flexible_load_power_sensors": "Flexible load power sensors",
-          "start_only_appliance_switches": "Start-only appliances",
-          "start_only_appliance_power_sensors": "Start-only appliance power sensors",
-          "device_profiles": "Device profiles",
-          "wallbox_switches": "Wallboxes",
-          "heat_pump_switches": "Heat pumps",
-          "heating_rod_switches": "Heating rods",
-          "heating_rod_power_sensors": "Heating rod power sensors",
-          "heating_rod_temperature_sensors": "Heating rod temperature sensors",
-          "heating_rod_target_temperatures": "Heating rod target temperatures"
+          "pool_switches": "Pool pump / pool heating",
+          "pool_power_sensors": "Pool power sensors",
+          "dehumidifier_switches": "Dehumidifier",
+          "dehumidifier_power_sensors": "Dehumidifier power sensors",
+          "start_only_appliance_switches": "Washing machine/dishwasher start releases",
+          "start_only_appliance_power_sensors": "Start release power sensors",
+          "ac_battery_profiles": "AC battery profile"
         },
         "data_description": {
-          "name": "Display name of this HEMS instance.",
-          "grid_power_sensor": "Current power at the grid connection in watts. Negative values usually mean export, positive values mean import.",
-          "grid_import_power_sensors": "Separate positive sensors for grid import in watts. Multiple sensors are summed.",
-          "grid_export_power_sensors": "Separate positive sensors for grid export in watts. Multiple sensors are summed.",
-          "grid_signed_import_positive_sensors": "Signed grid sensors where positive values mean import and negative values mean export.",
-          "grid_signed_export_positive_sensors": "Signed grid sensors where positive values mean export and negative values mean import.",
-          "grid_average_sensor": "Smoothed grid power, ideally a 15-minute average in watts. This avoids frequent switching.",
-          "grid_import_price_sensor": "Optional price per kWh for imported grid energy. BB HEMS uses the fallback value when no sensor is configured.",
-          "grid_export_price_sensor": "Optional price per kWh for exported energy. BB HEMS uses the fallback value when no sensor is configured.",
-          "pv_power_sensors": "One or more current power sensors for PV systems or balcony plants in watts. BB HEMS sums these values.",
-          "pv_source_profiles": "Optional JSON list of named PV sources with name, sensor, peak, azimuth, tilt and category. Example: [{\"name\":\"Garden balcony PV\",\"sensor\":\"sensor.bkw_garden_power\",\"peak\":800,\"azimuth\":220,\"tilt\":15,\"category\":\"balcony\"}]",
-          "pv_average_sensor": "Smoothed PV power, ideally a 15-minute average in watts.",
-          "pv_forecast_today_sensor": "Optional PV forecast for the remaining day or daily yield. Helps detect weak PV days.",
-          "pv_forecast_next_hour_sensor": "Optional PV power forecast for the next hour. Helps detect rising PV soon.",
-          "pv_forecast_next_3h_sensor": "Optional PV power forecast for the next 3 hours. Helps decide whether a better PV window is coming later.",
-          "pv_array_specs": "Optional PV surfaces as a list. Examples: South=180:30:4x430, Garage East=90:10:2x400 or 180:30:800. Format: Name=azimuth:tilt:modules x Wp or azimuth:tilt:Wp.",
-          "battery_soc_sensors": "Battery state-of-charge sensors in percent. With multiple batteries, BB HEMS uses the lowest SoC as protection value.",
-          "battery_discharge_sensors": "Current battery discharge power in watts. BB HEMS sums these values and stops flexible loads when discharge is too high.",
-          "battery_charge_sensors": "Current battery charge power in watts. From the configured minimum battery SoC, BB HEMS can conservatively plan part of this as usable surplus.",
-          "battery_signed_discharge_positive_sensors": "Signed battery sensors where positive values mean discharge and negative values mean charge.",
-          "battery_signed_charge_positive_sensors": "Signed battery sensors where positive values mean charge and negative values mean discharge.",
-          "house_load_sensors": "Positive house load sensors in watts. Multiple sensors are summed.",
-          "ac_battery_profiles": "Optional JSON list of controllable AC batteries such as EcoFlow Stream. Requires soc_sensor, charge_power_number and discharge_power_number; optional charge_power_sensor, discharge_power_sensor, min_soc, max_soc, reserve_soc, max_charge_power, max_discharge_power, control_interval_seconds and direction_switch_delay_seconds.",
-          "virtual_battery_charge_sensor": "Optional charge power sensor for a DIY battery without its own SoC.",
-          "virtual_battery_discharge_sensor": "Optional discharge power sensor for a DIY battery without its own SoC.",
-          "weather_state_sensor": "Weather state as a sensor or weather entity, for example sunny, partlycloudy or rainy.",
-          "cloud_sensor": "Cloud coverage in percent. Lower values make PV surplus more likely.",
-          "sunshine_sensor": "Sunshine duration or sunshine indicator. The value should increase when sunshine is currently available.",
-          "sun_entity": "Home Assistant sun entity, usually sun.sun. BB HEMS uses elevation and azimuth for the PV window.",
-          "flexible_load_switches": "Switchable loads that may be enabled during surplus, for example a dehumidifier.",
-          "flexible_load_power_sensors": "Optional power sensors for flexible loads in the same order as the switches. While a load is running, BB HEMS uses this real consumption instead of the global estimate.",
-          "start_only_appliance_switches": "Devices BB HEMS may only start, but should not turn off after that. Suitable for washing machines, dishwashers or dryers. Switch, input_boolean and button are supported.",
-          "start_only_appliance_power_sensors": "Optional power sensors in the same order. BB HEMS uses them to detect whether the program is actually running.",
-          "device_profiles": "Optional JSON device profiles with name, switch/button, category, power, priority, minimum runtime, cooldown, battery usage and control mode managed or start_only.",
-          "wallbox_switches": "Switchable wallboxes or charging-enable entities. Currently stored as a device group for later prioritization.",
-          "heat_pump_switches": "Switchable heat pumps or SG-ready enable entities. Currently stored as a device group for later prioritization.",
-          "heating_rod_switches": "Switchable heating rods or boiler-enable entities. BB HEMS treats them as surplus loads.",
-          "heating_rod_power_sensors": "Optional power sensors for heating rods in the same order as the switches.",
-          "heating_rod_temperature_sensors": "Optional temperature sensors for heating rods in the same order as the switches.",
-          "heating_rod_target_temperatures": "Optional target temperatures in the same order as the heating rods, for example 55, 28."
+          "grid_power_sensor": "Signed smart meter in watts. Positive = import, negative = export.",
+          "grid_import_power_sensors": "Separate positive sensors for grid import in watts.",
+          "grid_export_power_sensors": "Separate positive sensors for grid export in watts.",
+          "pv_power_sensors": "PV system and balcony PV. These values are displayed and not actively controlled.",
+          "battery_soc_sensors": "PV battery SoC. The AC battery may buffer additional PV export above this threshold.",
+          "battery_discharge_sensors": "PV battery discharge power. This is subtracted from the surplus budget.",
+          "pool_switches": "Pool has first surplus priority and is paused after manual stop.",
+          "dehumidifier_switches": "Dehumidifier only runs on real free surplus, without grid or battery.",
+          "start_only_appliance_switches": "Devices are only released/started. BB HEMS will not turn them off afterwards.",
+          "ac_battery_profiles": "JSON: [{\"name\":\"EcoFlow\",\"soc_sensor\":\"sensor.ecoflow_soc\",\"charge_power_number\":\"number.ecoflow_charge_w\",\"discharge_power_number\":\"number.ecoflow_discharge_w\",\"max_charge_power\":800,\"max_discharge_power\":800}]"
         }
       }
     }
@@ -95,410 +42,78 @@
   "options": {
     "step": {
       "init": {
-        "title": "Change BB HEMS sources",
-        "description": "Choose which source group you want to edit.",
+        "title": "Edit BB HEMS",
         "menu_options": {
-          "energy_sources": "Grid, PV and battery",
-          "weather_sources": "Sun",
-          "load_flexible": "Flexible loads",
-          "load_start_only": "Start-only appliances",
-          "load_heating_rods": "Heating rods",
-          "load_wallboxes": "Wallboxes",
-          "load_heat_pumps": "Heat pumps",
-          "load_advanced": "Advanced device profiles"
-        },
-        "menu_option_descriptions": {
-          "energy_sources": "Edit grid, PV sources, short PV forecasts, battery, house load and prices.",
-          "weather_sources": "Edit cloud coverage and sun position so BB HEMS can evaluate PV windows better.",
-          "load_flexible": "Edit normal loads that BB HEMS may turn on during surplus and turn off again when surplus is gone.",
-          "load_start_only": "Edit appliances BB HEMS may only start, such as washing machines, dishwashers or dryers.",
-          "load_heating_rods": "Edit heating rods, power sensors, temperature sensors and target temperatures.",
-          "load_wallboxes": "Edit wallbox switches or charging release entities.",
-          "load_heat_pumps": "Edit heat-pump switches or SG-ready release entities.",
-          "load_advanced": "Edit optional JSON profiles for priority, power, cooldown, minimum runtime and start-only behavior."
+          "energy": "Energy sources",
+          "loads": "Loads",
+          "ac_battery": "AC battery"
         }
       },
-      "energy_sources": {
-        "title": "Grid, PV and battery",
-        "description": "Configure the sensors BB HEMS uses for grid power, PV, battery state of charge, battery discharge and battery charging.",
+      "energy": {
+        "title": "Energy sources",
         "data": {
-          "name": "Name",
           "grid_power_sensor": "Current grid power",
           "grid_import_power_sensors": "Grid import sensors",
           "grid_export_power_sensors": "Grid export sensors",
           "grid_signed_import_positive_sensors": "Grid signed: positive = import",
           "grid_signed_export_positive_sensors": "Grid signed: positive = export",
-          "grid_average_sensor": "15-minute grid average",
-          "pv_power_sensors": "PV / balcony power sensors",
-          "pv_source_profiles": "PV source profiles",
-          "pv_average_sensor": "15-minute PV average",
-          "pv_forecast_today_sensor": "PV forecast today",
-          "pv_forecast_next_hour_sensor": "PV forecast next hour",
-          "pv_forecast_next_3h_sensor": "PV forecast next 3 hours",
-          "pv_array_specs": "PV arrays",
-          "battery_soc_sensors": "Battery SoC sensors",
-          "battery_discharge_sensors": "Battery discharge sensors",
-          "battery_charge_sensors": "Battery charge sensors",
-          "battery_signed_discharge_positive_sensors": "Battery signed: positive = discharge",
-          "battery_signed_charge_positive_sensors": "Battery signed: positive = charge",
-          "house_load_sensors": "House load sensors",
-          "ac_battery_profiles": "AC battery profiles",
-          "weather_state_sensor": "Weather state",
-          "cloud_sensor": "Cloud coverage",
-          "sunshine_sensor": "Sunshine duration",
-          "sun_entity": "Sun position",
-          "flexible_load_switches": "Flexible loads",
-          "flexible_load_power_sensors": "Flexible load power sensors",
-          "start_only_appliance_switches": "Start-only appliances",
-          "start_only_appliance_power_sensors": "Start-only appliance power sensors",
-          "device_profiles": "Device profiles",
-          "wallbox_switches": "Wallboxes",
-          "heat_pump_switches": "Heat pumps",
-          "heating_rod_switches": "Heating rods",
-          "heating_rod_power_sensors": "Heating rod power sensors",
-          "heating_rod_temperature_sensors": "Heating rod temperature sensors",
-          "heating_rod_target_temperatures": "Heating rod target temperatures"
-        },
-        "data_description": {
-          "name": "Display name of this HEMS instance.",
-          "grid_power_sensor": "Current power at the grid connection in watts. Negative values usually mean export, positive values mean import.",
-          "grid_import_power_sensors": "Separate positive sensors for grid import in watts. Multiple sensors are summed.",
-          "grid_export_power_sensors": "Separate positive sensors for grid export in watts. Multiple sensors are summed.",
-          "grid_signed_import_positive_sensors": "Signed grid sensors where positive values mean import and negative values mean export.",
-          "grid_signed_export_positive_sensors": "Signed grid sensors where positive values mean export and negative values mean import.",
-          "grid_average_sensor": "Smoothed grid power, ideally a 15-minute average in watts. This avoids frequent switching.",
-          "pv_power_sensors": "One or more current power sensors for PV systems or balcony plants in watts. BB HEMS sums these values.",
-          "pv_source_profiles": "Optional JSON list of named PV sources with name, sensor, peak, azimuth, tilt and category. Example: [{\"name\":\"Garden balcony PV\",\"sensor\":\"sensor.bkw_garden_power\",\"peak\":800,\"azimuth\":220,\"tilt\":15,\"category\":\"balcony\"}]",
-          "pv_average_sensor": "Smoothed PV power, ideally a 15-minute average in watts.",
-          "pv_forecast_today_sensor": "Optional PV forecast for the remaining day or daily yield. Helps detect weak PV days.",
-          "pv_forecast_next_hour_sensor": "Optional PV power forecast for the next hour. Helps detect rising PV soon.",
-          "pv_forecast_next_3h_sensor": "Optional PV power forecast for the next 3 hours. Helps decide whether a better PV window is coming later.",
-          "pv_array_specs": "Optional PV surfaces as a list. Examples: South=180:30:4x430, Garage East=90:10:2x400 or 180:30:800. Format: Name=azimuth:tilt:modules x Wp or azimuth:tilt:Wp.",
-          "battery_soc_sensors": "Battery state-of-charge sensors in percent. With multiple batteries, BB HEMS uses the lowest SoC as protection value.",
-          "battery_discharge_sensors": "Current battery discharge power in watts. BB HEMS sums these values and stops flexible loads when discharge is too high.",
-          "battery_charge_sensors": "Current battery charge power in watts. From the configured minimum battery SoC, BB HEMS can conservatively plan part of this as usable surplus.",
-          "battery_signed_discharge_positive_sensors": "Signed battery sensors where positive values mean discharge and negative values mean charge.",
-          "battery_signed_charge_positive_sensors": "Signed battery sensors where positive values mean charge and negative values mean discharge.",
-          "house_load_sensors": "Positive house load sensors in watts. Multiple sensors are summed.",
-          "ac_battery_profiles": "Optional JSON list of controllable AC batteries such as EcoFlow Stream. Requires soc_sensor, charge_power_number and discharge_power_number; optional charge_power_sensor, discharge_power_sensor, min_soc, max_soc, reserve_soc, max_charge_power, max_discharge_power, control_interval_seconds and direction_switch_delay_seconds.",
-          "weather_state_sensor": "Weather state as a sensor or weather entity, for example sunny, partlycloudy or rainy.",
-          "cloud_sensor": "Cloud coverage in percent. Lower values make PV surplus more likely.",
-          "sunshine_sensor": "Sunshine duration or sunshine indicator. The value should increase when sunshine is currently available.",
-          "sun_entity": "Home Assistant sun entity, usually sun.sun. BB HEMS uses elevation and azimuth for the PV window.",
-          "flexible_load_switches": "Switchable loads that may be enabled during surplus, for example a dehumidifier.",
-          "flexible_load_power_sensors": "Optional power sensors for flexible loads in the same order as the switches. While a load is running, BB HEMS uses this real consumption instead of the global estimate.",
-          "start_only_appliance_switches": "Devices BB HEMS may only start, but should not turn off after that. Suitable for washing machines, dishwashers or dryers. Switch, input_boolean and button are supported.",
-          "start_only_appliance_power_sensors": "Optional power sensors in the same order. BB HEMS uses them to detect whether the program is actually running.",
-          "device_profiles": "Optional JSON device profiles with name, switch/button, category, power, priority, minimum runtime, cooldown, battery usage and control mode managed or start_only.",
-          "wallbox_switches": "Switchable wallboxes or charging-enable entities. Currently stored as a device group for later prioritization.",
-          "heat_pump_switches": "Switchable heat pumps or SG-ready enable entities. Currently stored as a device group for later prioritization.",
-          "heating_rod_switches": "Switchable heating rods or boiler-enable entities. BB HEMS treats them as surplus loads.",
-          "heating_rod_power_sensors": "Optional power sensors for heating rods in the same order as the switches.",
-          "heating_rod_temperature_sensors": "Optional temperature sensors for heating rods in the same order as the switches.",
-          "heating_rod_target_temperatures": "Optional target temperatures in the same order as the heating rods, for example 55, 28."
+          "pv_power_sensors": "PV/BKW power sensors",
+          "battery_soc_sensors": "PV battery SoC sensors",
+          "battery_discharge_sensors": "PV battery discharge sensors",
+          "house_load_sensors": "House load sensors"
         }
       },
-      "weather_sources": {
-        "title": "Sun",
-        "description": "These sensors help BB HEMS evaluate PV surplus using clouds and sun position.",
+      "loads": {
+        "title": "Loads",
         "data": {
-          "cloud_sensor": "Cloud coverage",
-          "sun_entity": "Sun position"
-        },
-        "data_description": {
-          "cloud_sensor": "Cloud coverage in percent. Lower values make PV surplus more likely.",
-          "sun_entity": "Home Assistant sun entity, usually sun.sun. BB HEMS uses elevation and azimuth for the PV window."
+          "pool_switches": "Pool pump / pool heating",
+          "pool_power_sensors": "Pool power sensors",
+          "dehumidifier_switches": "Dehumidifier",
+          "dehumidifier_power_sensors": "Dehumidifier power sensors",
+          "start_only_appliance_switches": "Washing machine/dishwasher start releases",
+          "start_only_appliance_power_sensors": "Start release power sensors"
         }
       },
-      "load_sources": {
-        "title": "Loads and power sensors",
-        "description": "Configure switchable loads and their real power sensors. Power sensors must be in the same order as the switches.",
+      "ac_battery": {
+        "title": "AC battery",
         "data": {
-          "flexible_load_switches": "Flexible loads",
-          "flexible_load_power_sensors": "Flexible load power sensors",
-          "start_only_appliance_switches": "Start-only appliances",
-          "start_only_appliance_power_sensors": "Start-only appliance power sensors",
-          "device_profiles": "Device profiles",
-          "wallbox_switches": "Wallboxes",
-          "heat_pump_switches": "Heat pumps",
-          "heating_rod_switches": "Heating rods",
-          "heating_rod_power_sensors": "Heating rod power sensors"
-        },
-        "data_description": {
-          "flexible_load_switches": "Switchable loads that may be enabled during surplus, for example a dehumidifier.",
-          "flexible_load_power_sensors": "Optional power sensors for flexible loads in the same order as the switches. While a load is running, BB HEMS uses this real consumption instead of the global estimate.",
-          "start_only_appliance_switches": "Devices BB HEMS may only start, but should not turn off after that. Suitable for washing machines, dishwashers or dryers. Switch, input_boolean and button are supported.",
-          "start_only_appliance_power_sensors": "Optional power sensors in the same order. BB HEMS uses them to detect whether the program is actually running.",
-          "device_profiles": "Optional JSON device profiles with name, switch/button, category, power, priority, minimum runtime, cooldown, battery usage and control mode managed or start_only.",
-          "wallbox_switches": "Switchable wallboxes or charging-enable entities. Currently stored as a device group for later prioritization.",
-          "heat_pump_switches": "Switchable heat pumps or SG-ready enable entities. Currently stored as a device group for later prioritization.",
-          "heating_rod_switches": "Switchable heating rods or boiler-enable entities. BB HEMS treats them as surplus loads.",
-          "heating_rod_power_sensors": "Optional power sensors for heating rods in the same order as the switches."
-        }
-      },
-      "load_flexible": {
-        "title": "Flexible loads",
-        "description": "BB HEMS may turn these loads on during surplus and turn them off again later.",
-        "data": {
-          "flexible_load_switches": "Flexible loads",
-          "flexible_load_power_sensors": "Flexible load power sensors"
-        },
-        "data_description": {
-          "flexible_load_switches": "Switchable loads that may be enabled during surplus, for example a dehumidifier.",
-          "flexible_load_power_sensors": "Optional power sensors in the same order. While a load is running, BB HEMS uses this real consumption instead of the global estimate."
-        }
-      },
-      "load_start_only": {
-        "title": "Start-only appliances",
-        "description": "BB HEMS starts these appliances only when surplus fits. After that, BB HEMS will not turn them off automatically.",
-        "data": {
-          "start_only_appliance_switches": "Start-only appliances",
-          "start_only_appliance_power_sensors": "Start-only appliance power sensors"
-        },
-        "data_description": {
-          "start_only_appliance_switches": "Switch, input_boolean or button. Example: switch.dishwasher_start. BB HEMS starts the appliance only and will not turn it off afterwards.",
-          "start_only_appliance_power_sensors": "Optional. With a power sensor, BB HEMS can detect whether the program is actually running. Without a power sensor, BB HEMS blocks conservatively after start so the appliance is not started again."
-        }
-      },
-      "load_heating_rods": {
-        "title": "Heating rods",
-        "description": "Heating rods are surplus loads and can optionally be limited by target temperature.",
-        "data": {
-          "heating_rod_switches": "Heating rods",
-          "heating_rod_power_sensors": "Heating rod power sensors",
-          "heating_rod_temperature_sensors": "Heating rod temperature sensors",
-          "heating_rod_target_temperatures": "Heating rod target temperatures"
-        },
-        "data_description": {
-          "heating_rod_switches": "Switchable heating rods or boiler/pool release entities.",
-          "heating_rod_power_sensors": "Optional power sensors in the same order as the heating rods.",
-          "heating_rod_temperature_sensors": "Optional temperature sensors in the same order as the heating rods.",
-          "heating_rod_target_temperatures": "Optional target temperatures in the same order, for example 55, 28. BB HEMS turns the heating rod off when the target temperature is reached."
-        }
-      },
-      "load_wallboxes": {
-        "title": "Wallboxes",
-        "description": "Configure wallbox switches or charging release entities here.",
-        "data": {
-          "wallbox_switches": "Wallboxes"
-        },
-        "data_description": {
-          "wallbox_switches": "Switchable wallboxes or charging release entities. Detailed charge-current control follows later."
-        }
-      },
-      "load_heat_pumps": {
-        "title": "Heat pumps",
-        "description": "Configure heat-pump switches or SG-ready release entities here.",
-        "data": {
-          "heat_pump_switches": "Heat pumps"
-        },
-        "data_description": {
-          "heat_pump_switches": "Switchable heat pumps or SG-ready release entities. Comfort bands and thermal buffers follow later."
-        }
-      },
-      "load_advanced": {
-        "title": "Advanced device profiles",
-        "description": "Optional for devices that need per-device priority, power, battery usage, cooldown, minimum runtime or start-only behavior.",
-        "data": {
-          "device_profiles": "Device profiles"
-        },
-        "data_description": {
-          "device_profiles": "JSON list. Example: [{\"name\":\"Dishwasher\",\"switch\":\"switch.dishwasher_start\",\"category\":\"appliance\",\"power\":1200,\"control_mode\":\"start_only\",\"priority\":40,\"cooldown\":720,\"allow_battery\":false}]"
+          "ac_battery_profiles": "AC battery profile"
         }
       }
     }
   },
   "entity": {
     "sensor": {
-      "energy_mode": {
-        "name": "Energy mode"
-      },
-      "grid_power": {
-        "name": "Current grid power"
-      },
-      "grid_import_power": {
-        "name": "Grid import"
-      },
-      "grid_export_power": {
-        "name": "Grid export"
-      },
-      "grid_average": {
-        "name": "Grid power 15 min"
-      },
-      "pv_power_total": {
-        "name": "PV power total"
-      },
-      "pv_average": {
-        "name": "PV power 15 min"
-      },
-      "pv_window": {
-        "name": "PV window"
-      },
-      "pv_forecast_next_3h": {
-        "name": "PV forecast next 3 h"
-      },
-      "sun_elevation": {
-        "name": "Sun elevation"
-      },
-      "battery_soc_min": {
-        "name": "Battery SoC minimum"
-      },
-      "battery_discharge_total": {
-        "name": "Battery discharge total"
-      },
-      "battery_charge_total": {
-        "name": "Battery charge total"
-      },
-      "usable_battery_charge": {
-        "name": "Usable battery charge"
-      },
-      "house_load_total": {
-        "name": "House load total"
-      },
-      "grid_import_price": {
-        "name": "Grid import price"
-      },
-      "grid_export_price": {
-        "name": "Grid export price"
-      },
-      "savings_price": {
-        "name": "HEMS savings per kWh"
-      },
-      "virtual_battery_soc": {
-        "name": "Virtual battery SoC"
-      },
-      "virtual_battery_energy": {
-        "name": "Virtual battery energy"
-      },
-      "virtual_battery_usable_energy": {
-        "name": "Virtual battery usable energy"
-      },
-      "virtual_battery_confidence": {
-        "name": "Virtual battery confidence"
-      },
-      "available_surplus_budget": {
-        "name": "Available surplus budget"
-      },
-      "scheduled_surplus_power": {
-        "name": "Scheduled surplus power"
-      },
-      "shifted_energy_today": {
-        "name": "HEMS shifted energy today"
-      },
-      "estimated_savings_today": {
-        "name": "HEMS savings today"
-      },
-      "shifted_energy_total": {
-        "name": "HEMS shifted energy total"
-      },
-      "learning_samples": {
-        "name": "HEMS learning samples"
-      },
-      "seasonal_success_rate": {
-        "name": "HEMS seasonal success rate"
-      }
+      "energy_mode": {"name": "Energy mode"},
+      "grid_power": {"name": "Current grid power"},
+      "grid_import_power": {"name": "Grid import"},
+      "grid_export_power": {"name": "Grid export"},
+      "pv_power_total": {"name": "PV/BKW power total"},
+      "battery_soc_min": {"name": "PV battery SoC"},
+      "battery_discharge_total": {"name": "PV battery discharge"},
+      "house_load_total": {"name": "House load"},
+      "available_surplus_budget": {"name": "Free surplus budget"},
+      "scheduled_surplus_power": {"name": "Scheduled surplus power"}
+    },
+    "binary_sensor": {
+      "surplus_available": {"name": "Surplus available"},
+      "flexible_loads_allowed": {"name": "Loads released"}
     },
     "number": {
-      "grid_tolerance_w": {
-        "name": "Strict grid tolerance"
-      },
-      "pv_battery_ac_charge_threshold_soc": {
-        "name": "AC battery charge from PV battery SoC"
-      },
-      "manual_pause_hours": {
-        "name": "Manual pause"
-      },
-      "ac_battery_night_discharge_w": {
-        "name": "AC battery night discharge"
-      },
-      "min_battery_soc": {
-        "name": "Minimum SoC"
-      },
-      "protect_battery_soc": {
-        "name": "Battery protection SoC"
-      },
-      "battery_charge_share_soc": {
-        "name": "Share battery charging from SoC"
-      },
-      "battery_charge_reserve_good": {
-        "name": "Battery reserve with weather release"
-      },
-      "battery_charge_reserve_cloudy": {
-        "name": "Battery reserve when cloudy"
-      },
-      "pv_threshold": {
-        "name": "Current PV threshold"
-      },
-      "pv_avg_threshold": {
-        "name": "PV threshold 15 min"
-      },
-      "grid_import_limit": {
-        "name": "Grid import tolerance"
-      },
-      "grid_hard_import_limit": {
-        "name": "Hard grid import"
-      },
-      "battery_discharge_limit": {
-        "name": "Battery discharge limit"
-      },
-      "flexible_load_power": {
-        "name": "Fallback flexible load power"
-      },
-      "start_only_appliance_power": {
-        "name": "Fallback start-only appliance power"
-      },
-      "heating_rod_power": {
-        "name": "Fallback heating rod power"
-      },
-      "grid_import_price": {
-        "name": "Fallback grid import price"
-      },
-      "grid_export_price": {
-        "name": "Fallback grid export price"
-      },
-      "heating_rod_temperature_hysteresis": {
-        "name": "Heating rod temperature hysteresis"
-      },
-      "virtual_battery_capacity": {
-        "name": "Virtual battery capacity"
-      },
-      "virtual_battery_min_soc": {
-        "name": "Virtual battery min SoC"
-      },
-      "virtual_battery_max_soc": {
-        "name": "Virtual battery max SoC"
-      },
-      "virtual_battery_manual_soc": {
-        "name": "Virtual battery manual SoC"
-      },
-      "virtual_battery_charge_efficiency": {
-        "name": "Virtual battery charge efficiency"
-      },
-      "virtual_battery_discharge_efficiency": {
-        "name": "Virtual battery discharge efficiency"
-      }
+      "grid_tolerance_w": {"name": "Strict grid tolerance"},
+      "pv_battery_ac_charge_threshold_soc": {"name": "AC battery charge from PV battery SoC"},
+      "manual_pause_hours": {"name": "Manual pause"},
+      "ac_battery_night_discharge_w": {"name": "AC battery night discharge"},
+      "pool_power": {"name": "Fallback pool power"},
+      "dehumidifier_power": {"name": "Fallback dehumidifier power"},
+      "start_only_appliance_power": {"name": "Fallback start release power"}
     },
     "select": {
-      "mode": {
-        "name": "Operating mode"
-      },
-      "response_profile": {
-        "name": "Response profile"
-      }
+      "mode": {"name": "Operating mode"}
     },
     "switch": {
-      "battery_protection_enabled": {
-        "name": "Battery protection enabled"
-      },
-      "dashboard_enabled": {
-        "name": "Dashboard enabled"
-      },
-      "virtual_battery_enabled": {
-        "name": "Virtual battery enabled"
-      },
-      "use_virtual_battery": {
-        "name": "Use virtual battery in HEMS"
-      }
+      "auto_enabled": {"name": "Automation enabled"},
+      "dashboard_enabled": {"name": "Dashboard enabled"}
     }
   }
 }

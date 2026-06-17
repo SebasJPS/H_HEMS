@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "BB HEMS einrichten",
-        "description": "Wähle die Sensoren und schaltbaren Geräte aus. PV, Batterien und Verbraucher können als Mehrfachauswahl gepflegt werden.",
+        "description": "Schlanke v1: Smartmeter, PV/BKW, PV-Batterie, AC-Akku, Pool, Lufttrockner und Startfreigaben.",
         "data": {
           "name": "Name",
           "grid_power_sensor": "Netzleistung aktuell",
@@ -12,82 +12,29 @@
           "grid_export_power_sensors": "Einspeise-Sensoren",
           "grid_signed_import_positive_sensors": "Netz signed: Plus = Bezug",
           "grid_signed_export_positive_sensors": "Netz signed: Plus = Einspeisung",
-          "grid_average_sensor": "Netzleistung 15-Minuten-Mittel",
-          "grid_import_price_sensor": "Stromkosten-Sensor Netzbezug",
-          "grid_export_price_sensor": "Einspeisevergütung-Sensor",
-          "pv_power_sensors": "PV-/Balkonkraftwerk-Leistungssensoren",
-          "pv_source_profiles": "PV-Quellenprofile",
-          "pv_average_sensor": "PV 15-Minuten-Mittel",
-          "pv_forecast_today_sensor": "PV-Forecast heute",
-          "pv_forecast_next_hour_sensor": "PV-Forecast nächste Stunde",
-          "pv_forecast_next_3h_sensor": "PV-Forecast nächste 3 Stunden",
-          "pv_array_specs": "PV-Flächen",
-          "battery_soc_sensors": "Batterie-SoC-Sensoren",
-          "battery_discharge_sensors": "Batterie-Entladungssensoren",
-          "battery_charge_sensors": "Batterie-Ladungssensoren",
-          "battery_signed_discharge_positive_sensors": "Batterie signed: Plus = Entladung",
-          "battery_signed_charge_positive_sensors": "Batterie signed: Plus = Ladung",
+          "pv_power_sensors": "PV-/BKW-Leistungssensoren",
+          "battery_soc_sensors": "PV-Batterie-SoC-Sensoren",
+          "battery_discharge_sensors": "PV-Batterie-Entladungssensoren",
           "house_load_sensors": "Hauslast-Sensoren",
-          "ac_battery_profiles": "AC-Akku-Profile",
-          "virtual_battery_charge_sensor": "Virtuelle Batterie Ladung",
-          "virtual_battery_discharge_sensor": "Virtuelle Batterie Entladung",
-          "weather_state_sensor": "Wetterzustand",
-          "cloud_sensor": "Bewölkungsgrad",
-          "sunshine_sensor": "Sonnenscheindauer",
-          "sun_entity": "Sonnenstand",
-          "flexible_load_switches": "Flexible Verbraucher",
-          "flexible_load_power_sensors": "Leistungssensoren flexible Verbraucher",
-          "start_only_appliance_switches": "Nur starten: Waschmaschine, Geschirrspüler, Trockner",
-          "start_only_appliance_power_sensors": "Leistungssensoren nur starten",
-          "device_profiles": "Geräteprofile",
-          "wallbox_switches": "Wallboxen",
-          "heat_pump_switches": "Wärmepumpen",
-          "heating_rod_switches": "Heizstäbe",
-          "heating_rod_power_sensors": "Leistungssensoren Heizstäbe",
-          "heating_rod_temperature_sensors": "Temperatursensoren Heizstäbe",
-          "heating_rod_target_temperatures": "Zieltemperaturen Heizstäbe"
+          "pool_switches": "Poolpumpe / Poolheizung",
+          "pool_power_sensors": "Leistungssensoren Pool",
+          "dehumidifier_switches": "Lufttrockner",
+          "dehumidifier_power_sensors": "Leistungssensoren Lufttrockner",
+          "start_only_appliance_switches": "Startfreigaben Waschmaschine/Geschirrspüler",
+          "start_only_appliance_power_sensors": "Leistungssensoren Startfreigaben",
+          "ac_battery_profiles": "AC-Akku-Profil"
         },
         "data_description": {
-          "name": "Anzeigename der HEMS-Instanz.",
-          "grid_power_sensor": "Aktuelle Leistung am Netzanschluss in Watt. Negative Werte bedeuten typischerweise Einspeisung, positive Werte Netzbezug.",
-          "grid_import_power_sensors": "Getrennte positive Sensoren für Netzbezug in Watt. Mehrere Sensoren werden summiert.",
-          "grid_export_power_sensors": "Getrennte positive Sensoren für Einspeisung in Watt. Mehrere Sensoren werden summiert.",
-          "grid_signed_import_positive_sensors": "Signed Netzsensoren, bei denen positive Werte Bezug und negative Werte Einspeisung bedeuten.",
-          "grid_signed_export_positive_sensors": "Signed Netzsensoren, bei denen positive Werte Einspeisung und negative Werte Bezug bedeuten.",
-          "grid_average_sensor": "Geglätteter Netzleistungswert, idealerweise 15-Minuten-Mittel in Watt. Hilft gegen häufiges Ein-/Ausschalten.",
-          "grid_import_price_sensor": "Optionaler Preis pro kWh für Strom aus dem Netz. Ohne Sensor nutzt BB HEMS den Fallback-Wert.",
-          "grid_export_price_sensor": "Optionaler Preis pro kWh für eingespeisten Strom. Ohne Sensor nutzt BB HEMS den Fallback-Wert.",
-          "pv_power_sensors": "Ein oder mehrere aktuelle Leistungssensoren deiner PV-Anlagen oder Balkonkraftwerke in Watt. BB HEMS summiert diese Werte.",
-          "pv_source_profiles": "Optionale JSON-Liste benannter PV-Quellen mit name, sensor, peak, azimuth, tilt und category. Beispiel: [{\"name\":\"BKW Garten\",\"sensor\":\"sensor.bkw_garten_power\",\"peak\":800,\"azimuth\":220,\"tilt\":15,\"category\":\"balcony\"}]",
-          "pv_average_sensor": "Geglättete PV-Leistung, idealerweise 15-Minuten-Mittel in Watt.",
-          "pv_forecast_today_sensor": "Optionaler PV-Forecast für den restlichen Tag oder Tagesertrag. Hilft, schwache Tage zu erkennen.",
-          "pv_forecast_next_hour_sensor": "Optionaler PV-Leistungsforecast für die nächste Stunde. Hilft zu erkennen, ob PV gleich steigt.",
-          "pv_forecast_next_3h_sensor": "Optionaler PV-Leistungsforecast für die nächsten 3 Stunden. Hilft zu entscheiden, ob später ein besseres PV-Fenster kommt.",
-          "pv_array_specs": "Optionale PV-Flächen als Liste. Beispiele: Süd=180:30:4x430, Garage Ost=90:10:2x400 oder 180:30:800. Format: Name=Azimut:Neigung:Module x Wp oder Azimut:Neigung:Wp.",
-          "battery_soc_sensors": "SoC-Sensoren deiner Batterien in Prozent. Bei mehreren Batterien nutzt BB HEMS den niedrigsten SoC als Schutzwert.",
-          "battery_discharge_sensors": "Aktuelle Entladeleistung der Batterien in Watt. BB HEMS summiert diese Werte und stoppt flexible Lasten bei zu hoher Entladung.",
-          "battery_charge_sensors": "Aktuelle Ladeleistung der Batterien in Watt. Ab dem eingestellten Mindest-SoC kann BB HEMS einen konservativen Teil davon als nutzbaren Überschuss einplanen.",
-          "battery_signed_discharge_positive_sensors": "Signed Batterie-Sensoren, bei denen positive Werte Entladung und negative Werte Ladung bedeuten.",
-          "battery_signed_charge_positive_sensors": "Signed Batterie-Sensoren, bei denen positive Werte Ladung und negative Werte Entladung bedeuten.",
-          "house_load_sensors": "Positive Hauslast- oder Load-Sensoren in Watt. Mehrere Sensoren werden summiert.",
-          "ac_battery_profiles": "Optionale JSON-Liste steuerbarer AC-Akkus wie EcoFlow Stream. Benötigt soc_sensor, charge_power_number und discharge_power_number; optional charge_power_sensor, discharge_power_sensor, min_soc, max_soc, reserve_soc, max_charge_power, max_discharge_power, control_interval_seconds und direction_switch_delay_seconds.",
-          "virtual_battery_charge_sensor": "Optionaler Ladeleistungssensor für eine selbstgebaute Batterie ohne eigenen SoC.",
-          "virtual_battery_discharge_sensor": "Optionaler Entladeleistungssensor für eine selbstgebaute Batterie ohne eigenen SoC.",
-          "weather_state_sensor": "Wetterzustand als Sensor oder Weather-Entität, z.B. sunny, partlycloudy, rainy oder deutsche Zustände.",
-          "cloud_sensor": "Bewölkung in Prozent. Niedrige Werte machen PV-Überschuss wahrscheinlicher.",
-          "sunshine_sensor": "Sonnenscheindauer oder Sonnenindikator. Der Wert sollte größer werden, wenn aktuell Sonne verfügbar ist.",
-          "sun_entity": "Home-Assistant-Sonne, meist sun.sun. BB HEMS nutzt Elevation und Azimut für das PV-Fenster.",
-          "flexible_load_switches": "Schaltbare Verbraucher, die bei Überschuss freigegeben werden dürfen, z.B. Luftentfeuchter.",
-          "flexible_load_power_sensors": "Optionale Leistungssensoren der flexiblen Verbraucher in gleicher Reihenfolge wie die Schalter. Wenn ein Verbraucher läuft, nutzt BB HEMS diesen echten Verbrauch statt des pauschalen Schätzwerts.",
-          "start_only_appliance_switches": "Geräte, die HEMS nur starten darf, aber danach nicht ausschalten soll. Geeignet für Waschmaschine, Geschirrspüler oder Trockner. Switch, input_boolean und button sind möglich.",
-          "start_only_appliance_power_sensors": "Optionale Leistungssensoren in gleicher Reihenfolge. Damit erkennt BB HEMS, ob das Programm wirklich läuft.",
-          "device_profiles": "Optionale JSON-Geräteprofile mit Name, Schalter/Button, Kategorie, Leistung, Priorität, Mindestlaufzeit, Cooldown, Batterie-Nutzung und Steuerungsart managed oder start_only.",
-          "wallbox_switches": "Schaltbare Wallboxen oder Ladefreigaben. Wird aktuell als Gerätegruppe erfasst und später priorisiert.",
-          "heat_pump_switches": "Schaltbare Wärmepumpen oder SG-Ready-Freigaben. Wird aktuell als Gerätegruppe erfasst und später priorisiert.",
-          "heating_rod_switches": "Schaltbare Heizstäbe oder Boiler-Freigaben. BB HEMS behandelt sie als Überschussverbraucher.",
-          "heating_rod_power_sensors": "Optionale Leistungssensoren der Heizstäbe in gleicher Reihenfolge wie die Schalter.",
-          "heating_rod_temperature_sensors": "Optionale Temperatursensoren der Heizstäbe in gleicher Reihenfolge wie die Schalter.",
-          "heating_rod_target_temperatures": "Optionale Zieltemperaturen in gleicher Reihenfolge wie die Heizstäbe, z.B. 55, 28."
+          "grid_power_sensor": "Signed Smartmeter in Watt. Positiv = Bezug, negativ = Einspeisung.",
+          "grid_import_power_sensors": "Getrennte positive Sensoren für Netzbezug in Watt.",
+          "grid_export_power_sensors": "Getrennte positive Sensoren für Einspeisung in Watt.",
+          "pv_power_sensors": "PV-Anlage und Balkonkraftwerk. Diese Werte werden nur angezeigt und nicht künstlich geregelt.",
+          "battery_soc_sensors": "SoC der PV-Batterie. Ab diesem Wert darf der AC-Akku zusätzlich PV-Export puffern.",
+          "battery_discharge_sensors": "Entladeleistung der PV-Batterie. Diese Leistung wird vom Überschussbudget abgezogen.",
+          "pool_switches": "Pool darf bei echtem Überschuss zuerst laufen und wird bei manuellem Stopp pausiert.",
+          "dehumidifier_switches": "Lufttrockner läuft nur bei echtem Gratis-Überschuss, ohne Netz und ohne Akku.",
+          "start_only_appliance_switches": "Geräte werden nur freigegeben/gestartet. BB HEMS schaltet sie danach nicht automatisch aus.",
+          "ac_battery_profiles": "JSON: [{\"name\":\"EcoFlow\",\"soc_sensor\":\"sensor.ecoflow_soc\",\"charge_power_number\":\"number.ecoflow_charge_w\",\"discharge_power_number\":\"number.ecoflow_discharge_w\",\"max_charge_power\":800,\"max_discharge_power\":800}]"
         }
       }
     }
@@ -95,442 +42,78 @@
   "options": {
     "step": {
       "init": {
-        "title": "BB HEMS Quellen ändern",
-        "description": "Wähle, welche Quellgruppe du bearbeiten möchtest.",
+        "title": "BB HEMS bearbeiten",
         "menu_options": {
-          "energy_sources": "Netz, PV und Batterie",
-          "weather_sources": "Sonne",
-          "load_flexible": "Flexible Verbraucher",
-          "load_start_only": "Nur starten: Waschmaschine, Geschirrspüler, Trockner",
-          "load_heating_rods": "Heizstäbe",
-          "load_wallboxes": "Wallboxen",
-          "load_heat_pumps": "Wärmepumpen",
-          "load_advanced": "Erweiterte Geräteprofile"
-        },
-        "menu_option_descriptions": {
-          "energy_sources": "Netz, PV-Quellen, kurze PV-Forecasts, Batterie, Hauslast und Preise bearbeiten.",
-          "weather_sources": "Bewölkung und Sonnenstand bearbeiten, damit BB HEMS PV-Fenster besser einschätzen kann.",
-          "load_flexible": "Normale Verbraucher bearbeiten, die BB HEMS bei Überschuss einschalten und bei fehlendem Überschuss wieder ausschalten darf.",
-          "load_start_only": "Geräte bearbeiten, die BB HEMS nur starten darf. Geeignet für Waschmaschine, Geschirrspüler oder Trockner.",
-          "load_heating_rods": "Heizstäbe, Leistungssensoren, Temperatursensoren und Zieltemperaturen bearbeiten.",
-          "load_wallboxes": "Wallbox-Schalter oder Ladefreigaben bearbeiten.",
-          "load_heat_pumps": "Wärmepumpen-Schalter oder SG-Ready-Freigaben bearbeiten.",
-          "load_advanced": "Optionale JSON-Profile für Priorität, Leistung, Cooldown, Mindestlaufzeit und Start-only-Verhalten bearbeiten."
+          "energy": "Energiequellen",
+          "loads": "Verbraucher",
+          "ac_battery": "AC-Akku"
         }
       },
-      "energy_sources": {
-        "title": "Netz, PV und Batterie",
-        "description": "Hier werden die Sensoren eingetragen, die BB HEMS für Netzleistung, PV, Batteriestand, Batterie-Entladung und Batterie-Ladung nutzt.",
+      "energy": {
+        "title": "Energiequellen",
         "data": {
-          "name": "Name",
           "grid_power_sensor": "Netzleistung aktuell",
           "grid_import_power_sensors": "Netzbezug-Sensoren",
           "grid_export_power_sensors": "Einspeise-Sensoren",
           "grid_signed_import_positive_sensors": "Netz signed: Plus = Bezug",
           "grid_signed_export_positive_sensors": "Netz signed: Plus = Einspeisung",
-          "grid_average_sensor": "Netzleistung 15-Minuten-Mittel",
-          "pv_power_sensors": "PV-/Balkonkraftwerk-Leistungssensoren",
-          "pv_source_profiles": "PV-Quellenprofile",
-          "pv_average_sensor": "PV 15-Minuten-Mittel",
-          "pv_forecast_today_sensor": "PV-Forecast heute",
-          "pv_forecast_next_hour_sensor": "PV-Forecast nächste Stunde",
-          "pv_forecast_next_3h_sensor": "PV-Forecast nächste 3 Stunden",
-          "pv_array_specs": "PV-Flächen",
-          "battery_soc_sensors": "Batterie-SoC-Sensoren",
-          "battery_discharge_sensors": "Batterie-Entladungssensoren",
-          "battery_charge_sensors": "Batterie-Ladungssensoren",
-          "battery_signed_discharge_positive_sensors": "Batterie signed: Plus = Entladung",
-          "battery_signed_charge_positive_sensors": "Batterie signed: Plus = Ladung",
-          "house_load_sensors": "Hauslast-Sensoren",
-          "ac_battery_profiles": "AC-Akku-Profile",
-          "weather_state_sensor": "Wetterzustand",
-          "cloud_sensor": "Bewölkungsgrad",
-          "sunshine_sensor": "Sonnenscheindauer",
-          "sun_entity": "Sonnenstand",
-          "flexible_load_switches": "Flexible Verbraucher",
-          "flexible_load_power_sensors": "Leistungssensoren flexible Verbraucher",
-          "start_only_appliance_switches": "Nur starten: Waschmaschine, Geschirrspüler, Trockner",
-          "start_only_appliance_power_sensors": "Leistungssensoren nur starten",
-          "device_profiles": "Geräteprofile",
-          "wallbox_switches": "Wallboxen",
-          "heat_pump_switches": "Wärmepumpen",
-          "heating_rod_switches": "Heizstäbe",
-          "heating_rod_power_sensors": "Leistungssensoren Heizstäbe",
-          "heating_rod_temperature_sensors": "Temperatursensoren Heizstäbe",
-          "heating_rod_target_temperatures": "Zieltemperaturen Heizstäbe"
-        },
-        "data_description": {
-          "name": "Anzeigename der HEMS-Instanz.",
-          "grid_power_sensor": "Aktuelle Leistung am Netzanschluss in Watt. Negative Werte bedeuten typischerweise Einspeisung, positive Werte Netzbezug.",
-          "grid_import_power_sensors": "Getrennte positive Sensoren für Netzbezug in Watt. Mehrere Sensoren werden summiert.",
-          "grid_export_power_sensors": "Getrennte positive Sensoren für Einspeisung in Watt. Mehrere Sensoren werden summiert.",
-          "grid_signed_import_positive_sensors": "Signed Netzsensoren, bei denen positive Werte Bezug und negative Werte Einspeisung bedeuten.",
-          "grid_signed_export_positive_sensors": "Signed Netzsensoren, bei denen positive Werte Einspeisung und negative Werte Bezug bedeuten.",
-          "grid_average_sensor": "Geglätteter Netzleistungswert, idealerweise 15-Minuten-Mittel in Watt. Hilft gegen häufiges Ein-/Ausschalten.",
-          "pv_power_sensors": "Ein oder mehrere aktuelle Leistungssensoren deiner PV-Anlagen oder Balkonkraftwerke in Watt. BB HEMS summiert diese Werte.",
-          "pv_source_profiles": "Optionale JSON-Liste benannter PV-Quellen mit name, sensor, peak, azimuth, tilt und category. Beispiel: [{\"name\":\"BKW Garten\",\"sensor\":\"sensor.bkw_garten_power\",\"peak\":800,\"azimuth\":220,\"tilt\":15,\"category\":\"balcony\"}]",
-          "pv_average_sensor": "Geglättete PV-Leistung, idealerweise 15-Minuten-Mittel in Watt.",
-          "pv_forecast_today_sensor": "Optionaler PV-Forecast für den restlichen Tag oder Tagesertrag. Hilft, schwache Tage zu erkennen.",
-          "pv_forecast_next_hour_sensor": "Optionaler PV-Leistungsforecast für die nächste Stunde. Hilft zu erkennen, ob PV gleich steigt.",
-          "pv_forecast_next_3h_sensor": "Optionaler PV-Leistungsforecast für die nächsten 3 Stunden. Hilft zu entscheiden, ob später ein besseres PV-Fenster kommt.",
-          "pv_array_specs": "Optionale PV-Flächen als Liste. Beispiele: Süd=180:30:4x430, Garage Ost=90:10:2x400 oder 180:30:800. Format: Name=Azimut:Neigung:Module x Wp oder Azimut:Neigung:Wp.",
-          "battery_soc_sensors": "SoC-Sensoren deiner Batterien in Prozent. Bei mehreren Batterien nutzt BB HEMS den niedrigsten SoC als Schutzwert.",
-          "battery_discharge_sensors": "Aktuelle Entladeleistung der Batterien in Watt. BB HEMS summiert diese Werte und stoppt flexible Lasten bei zu hoher Entladung.",
-          "battery_charge_sensors": "Aktuelle Ladeleistung der Batterien in Watt. Ab dem eingestellten Mindest-SoC kann BB HEMS einen konservativen Teil davon als nutzbaren Überschuss einplanen.",
-          "battery_signed_discharge_positive_sensors": "Signed Batterie-Sensoren, bei denen positive Werte Entladung und negative Werte Ladung bedeuten.",
-          "battery_signed_charge_positive_sensors": "Signed Batterie-Sensoren, bei denen positive Werte Ladung und negative Werte Entladung bedeuten.",
-          "house_load_sensors": "Positive Hauslast- oder Load-Sensoren in Watt. Mehrere Sensoren werden summiert.",
-          "ac_battery_profiles": "Optionale JSON-Liste steuerbarer AC-Akkus wie EcoFlow Stream. Benötigt soc_sensor, charge_power_number und discharge_power_number; optional charge_power_sensor, discharge_power_sensor, min_soc, max_soc, reserve_soc, max_charge_power, max_discharge_power, control_interval_seconds und direction_switch_delay_seconds.",
-          "weather_state_sensor": "Wetterzustand als Sensor oder Weather-Entität, z.B. sunny, partlycloudy, rainy oder deutsche Zustände.",
-          "cloud_sensor": "Bewölkung in Prozent. Niedrige Werte machen PV-Überschuss wahrscheinlicher.",
-          "sunshine_sensor": "Sonnenscheindauer oder Sonnenindikator. Der Wert sollte größer werden, wenn aktuell Sonne verfügbar ist.",
-          "sun_entity": "Home-Assistant-Sonne, meist sun.sun. BB HEMS nutzt Elevation und Azimut für das PV-Fenster.",
-          "flexible_load_switches": "Schaltbare Verbraucher, die bei Überschuss freigegeben werden dürfen, z.B. Luftentfeuchter.",
-          "flexible_load_power_sensors": "Optionale Leistungssensoren der flexiblen Verbraucher in gleicher Reihenfolge wie die Schalter. Wenn ein Verbraucher läuft, nutzt BB HEMS diesen echten Verbrauch statt des pauschalen Schätzwerts.",
-          "start_only_appliance_switches": "Geräte, die HEMS nur starten darf, aber danach nicht ausschalten soll. Geeignet für Waschmaschine, Geschirrspüler oder Trockner. Switch, input_boolean und button sind möglich.",
-          "start_only_appliance_power_sensors": "Optionale Leistungssensoren in gleicher Reihenfolge. Damit erkennt BB HEMS, ob das Programm wirklich läuft.",
-          "device_profiles": "Optionale JSON-Geräteprofile mit Name, Schalter/Button, Kategorie, Leistung, Priorität, Mindestlaufzeit, Cooldown, Batterie-Nutzung und Steuerungsart managed oder start_only.",
-          "wallbox_switches": "Schaltbare Wallboxen oder Ladefreigaben. Wird aktuell als Gerätegruppe erfasst und später priorisiert.",
-          "heat_pump_switches": "Schaltbare Wärmepumpen oder SG-Ready-Freigaben. Wird aktuell als Gerätegruppe erfasst und später priorisiert.",
-          "heating_rod_switches": "Schaltbare Heizstäbe oder Boiler-Freigaben. BB HEMS behandelt sie als Überschussverbraucher.",
-          "heating_rod_power_sensors": "Optionale Leistungssensoren der Heizstäbe in gleicher Reihenfolge wie die Schalter.",
-          "heating_rod_temperature_sensors": "Optionale Temperatursensoren der Heizstäbe in gleicher Reihenfolge wie die Schalter.",
-          "heating_rod_target_temperatures": "Optionale Zieltemperaturen in gleicher Reihenfolge wie die Heizstäbe, z.B. 55, 28."
+          "pv_power_sensors": "PV-/BKW-Leistungssensoren",
+          "battery_soc_sensors": "PV-Batterie-SoC-Sensoren",
+          "battery_discharge_sensors": "PV-Batterie-Entladungssensoren",
+          "house_load_sensors": "Hauslast-Sensoren"
         }
       },
-      "weather_sources": {
-        "title": "Sonne",
-        "description": "Diese Sensoren helfen BB HEMS, PV-Überschuss nach Bewölkung und Sonnenstand besser einzuschätzen.",
+      "loads": {
+        "title": "Verbraucher",
         "data": {
-          "cloud_sensor": "Bewölkungsgrad",
-          "sun_entity": "Sonnenstand"
-        },
-        "data_description": {
-          "cloud_sensor": "Bewölkung in Prozent. Niedrige Werte machen PV-Überschuss wahrscheinlicher.",
-          "sun_entity": "Home-Assistant-Sonne, meist sun.sun. BB HEMS nutzt Elevation und Azimut für das PV-Fenster."
+          "pool_switches": "Poolpumpe / Poolheizung",
+          "pool_power_sensors": "Leistungssensoren Pool",
+          "dehumidifier_switches": "Lufttrockner",
+          "dehumidifier_power_sensors": "Leistungssensoren Lufttrockner",
+          "start_only_appliance_switches": "Startfreigaben Waschmaschine/Geschirrspüler",
+          "start_only_appliance_power_sensors": "Leistungssensoren Startfreigaben"
         }
       },
-      "load_sources": {
-        "title": "Verbraucher und Leistungssensoren",
-        "description": "Hier werden schaltbare Verbraucher und ihre echten Leistungssensoren eingetragen. Die Leistungssensoren müssen in gleicher Reihenfolge wie die Schalter stehen.",
+      "ac_battery": {
+        "title": "AC-Akku",
         "data": {
-          "flexible_load_switches": "Flexible Verbraucher",
-          "flexible_load_power_sensors": "Leistungssensoren flexible Verbraucher",
-          "start_only_appliance_switches": "Nur starten: Waschmaschine, Geschirrspüler, Trockner",
-          "start_only_appliance_power_sensors": "Leistungssensoren nur starten",
-          "device_profiles": "Geräteprofile",
-          "wallbox_switches": "Wallboxen",
-          "heat_pump_switches": "Wärmepumpen",
-          "heating_rod_switches": "Heizstäbe",
-          "heating_rod_power_sensors": "Leistungssensoren Heizstäbe"
-        },
-        "data_description": {
-          "flexible_load_switches": "Schaltbare Verbraucher, die bei Überschuss freigegeben werden dürfen, z.B. Luftentfeuchter.",
-          "flexible_load_power_sensors": "Optionale Leistungssensoren der flexiblen Verbraucher in gleicher Reihenfolge wie die Schalter. Wenn ein Verbraucher läuft, nutzt BB HEMS diesen echten Verbrauch statt des pauschalen Schätzwerts.",
-          "start_only_appliance_switches": "Geräte, die HEMS nur starten darf, aber danach nicht ausschalten soll. Geeignet für Waschmaschine, Geschirrspüler oder Trockner. Switch, input_boolean und button sind möglich.",
-          "start_only_appliance_power_sensors": "Optionale Leistungssensoren in gleicher Reihenfolge. Damit erkennt BB HEMS, ob das Programm wirklich läuft.",
-          "device_profiles": "Optionale JSON-Geräteprofile mit Name, Schalter/Button, Kategorie, Leistung, Priorität, Mindestlaufzeit, Cooldown, Batterie-Nutzung und Steuerungsart managed oder start_only.",
-          "wallbox_switches": "Schaltbare Wallboxen oder Ladefreigaben. Wird aktuell als Gerätegruppe erfasst und später priorisiert.",
-          "heat_pump_switches": "Schaltbare Wärmepumpen oder SG-Ready-Freigaben. Wird aktuell als Gerätegruppe erfasst und später priorisiert.",
-          "heating_rod_switches": "Schaltbare Heizstäbe oder Boiler-Freigaben. BB HEMS behandelt sie als Überschussverbraucher.",
-          "heating_rod_power_sensors": "Optionale Leistungssensoren der Heizstäbe in gleicher Reihenfolge wie die Schalter."
-        }
-      },
-      "load_flexible": {
-        "title": "Flexible Verbraucher",
-        "description": "Diese Verbraucher darf BB HEMS bei Überschuss einschalten und später auch wieder ausschalten.",
-        "data": {
-          "flexible_load_switches": "Flexible Verbraucher",
-          "flexible_load_power_sensors": "Leistungssensoren flexible Verbraucher"
-        },
-        "data_description": {
-          "flexible_load_switches": "Schaltbare Verbraucher, die bei Überschuss freigegeben werden dürfen, z.B. Luftentfeuchter.",
-          "flexible_load_power_sensors": "Optionale Leistungssensoren in gleicher Reihenfolge. Wenn ein Verbraucher läuft, nutzt BB HEMS diesen echten Verbrauch statt des pauschalen Schätzwerts."
-        }
-      },
-      "load_start_only": {
-        "title": "Nur starten: Waschmaschine, Geschirrspüler, Trockner",
-        "description": "Diese Geräte startet BB HEMS nur bei passendem Überschuss. Danach schaltet BB HEMS sie nicht automatisch aus.",
-        "data": {
-          "start_only_appliance_switches": "Nur-starten-Geräte",
-          "start_only_appliance_power_sensors": "Leistungssensoren nur starten"
-        },
-        "data_description": {
-          "start_only_appliance_switches": "Switch, input_boolean oder button. Beispiel: switch.geschirrspuler_einschalter. BB HEMS startet das Gerät nur und schaltet es danach nicht aus.",
-          "start_only_appliance_power_sensors": "Optional. Mit Leistungssensor erkennt BB HEMS, ob das Programm wirklich läuft. Ohne Leistungssensor wird nach dem Start konservativ blockiert, damit das Gerät nicht erneut gestartet wird."
-        }
-      },
-      "load_heating_rods": {
-        "title": "Heizstäbe",
-        "description": "Heizstäbe sind Überschussverbraucher und können zusätzlich mit Zieltemperatur begrenzt werden.",
-        "data": {
-          "heating_rod_switches": "Heizstäbe",
-          "heating_rod_power_sensors": "Leistungssensoren Heizstäbe",
-          "heating_rod_temperature_sensors": "Temperatursensoren Heizstäbe",
-          "heating_rod_target_temperatures": "Zieltemperaturen Heizstäbe"
-        },
-        "data_description": {
-          "heating_rod_switches": "Schaltbare Heizstäbe oder Boiler-/Pool-Freigaben.",
-          "heating_rod_power_sensors": "Optionale Leistungssensoren in gleicher Reihenfolge wie die Heizstäbe.",
-          "heating_rod_temperature_sensors": "Optionale Temperatursensoren in gleicher Reihenfolge wie die Heizstäbe.",
-          "heating_rod_target_temperatures": "Optionale Zieltemperaturen in gleicher Reihenfolge, z.B. 55, 28. Bei erreichter Temperatur schaltet BB HEMS den Heizstab aus."
-        }
-      },
-      "load_wallboxes": {
-        "title": "Wallboxen",
-        "description": "Hier werden Wallbox-Schalter oder Ladefreigaben eingetragen.",
-        "data": {
-          "wallbox_switches": "Wallboxen"
-        },
-        "data_description": {
-          "wallbox_switches": "Schaltbare Wallboxen oder Ladefreigaben. Detaillierte Ladestrom-Regelung folgt später."
-        }
-      },
-      "load_heat_pumps": {
-        "title": "Wärmepumpen",
-        "description": "Hier werden Wärmepumpen-Schalter oder SG-Ready-Freigaben eingetragen.",
-        "data": {
-          "heat_pump_switches": "Wärmepumpen"
-        },
-        "data_description": {
-          "heat_pump_switches": "Schaltbare Wärmepumpen oder SG-Ready-Freigaben. Komfortbänder und thermische Puffer folgen später."
-        }
-      },
-      "load_advanced": {
-        "title": "Erweiterte Geräteprofile",
-        "description": "Optional für Geräte, die Priorität, Leistung, Batterie-Nutzung, Cooldown, Mindestlaufzeit oder Start-only-Verhalten pro Gerät brauchen.",
-        "data": {
-          "device_profiles": "Geräteprofile"
-        },
-        "data_description": {
-          "device_profiles": "JSON-Liste. Beispiel: [{\"name\":\"Geschirrspüler\",\"switch\":\"switch.geschirrspuler_einschalter\",\"category\":\"appliance\",\"power\":1200,\"control_mode\":\"start_only\",\"priority\":40,\"cooldown\":720,\"allow_battery\":false}]"
+          "ac_battery_profiles": "AC-Akku-Profil"
         }
       }
     }
   },
   "entity": {
     "sensor": {
-      "energy_mode": {
-        "name": "Energiemodus"
-      },
-      "grid_power": {
-        "name": "Netzleistung aktuell"
-      },
-      "grid_import_power": {
-        "name": "Netzbezug"
-      },
-      "grid_export_power": {
-        "name": "Einspeisung"
-      },
-      "grid_average": {
-        "name": "Netzleistung 15 min"
-      },
-      "grid_import_price": {
-        "name": "Stromkosten Netzbezug"
-      },
-      "grid_export_price": {
-        "name": "Einspeisevergütung"
-      },
-      "savings_price": {
-        "name": "HEMS Ersparnis je kWh"
-      },
-      "pv_power_total": {
-        "name": "PV-Leistung gesamt"
-      },
-      "pv_average": {
-        "name": "PV-Leistung 15 min"
-      },
-      "pv_window": {
-        "name": "PV-Fenster"
-      },
-      "pv_forecast_next_3h": {
-        "name": "PV-Forecast nächste 3 h"
-      },
-      "sun_elevation": {
-        "name": "Sonnenhöhe"
-      },
-      "battery_soc_min": {
-        "name": "Batterie-SoC Minimum"
-      },
-      "battery_discharge_total": {
-        "name": "Batterie-Entladung gesamt"
-      },
-      "battery_charge_total": {
-        "name": "Batterie-Ladung gesamt"
-      },
-      "usable_battery_charge": {
-        "name": "Nutzbare Batterie-Ladung"
-      },
-      "house_load_total": {
-        "name": "Hauslast gesamt"
-      },
-      "virtual_battery_soc": {
-        "name": "Virtuelle Batterie SoC"
-      },
-      "virtual_battery_energy": {
-        "name": "Virtuelle Batterie Energie"
-      },
-      "virtual_battery_usable_energy": {
-        "name": "Virtuelle Batterie nutzbare Energie"
-      },
-      "virtual_battery_confidence": {
-        "name": "Virtuelle Batterie Vertrauen"
-      },
-      "grid_tolerance": {
-        "name": "Netztoleranz"
-      },
-      "cloud_coverage": {
-        "name": "Bewölkung"
-      },
-      "sunshine_minutes": {
-        "name": "Sonnenschein"
-      },
-      "active_flexible_loads": {
-        "name": "Aktive flexible Verbraucher"
-      },
-      "available_surplus_budget": {
-        "name": "Verfügbares Überschussbudget"
-      },
-      "scheduled_surplus_power": {
-        "name": "Geplante Überschussleistung"
-      },
-      "shifted_energy_today": {
-        "name": "HEMS verschobene Energie heute"
-      },
-      "estimated_savings_today": {
-        "name": "HEMS Ersparnis heute"
-      },
-      "shifted_energy_total": {
-        "name": "HEMS verschobene Energie gesamt"
-      },
-      "learning_samples": {
-        "name": "HEMS Erfahrungswerte"
-      },
-      "seasonal_success_rate": {
-        "name": "HEMS Jahreszeit-Trefferquote"
-      },
-      "configured_assets": {
-        "name": "Konfigurierte Anlagen"
-      }
+      "energy_mode": {"name": "Energiemodus"},
+      "grid_power": {"name": "Netzleistung aktuell"},
+      "grid_import_power": {"name": "Netzbezug"},
+      "grid_export_power": {"name": "Einspeisung"},
+      "pv_power_total": {"name": "PV/BKW-Leistung gesamt"},
+      "battery_soc_min": {"name": "PV-Batterie-SoC"},
+      "battery_discharge_total": {"name": "PV-Batterie-Entladung"},
+      "house_load_total": {"name": "Hauslast"},
+      "available_surplus_budget": {"name": "Freies Überschussbudget"},
+      "scheduled_surplus_power": {"name": "Geplante Überschussleistung"}
     },
     "binary_sensor": {
-      "surplus_available": {
-        "name": "Überschuss verfügbar"
-      },
-      "battery_protect": {
-        "name": "Batterieschutz"
-      },
-      "good_weather": {
-        "name": "Wetterfreigabe"
-      },
-      "flexible_loads_allowed": {
-        "name": "Flexible Verbraucher erlaubt"
-      }
+      "surplus_available": {"name": "Überschuss verfügbar"},
+      "flexible_loads_allowed": {"name": "Verbraucher freigegeben"}
     },
     "number": {
-      "grid_tolerance_w": {
-        "name": "Strikte Netztoleranz"
-      },
-      "pv_battery_ac_charge_threshold_soc": {
-        "name": "AC-Akku laden ab PV-Batterie-SoC"
-      },
-      "manual_pause_hours": {
-        "name": "Manuelle Pause"
-      },
-      "ac_battery_night_discharge_w": {
-        "name": "AC-Akku Nachtentladung"
-      },
-      "min_battery_soc": {
-        "name": "Mindest-SoC"
-      },
-      "protect_battery_soc": {
-        "name": "Batterieschutz-SoC"
-      },
-      "battery_charge_share_soc": {
-        "name": "Batterieladung teilen ab SoC"
-      },
-      "battery_charge_reserve_good": {
-        "name": "Batteriereserve bei Wetterfreigabe"
-      },
-      "battery_charge_reserve_cloudy": {
-        "name": "Batteriereserve bei Bewölkung"
-      },
-      "pv_threshold": {
-        "name": "PV-Schwellwert aktuell"
-      },
-      "pv_avg_threshold": {
-        "name": "PV-Schwellwert 15 min"
-      },
-      "grid_import_limit": {
-        "name": "Netzbezug-Toleranz"
-      },
-      "grid_hard_import_limit": {
-        "name": "Netzbezug hart"
-      },
-      "battery_discharge_limit": {
-        "name": "Entladegrenze Batterie"
-      },
-      "grid_import_price": {
-        "name": "Fallback Stromkosten Netzbezug"
-      },
-      "grid_export_price": {
-        "name": "Fallback Einspeisevergütung"
-      },
-      "flexible_load_power": {
-        "name": "Fallback-Leistung flexible Verbraucher"
-      },
-      "start_only_appliance_power": {
-        "name": "Fallback-Leistung Nur-starten-Geräte"
-      },
-      "heating_rod_power": {
-        "name": "Fallback-Leistung Heizstab"
-      },
-      "heating_rod_temperature_hysteresis": {
-        "name": "Heizstab Temperatur-Hysterese"
-      },
-      "virtual_battery_capacity": {
-        "name": "Virtuelle Batterie Kapazität"
-      },
-      "virtual_battery_min_soc": {
-        "name": "Virtuelle Batterie min SoC"
-      },
-      "virtual_battery_max_soc": {
-        "name": "Virtuelle Batterie max SoC"
-      },
-      "virtual_battery_manual_soc": {
-        "name": "Virtuelle Batterie manueller SoC"
-      },
-      "virtual_battery_charge_efficiency": {
-        "name": "Virtuelle Batterie Lade-Wirkungsgrad"
-      },
-      "virtual_battery_discharge_efficiency": {
-        "name": "Virtuelle Batterie Entlade-Wirkungsgrad"
-      }
+      "grid_tolerance_w": {"name": "Strikte Netztoleranz"},
+      "pv_battery_ac_charge_threshold_soc": {"name": "AC-Akku laden ab PV-Batterie-SoC"},
+      "manual_pause_hours": {"name": "Manuelle Pause"},
+      "ac_battery_night_discharge_w": {"name": "AC-Akku Nachtentladung"},
+      "pool_power": {"name": "Fallback-Leistung Pool"},
+      "dehumidifier_power": {"name": "Fallback-Leistung Lufttrockner"},
+      "start_only_appliance_power": {"name": "Fallback-Leistung Startfreigaben"}
     },
     "select": {
-      "mode": {
-        "name": "Betriebsart"
-      },
-      "response_profile": {
-        "name": "Reaktionsmodus"
-      }
+      "mode": {"name": "Betriebsart"}
     },
     "switch": {
-      "auto_enabled": {
-        "name": "Automatik aktiv"
-      },
-      "battery_protection_enabled": {
-        "name": "Batterieschutz aktiv"
-      },
-      "dashboard_enabled": {
-        "name": "Dashboard aktiv"
-      },
-      "virtual_battery_enabled": {
-        "name": "Virtuelle Batterie aktiv"
-      },
-      "use_virtual_battery": {
-        "name": "Virtuelle Batterie im HEMS nutzen"
-      }
+      "auto_enabled": {"name": "Automatik aktiv"},
+      "dashboard_enabled": {"name": "Dashboard aktiv"}
     }
   }
 }

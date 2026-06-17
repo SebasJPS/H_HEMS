@@ -92,6 +92,52 @@ Binary sensors:
 - `binary_sensor.bb_hems_surplus_available`
 - `binary_sensor.bb_hems_flexible_loads_allowed`
 
+## Dashboard and optional Lovelace card
+
+BB HEMS ships with a built-in Home Assistant sidebar dashboard. The dashboard
+includes a modern house energy-flow view with live `W` values for house, grid,
+PV, PV battery and AC battery. If a direct house load sensor is configured, it
+is preferred; otherwise the dashboard falls back to an estimated live house
+load from the available aggregate values.
+
+The same visualization is also available as an optional Lovelace custom card.
+Add this JavaScript module as a dashboard resource:
+
+```text
+/api/bb_hems/static/lovelace-card.js
+```
+
+Example Lovelace card:
+
+```yaml
+type: custom:bb-hems-house-flow-card
+title: Haus Energiefluss
+entity: sensor.bb_hems_energy_mode
+house:
+  power: sensor.haus_leistung
+  energy: sensor.haus_verbrauch_heute
+pv_roof:
+  power: sensor.pv_dach_leistung
+bkw_garage:
+  power: sensor.bkw_garage_leistung
+grid:
+  power: sensor.netz_leistung
+pv_battery:
+  power: sensor.pv_batterie_leistung
+  soc: sensor.pv_batterie_soc
+ac_battery:
+  power: sensor.ac_batterie_leistung
+  soc: sensor.ac_batterie_soc
+ev:
+  power: sensor.wallbox_leistung
+heat_pump:
+  power: sensor.waermepumpe_leistung
+```
+
+If a field is omitted, the card uses the aggregated BB HEMS values where
+available. The card itself only displays values; durable `kWh` counting should
+be done by Home Assistant energy sensors or BB HEMS backend sensors.
+
 ## Removed from v1
 
 - Virtual battery

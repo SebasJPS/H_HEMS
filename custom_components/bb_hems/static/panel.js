@@ -1,4 +1,6 @@
-const BB_HEMS_VERSION = "1.0.2b0";
+import "./house-flow.js";
+
+const BB_HEMS_VERSION = "1.0.3b0";
 
 const I18N = {
   de: {
@@ -15,6 +17,9 @@ const I18N = {
     import: "Bezug",
     pv: "PV + BKW",
     battery: "PV-Batterie",
+    house: "Haus",
+    houseFlow: "Haus-Energiefluss",
+    directHouseSensor: "Direkter Haus-Sensor, falls konfiguriert",
     budget: "Freies Budget",
     planned: "Geplant",
     active: "Automatik aktiv",
@@ -44,6 +49,9 @@ const I18N = {
     import: "Import",
     pv: "PV + BKW",
     battery: "PV battery",
+    house: "House",
+    houseFlow: "House energy flow",
+    directHouseSensor: "Direct house sensor when configured",
     budget: "Free budget",
     planned: "Planned",
     active: "Automation active",
@@ -86,6 +94,7 @@ class BbHemsPanel extends HTMLElement {
     const tr = I18N[lang];
     const planned = asArray(attrs.scheduled_surplus_loads);
     const manualPaused = asArray(attrs.manually_paused_loads);
+    const flowData = hemsFlowData(attrs, tr);
 
     this.innerHTML = `
       <style>
@@ -123,6 +132,7 @@ class BbHemsPanel extends HTMLElement {
         .row:first-of-type { border-top: 0; }
         .controls { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
         .active-button { border-color: var(--accent); color: var(--accent); }
+        bb-hems-house-flow { display: block; margin-bottom: 12px; }
         @media (max-width: 900px) {
           .head, .wide { grid-template-columns: 1fr; }
           .links { justify-content: flex-start; }
@@ -145,7 +155,10 @@ class BbHemsPanel extends HTMLElement {
           </div>
         </section>
 
+        <bb-hems-house-flow></bb-hems-house-flow>
+
         <section class="grid">
+          ${tile(tr.house, power(attrs.house_load), tr.directHouseSensor)}
           ${tile(tr.grid, gridText(attrs, tr), `${tr.import}: ${power(attrs.grid_import)} · ${tr.export}: ${power(attrs.grid_export)}`)}
           ${tile(tr.pv, power(attrs.pv_power), "")}
           ${tile(tr.battery, attrs.battery_soc_min == null ? "-" : `${Number(attrs.battery_soc_min).toFixed(1)}%`, `Entladung: ${power(attrs.battery_discharge)}`)}
@@ -179,6 +192,7 @@ class BbHemsPanel extends HTMLElement {
         ${events(attrs, tr)}
       </main>
     `;
+    this.querySelector("bb-hems-house-flow").data = flowData;
     this.bind(states);
   }
 
@@ -226,6 +240,48 @@ function acBatteryCard(attrs, tr) {
   const value = first.soc == null ? "-" : `${Number(first.soc).toFixed(1)}%`;
   const note = `${tr.target}: ${tr.charging} ${power(first.target_charge)} · ${tr.discharging} ${power(first.target_discharge)}. ${first.reason || ""}`;
   return tile(tr.acBattery, value, note);
+}
+
+function hemsFlowData(attrs, tr) {
+  const acBattery = firstAcBattery(attrs);
+  const gridPower = Number(attrs.grid_import || 0) - Number(attrs.grid_export || 0);
+  const housePower = Number(attrs.house_load || 0);
+  const estimatedHousePower = Math.max(
+    0,
+    Number(attrs.pv_power || 0)
+      + Number(attrs.grid_import || 0)
+      + Number(attrs.battery_discharge || 0)
+      - Number(attrs.grid_export || 0)
+  );
+  return {
+    status: tr.houseFlow,
+    house: {
+      power: housePower > 0 ? housePower : estimatedHousePower,
+      energySource: housePower > 0 ? "Haus-Sensor" : "berechnet",
+    },
+    pvRoof: { power: Number(attrs.pv_power || 0) },
+    bkwGarage: { power: 0 },
+    grid: { power: gridPower },
+    pvBattery: {
+      power: -Number(attrs.battery_discharge || 0),
+      soc: attrs.battery_soc_min,
+    },
+    acBattery,
+    ev: { power: 0 },
+    heatPump: { power: 0 },
+  };
+}
+
+function firstAcBattery(attrs) {
+  const rows = Array.isArray(attrs.ac_battery_details) ? attrs.ac_battery_details : [];
+  if (!rows.length) return { power: 0, soc: null };
+  const first = rows[0];
+  const charge = Number(first.charge_power || first.target_charge || 0);
+  const discharge = Number(first.discharge_power || first.target_discharge || 0);
+  return {
+    power: charge > 0 ? charge : -discharge,
+    soc: first.soc,
+  };
 }
 
 function events(attrs, tr) {

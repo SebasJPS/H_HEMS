@@ -16,6 +16,7 @@ from .coordinator import HemsCoordinator
 PANEL_COMPONENT_NAME = "bb-hems-panel"
 STATIC_URL = "/api/bb_hems/static"
 MANIFEST_PATH = Path(__file__).parent / "manifest.json"
+STATIC_REGISTERED_KEY = f"{PANEL_COMPONENT_NAME}_static_registered"
 
 
 def _frontend_version() -> str:
@@ -36,6 +37,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.runtime_data = coordinator
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await _async_register_static(hass)
     if {**DEFAULTS, **dict(entry.options)}[OPT_DASHBOARD_ENABLED]:
         await _async_register_dashboard(hass)
     else:
@@ -54,11 +56,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unload_ok
 
 
-async def _async_register_dashboard(hass: HomeAssistant) -> None:
-    """Expose the bundled dashboard and add a sidebar panel."""
+async def _async_register_static(hass: HomeAssistant) -> None:
+    """Expose bundled frontend assets."""
+    if hass.data.get(STATIC_REGISTERED_KEY):
+        return
     static_path = Path(__file__).parent / "static"
-    frontend_version = _frontend_version()
-
     await hass.http.async_register_static_paths(
         [
             StaticPathConfig(
@@ -68,6 +70,12 @@ async def _async_register_dashboard(hass: HomeAssistant) -> None:
             )
         ]
     )
+    hass.data[STATIC_REGISTERED_KEY] = True
+
+
+async def _async_register_dashboard(hass: HomeAssistant) -> None:
+    """Add a sidebar panel for the bundled dashboard."""
+    frontend_version = _frontend_version()
 
     frontend.async_register_built_in_panel(
         hass,

@@ -447,6 +447,7 @@ class HemsSensor(HemsEntity, SensorEntity):
             "scheduled_surplus_loads": data.scheduled_surplus_loads,
             "scheduled_surplus_power": data.scheduled_surplus_power,
             "temperature_blocked_loads": data.temperature_blocked_loads,
+            "manually_paused_loads": data.manually_paused_loads,
             "shifted_energy_today": data.shifted_energy_today,
             "estimated_savings_today": data.estimated_savings_today,
             "shifted_energy_total": data.shifted_energy_total,

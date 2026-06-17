@@ -399,6 +399,18 @@
       }
     },
     "number": {
+      "grid_tolerance_w": {
+        "name": "Strict grid tolerance"
+      },
+      "pv_battery_ac_charge_threshold_soc": {
+        "name": "AC battery charge from PV battery SoC"
+      },
+      "manual_pause_hours": {
+        "name": "Manual pause"
+      },
+      "ac_battery_night_discharge_w": {
+        "name": "AC battery night discharge"
+      },
       "min_battery_soc": {
         "name": "Minimum SoC"
       },

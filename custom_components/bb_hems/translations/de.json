@@ -428,6 +428,18 @@
       }
     },
     "number": {
+      "grid_tolerance_w": {
+        "name": "Strikte Netztoleranz"
+      },
+      "pv_battery_ac_charge_threshold_soc": {
+        "name": "AC-Akku laden ab PV-Batterie-SoC"
+      },
+      "manual_pause_hours": {
+        "name": "Manuelle Pause"
+      },
+      "ac_battery_night_discharge_w": {
+        "name": "AC-Akku Nachtentladung"
+      },
       "min_battery_soc": {
         "name": "Mindest-SoC"
       },

@@ -26,7 +26,7 @@ const ALIASES = {
   mode_select: ["select.bb_hems_mode", "betriebsart", "operating mode"],
 };
 
-const BB_HEMS_VERSION = "0.13.0";
+const BB_HEMS_VERSION = "1.0.1b0";
 const I18N = {
   de: {
     subtitle: "Was HEMS gerade entscheidet, schaltet und einspart",
@@ -101,6 +101,7 @@ const I18N = {
     target: "Ziel",
     blockers: "Blocker & Freigaben",
     batteryFree: "Batterieschutz frei",
+    manualPaused: "Manuell pausiert",
     weatherRelease: "Wetterfreigabe",
     pvWindow: "PV-Fenster",
     seasonLearning: "Jahreszeit-Erfahrung",
@@ -197,6 +198,7 @@ const I18N = {
     target: "Target",
     blockers: "Blockers & releases",
     batteryFree: "Battery protection free",
+    manualPaused: "Manually paused",
     weatherRelease: "Weather release",
     pvWindow: "PV window",
     seasonLearning: "Season experience",
@@ -814,9 +816,11 @@ function blockerCard(states, attrs, tr) {
   const weather = isOn(byKey(states, "good_weather")) || attrs.good_weather;
   const pvWindow = attrs.pv_window || byKey(states, "pv_window")?.state;
   const budget = numericState(byKey(states, "available_surplus_budget"));
+  const manualPauses = asArray(attrs.manually_paused_loads);
   return `<section class="next-card">
     <h2>${esc(tr.blockers)}</h2>
     ${blockerItem(!protect, tr.batteryFree, attrs.battery_reason || tr.batteryFree)}
+    ${blockerItem(!manualPauses.length, tr.manualPaused, manualPauses.length ? manualPauses.join(", ") : tr.free)}
     ${blockerItem(weather, tr.weatherRelease, attrs.weather_reason || tr.weatherRelease)}
     ${blockerItem(Boolean(pvWindow && !["night", "low_today", "weak_now"].includes(pvWindow)), tr.pvWindow, attrs.pv_window_reason || `${tr.pvWindow}: ${pvWindow || "-"}.`)}
     ${blockerItem(budget > 0, tr.budget, budget > 0 ? `${Math.round(budget)} W` : tr.noSurplus)}

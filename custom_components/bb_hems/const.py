@@ -58,6 +58,12 @@ OPT_RESPONSE_PROFILE = "response_profile"
 OPT_AUTO_ENABLED = "auto_enabled"
 OPT_DASHBOARD_ENABLED = "dashboard_enabled"
 OPT_BATTERY_PROTECTION_ENABLED = "battery_protection_enabled"
+OPT_GRID_TOLERANCE_W = "grid_tolerance_w"
+OPT_PV_BATTERY_AC_CHARGE_THRESHOLD_SOC = "pv_battery_ac_charge_threshold_soc"
+OPT_MANUAL_PAUSE_HOURS = "manual_pause_hours"
+OPT_AC_BATTERY_NIGHT_DISCHARGE_W = "ac_battery_night_discharge_w"
+OPT_AC_BATTERY_NIGHT_START = "ac_battery_night_start"
+OPT_AC_BATTERY_NIGHT_END = "ac_battery_night_end"
 OPT_GRID_IMPORT_PRICE = "grid_import_price"
 OPT_GRID_EXPORT_PRICE = "grid_export_price"
 OPT_VIRTUAL_BATTERY_ENABLED = "virtual_battery_enabled"
@@ -107,6 +113,12 @@ DEFAULTS = {
     OPT_AUTO_ENABLED: True,
     OPT_DASHBOARD_ENABLED: True,
     OPT_BATTERY_PROTECTION_ENABLED: True,
+    OPT_GRID_TOLERANCE_W: 50.0,
+    OPT_PV_BATTERY_AC_CHARGE_THRESHOLD_SOC: 80.0,
+    OPT_MANUAL_PAUSE_HOURS: 4.0,
+    OPT_AC_BATTERY_NIGHT_DISCHARGE_W: 120.0,
+    OPT_AC_BATTERY_NIGHT_START: "22:00",
+    OPT_AC_BATTERY_NIGHT_END: "06:00",
     OPT_GRID_IMPORT_PRICE: 0.32,
     OPT_GRID_EXPORT_PRICE: 0.08,
     OPT_VIRTUAL_BATTERY_ENABLED: False,

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, replace
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 import json
 import logging
 from typing import Any
@@ -65,6 +65,9 @@ from .const import (
     MODE_FORCE_SURPLUS,
     MODE_OFF,
     OPT_AUTO_ENABLED,
+    OPT_AC_BATTERY_NIGHT_DISCHARGE_W,
+    OPT_AC_BATTERY_NIGHT_END,
+    OPT_AC_BATTERY_NIGHT_START,
     OPT_BATTERY_CHARGE_RESERVE_CLOUDY,
     OPT_BATTERY_CHARGE_RESERVE_GOOD,
     OPT_BATTERY_CHARGE_SHARE_SOC,
@@ -72,15 +75,18 @@ from .const import (
     OPT_BATTERY_PROTECTION_ENABLED,
     OPT_DASHBOARD_ENABLED,
     OPT_FLEXIBLE_LOAD_POWER,
+    OPT_GRID_TOLERANCE_W,
     OPT_GRID_EXPORT_PRICE,
     OPT_GRID_HARD_IMPORT_LIMIT,
     OPT_GRID_IMPORT_LIMIT,
     OPT_GRID_IMPORT_PRICE,
     OPT_HEATING_ROD_POWER,
     OPT_HEATING_ROD_TEMPERATURE_HYSTERESIS,
+    OPT_MANUAL_PAUSE_HOURS,
     OPT_MIN_BATTERY_SOC,
     OPT_MODE,
     OPT_PROTECT_BATTERY_SOC,
+    OPT_PV_BATTERY_AC_CHARGE_THRESHOLD_SOC,
     OPT_PV_AVG_THRESHOLD,
     OPT_PV_THRESHOLD,
     OPT_RESPONSE_PROFILE,
@@ -98,6 +104,12 @@ from .const import (
     RESPONSE_REALTIME,
     RESPONSE_SECONDS,
     SCAN_INTERVAL,
+)
+from .surplus_policy import (
+    StrictSurplusOptions,
+    SurplusLoad,
+    ac_battery_target,
+    schedule_strict_surplus_loads,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -258,6 +270,7 @@ class HemsData:
     scheduled_surplus_loads: tuple[str, ...]
     scheduled_surplus_power: float
     temperature_blocked_loads: tuple[str, ...]
+    manually_paused_loads: tuple[str, ...]
     shifted_energy_today: float
     estimated_savings_today: float
     shifted_energy_total: float
@@ -305,6 +318,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         self._virtual_battery_manual_reference: float | None = None
         self._virtual_battery_corrections: int = 0
         self._device_runtime_state: dict[str, dict[str, str]] = {}
+        self._manual_pauses: dict[str, str] = {}
         self._ac_battery_runtime_state: dict[str, dict[str, Any]] = {}
         self._ac_battery_task: asyncio.Task | None = self.hass.async_create_task(
             self._async_ac_battery_fast_loop()
@@ -352,6 +366,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         self._device_runtime_state = self._safe_device_runtime_state(
             stored.get("device_runtime_state")
         )
+        self._manual_pauses = self._safe_manual_pauses(stored.get("manual_pauses"))
         self._learning_buckets = self._safe_learning_buckets(
             stored.get("learning_buckets")
         )
@@ -379,6 +394,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                 ),
                 "virtual_battery_corrections": self._virtual_battery_corrections,
                 "device_runtime_state": self._device_runtime_state,
+                "manual_pauses": self._manual_pauses,
                 "learning_buckets": self._learning_buckets,
                 "action_history": self._action_history,
             }
@@ -525,9 +541,9 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         )
         bad_weather = self._bad_weather(weather_normalized, cloud_coverage)
         mode = opts[OPT_MODE]
-        grid_tolerance = self._grid_tolerance(battery_soc_min, good_weather)
-        seasonal_grid_adjustment = self._learning_grid_tolerance_adjustment(mode)
-        grid_tolerance += seasonal_grid_adjustment
+        strict_options = self._strict_surplus_options()
+        grid_tolerance = strict_options.grid_tolerance_w
+        seasonal_grid_adjustment = 0.0
         min_battery_soc = float(opts[OPT_MIN_BATTERY_SOC])
         usable_battery_charge = self._usable_battery_charge(
             battery_soc_min, battery_charge, min_battery_soc, good_weather, bad_weather
@@ -757,6 +773,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             temperature_blocked_loads=tuple(
                 load.entity_id for load in controlled_loads if load.blocked
             ),
+            manually_paused_loads=tuple(self._active_manual_pauses().keys()),
             shifted_energy_today=shifted_energy_today,
             estimated_savings_today=estimated_savings_today,
             shifted_energy_total=self._shifted_energy_total,
@@ -1187,9 +1204,59 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             result[entity_id] = {
                 key: str(raw)
                 for key, raw in state.items()
-                if key in {"last_on", "last_off", "start_pending_at", "started_at"} and raw
+                if key
+                in {"last_on", "last_off", "start_pending_at", "started_at", "hems_on"}
+                and raw
             }
         return result
+
+    def _safe_manual_pauses(self, value: Any) -> dict[str, str]:
+        if not isinstance(value, dict):
+            return {}
+        result: dict[str, str] = {}
+        now = datetime.now()
+        for entity_id, raw_until in value.items():
+            if not isinstance(entity_id, str):
+                continue
+            paused_until = self._parse_datetime(str(raw_until))
+            if paused_until is not None and paused_until > now:
+                result[entity_id] = paused_until.isoformat(timespec="seconds")
+        return result
+
+    def _active_manual_pauses(self) -> dict[str, str]:
+        now = datetime.now()
+        active: dict[str, str] = {}
+        for entity_id, raw_until in list(self._manual_pauses.items()):
+            paused_until = self._parse_datetime(raw_until)
+            if paused_until is None or paused_until <= now:
+                self._manual_pauses.pop(entity_id, None)
+                continue
+            active[entity_id] = raw_until
+        return active
+
+    def _strict_surplus_options(self) -> StrictSurplusOptions:
+        opts = self.opts
+        return StrictSurplusOptions(
+            grid_tolerance_w=float(opts[OPT_GRID_TOLERANCE_W]),
+            pv_battery_ac_charge_threshold_soc=float(
+                opts[OPT_PV_BATTERY_AC_CHARGE_THRESHOLD_SOC]
+            ),
+            manual_pause_hours=float(opts[OPT_MANUAL_PAUSE_HOURS]),
+            ac_battery_night_discharge_w=float(opts[OPT_AC_BATTERY_NIGHT_DISCHARGE_W]),
+            ac_battery_night_start=self._time_option(
+                str(opts[OPT_AC_BATTERY_NIGHT_START]), time(22, 0)
+            ),
+            ac_battery_night_end=self._time_option(
+                str(opts[OPT_AC_BATTERY_NIGHT_END]), time(6, 0)
+            ),
+        )
+
+    def _time_option(self, value: str, default: time) -> time:
+        try:
+            hour, minute = value.split(":", 1)
+            return time(max(0, min(23, int(hour))), max(0, min(59, int(minute))))
+        except (TypeError, ValueError):
+            return default
 
     def _safe_float(self, value: Any, default: float) -> float:
         try:
@@ -1368,50 +1435,67 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         grid_import: float,
     ) -> tuple[float, float, str]:
         """Return target charge/discharge power and reason for one AC battery."""
-        if profile.soc is None:
-            return 0.0, 0.0, self._txt(
-                f"{profile.name}: kein SoC verfügbar.",
-                f"{profile.name}: no SoC available.",
-            )
-        discharge_floor = max(profile.min_soc, profile.reserve_soc)
-        if profile.soc >= profile.max_soc:
-            if grid_import > 50 and profile.soc > discharge_floor:
-                target = self._round_ac_power(
-                    min(grid_import, profile.max_discharge_power), profile.step_power
-                )
-                return 0.0, target, self._txt(
-                    f"{profile.name}: SoC {profile.soc:.1f}% ist voll genug, entlädt gegen Netzbezug.",
-                    f"{profile.name}: SoC {profile.soc:.1f}% is high enough, discharging against grid import.",
-                )
-            return 0.0, 0.0, self._txt(
-                f"{profile.name}: max SoC {profile.max_soc:.1f}% erreicht.",
-                f"{profile.name}: max SoC {profile.max_soc:.1f}% reached.",
-            )
-        if surplus_budget > 50 and profile.soc < profile.max_soc:
-            target = self._round_ac_power(
-                min(surplus_budget, profile.max_charge_power), profile.step_power
-            )
-            return target, 0.0, self._txt(
-                f"{profile.name}: lädt mit PV-/Überschussbudget.",
-                f"{profile.name}: charging from PV/surplus budget.",
-            )
-        if grid_import > 50 and profile.soc > discharge_floor:
-            target = self._round_ac_power(
-                min(grid_import, profile.max_discharge_power), profile.step_power
-            )
-            return 0.0, target, self._txt(
-                f"{profile.name}: entlädt gegen Netzbezug bis Schutz-SoC {discharge_floor:.1f}%.",
-                f"{profile.name}: discharging against grid import down to protection SoC {discharge_floor:.1f}%.",
-            )
-        if profile.soc <= discharge_floor:
-            return 0.0, 0.0, self._txt(
-                f"{profile.name}: Schutz-SoC {discharge_floor:.1f}% blockiert Entladung.",
-                f"{profile.name}: protection SoC {discharge_floor:.1f}% blocks discharge.",
-            )
-        return 0.0, 0.0, self._txt(
-            f"{profile.name}: kein nutzbarer Überschuss oder Netzbezug.",
-            f"{profile.name}: no usable surplus or grid import.",
+        decision = ac_battery_target(
+            soc=profile.soc,
+            min_soc=max(profile.min_soc, profile.reserve_soc),
+            max_soc=profile.max_soc,
+            max_charge_power_w=profile.max_charge_power,
+            max_discharge_power_w=profile.max_discharge_power,
+            step_power_w=profile.step_power,
+            surplus_budget_w=surplus_budget,
+            grid_import_w=grid_import,
+            pv_battery_soc=self._current_pv_battery_soc(),
+            now=datetime.now().time(),
+            options=self._strict_surplus_options(),
         )
+        return decision.charge_w, decision.discharge_w, self._localized_ac_reason(
+            profile.name, decision.reason
+        )
+
+    def _current_pv_battery_soc(self) -> float | None:
+        values = [
+            self._float_state(entity_id, None)
+            for entity_id in self.config_entry.data.get(CONF_BATTERY_SOC_SENSORS, [])
+        ]
+        values = [value for value in values if value is not None]
+        return min(values) if values else None
+
+    def _localized_ac_reason(self, name: str, reason: str) -> str:
+        translations = {
+            "AC battery has no SoC": self._txt(
+                f"{name}: kein SoC verfügbar.",
+                f"{name}: no SoC available.",
+            ),
+            "night discharge blocked by minimum SoC": self._txt(
+                f"{name}: Nachtentladung durch Mindest-SoC blockiert.",
+                f"{name}: night discharge blocked by minimum SoC.",
+            ),
+            "fixed night discharge": self._txt(
+                f"{name}: feste Nachtentladung für die Grundlast.",
+                f"{name}: fixed night discharge for base load.",
+            ),
+            "AC battery will not charge while grid import is present": self._txt(
+                f"{name}: lädt nicht, solange Netzbezug anliegt.",
+                f"{name}: will not charge while grid import is present.",
+            ),
+            "PV battery has priority before AC battery charging": self._txt(
+                f"{name}: PV-Batterie hat Vorrang, AC-Akku lädt erst ab {float(self.opts[OPT_PV_BATTERY_AC_CHARGE_THRESHOLD_SOC]):.0f}% PV-Batterie-SoC.",
+                f"{name}: PV battery has priority; AC battery charges from {float(self.opts[OPT_PV_BATTERY_AC_CHARGE_THRESHOLD_SOC]):.0f}% PV battery SoC.",
+            ),
+            "AC battery max SoC reached": self._txt(
+                f"{name}: max. SoC erreicht.",
+                f"{name}: max SoC reached.",
+            ),
+            "no usable surplus for AC battery charging": self._txt(
+                f"{name}: kein nutzbarer Überschuss für AC-Akku-Ladung.",
+                f"{name}: no usable surplus for AC battery charging.",
+            ),
+            "charging from BKW/PV export surplus": self._txt(
+                f"{name}: lädt aus BKW-/PV-Exportüberschuss.",
+                f"{name}: charging from BKW/PV export surplus.",
+            ),
+        }
+        return translations.get(reason, f"{name}: {reason}")
 
     async def _async_set_ac_battery_numbers(
         self,
@@ -1604,6 +1688,15 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         for load in flexible_loads:
             entity_id = load.entity_id
             should_be_on = entity_id in desired_on
+            pause_reason = self._manual_control_pause_reason(load, should_be_on)
+            if pause_reason is not None:
+                self._add_action(
+                    self._txt("Manuelle Pause erkannt", "Manual pause detected"),
+                    pause_reason,
+                    "manual",
+                )
+                action_added = True
+                continue
             if load.control_mode == "start_only" and not should_be_on:
                 if await self._async_apply_start_only_timeout(load):
                     action_added = True
@@ -1649,6 +1742,33 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             action_added = True
 
         return action_added
+
+    def _manual_control_pause_reason(
+        self, load: LoadProfile, should_be_on: bool
+    ) -> str | None:
+        if not should_be_on or load.control_mode == "start_only":
+            return None
+        active_pauses = self._active_manual_pauses()
+        if load.entity_id in active_pauses:
+            return self._manual_pause_reason(load.entity_id, active_pauses)
+        runtime_state = self._device_runtime_state.setdefault(load.entity_id, {})
+        last_on = self._parse_datetime(runtime_state.get("last_on"))
+        if (
+            runtime_state.get("hems_on") != "true"
+            or load.is_on
+            or last_on is None
+            or datetime.now() - last_on < timedelta(minutes=2)
+        ):
+            return None
+        paused_until = datetime.now() + timedelta(
+            hours=float(self.opts[OPT_MANUAL_PAUSE_HOURS])
+        )
+        self._manual_pauses[load.entity_id] = paused_until.isoformat(timespec="seconds")
+        runtime_state["hems_on"] = "false"
+        return self._txt(
+            f"{load.name} wurde außerhalb von HEMS ausgeschaltet und ist bis {paused_until.strftime('%H:%M')} pausiert.",
+            f"{load.name} was switched off outside HEMS and is paused until {paused_until.strftime('%H:%M')}.",
+        )
 
     async def _async_apply_start_only_timeout(self, load: LoadProfile) -> bool:
         """Turn a start-only release off only when no program started in time."""
@@ -1739,6 +1859,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         state = self._device_runtime_state.setdefault(load.entity_id, {})
         key = "last_on" if switched_on else "last_off"
         state[key] = datetime.now().isoformat(timespec="seconds")
+        state["hems_on"] = "true" if switched_on else "false"
         if load.control_mode == "start_only":
             if switched_on:
                 state["start_pending_at"] = state[key]
@@ -1822,18 +1943,19 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         profiles: list[LoadProfile] = []
         for index, entity_id in enumerate(data.get(CONF_FLEXIBLE_LOAD_SWITCHES, [])):
             power_sensor = self._matching_entity(flexible_power_sensors, index)
+            category = self._default_category(entity_id, "flexible_load")
             profiles.append(
                 LoadProfile(
                     entity_id=entity_id,
                     name=entity_id,
-                    category="flexible_load",
+                    category=category,
                     estimated_power=flexible_power,
                     actual_power=self._positive_float_state(power_sensor),
                     power_sensor=power_sensor,
-                    priority=10,
+                    priority=self._default_priority(category, 20),
                     min_runtime=timedelta(seconds=0),
                     cooldown=timedelta(seconds=0),
-                    allow_battery=True,
+                    allow_battery=False,
                     control_mode="managed",
                     start_power_threshold=20.0,
                     start_timeout=timedelta(seconds=0),
@@ -1851,7 +1973,7 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                 estimated_power=start_only_power,
                 actual_power=self._positive_float_state(power_sensor),
                 power_sensor=power_sensor,
-                priority=40,
+                priority=60,
                 min_runtime=timedelta(seconds=0),
                 cooldown=timedelta(hours=12),
                 allow_battery=False,
@@ -1872,18 +1994,19 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             blocked, blocked_reason = self._heating_rod_temperature_block(
                 temperature, target_temperature, hysteresis, is_on
             )
+            category = self._default_category(entity_id, "heating_rod")
             profiles.append(
                 LoadProfile(
                     entity_id=entity_id,
                     name=entity_id,
-                    category="heating_rod",
+                    category=category,
                     estimated_power=heating_rod_power,
                     actual_power=self._positive_float_state(power_sensor),
                     power_sensor=power_sensor,
-                    priority=30,
+                    priority=self._default_priority(category, 10),
                     min_runtime=timedelta(seconds=0),
                     cooldown=timedelta(seconds=0),
-                    allow_battery=True,
+                    allow_battery=False,
                     control_mode="managed",
                     start_power_threshold=20.0,
                     start_timeout=timedelta(seconds=0),
@@ -1943,14 +2066,19 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
                 estimated_power=max(0.0, estimated_power),
                 actual_power=actual_power,
                 power_sensor=str(power_sensor) if power_sensor else None,
-                priority=int(self._safe_float(item.get("priority"), 50 + index)),
+                priority=int(
+                    self._safe_float(
+                        item.get("priority"),
+                        self._default_priority(category, 50 + index),
+                    )
+                ),
                 min_runtime=timedelta(
                     minutes=max(0.0, self._safe_float(item.get("min_runtime"), 0.0))
                 ),
                 cooldown=timedelta(
                     minutes=max(0.0, self._safe_float(item.get("cooldown"), 0.0))
                 ),
-                allow_battery=self._safe_bool(item.get("allow_battery"), True),
+                allow_battery=self._safe_bool(item.get("allow_battery"), False),
                 control_mode=control_mode,
                 start_power_threshold=max(
                     0.0, self._safe_float(item.get("start_power_threshold"), 20.0)
@@ -1966,6 +2094,27 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             )
             profiles.append(self._with_start_only_block(profile))
         return profiles
+
+    def _default_category(self, entity_id: str, fallback: str) -> str:
+        text = entity_id.lower()
+        if any(token in text for token in ("pool", "pumpe", "heizung")):
+            return "pool"
+        if any(token in text for token in ("lufttrock", "entfeucht", "dehumid")):
+            return "dehumidifier"
+        return fallback
+
+    def _default_priority(self, category: str, fallback: int) -> int:
+        priorities = {
+            "pool": 5,
+            "dehumidifier": 20,
+            "flexible_load": 20,
+            "heating_rod": 10,
+            "hot_water_heat_pump": 30,
+            "appliance": 60,
+            "wallbox": 90,
+            "heat_pump": 80,
+        }
+        return priorities.get(category, fallback)
 
     def _with_start_only_block(self, load: LoadProfile) -> LoadProfile:
         if load.control_mode != "start_only":
@@ -2110,76 +2259,38 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
         bad_weather: bool,
     ) -> tuple[tuple[str, ...], float, float, str]:
         """Select the loads that fit into the current surplus budget."""
-        active_power = sum(load.scheduling_power for load in loads if load.is_on)
-        current_export = max(0.0, -grid_power)
-        budget_with_battery = max(
-            0.0,
-            current_export
-            + active_power
-            + usable_battery_charge
-            - max(0.0, battery_discharge),
+        active_pauses = self._active_manual_pauses()
+        policy_loads = [
+            SurplusLoad(
+                entity_id=load.entity_id,
+                name=load.name,
+                category=load.category,
+                power_w=load.scheduling_power,
+                priority=load.priority,
+                is_on=load.is_on,
+                is_blocked=load.blocked,
+                block_reason=load.blocked_reason,
+                allow_battery=load.allow_battery,
+                allow_grid=False,
+                start_only=load.control_mode == "start_only",
+                manually_paused=load.entity_id in active_pauses,
+                pause_reason=self._manual_pause_reason(load.entity_id, active_pauses),
+            )
+            for load in loads
+        ]
+        result = schedule_strict_surplus_loads(
+            loads=policy_loads,
+            allowed=allowed,
+            grid_import_w=max(0.0, grid_power),
+            grid_export_w=max(0.0, -grid_power),
+            battery_discharge_w=battery_discharge,
+            options=self._strict_surplus_options(),
         )
-        budget_without_battery = max(
-            0.0,
-            current_export + active_power - max(0.0, battery_discharge),
-        )
-        if not allowed:
-            return (), 0.0, budget_with_battery, self._txt(
-                "Smart Scheduler blockiert alle Überschussverbraucher, weil die zentrale HEMS-Freigabe fehlt.",
-                "Smart scheduler blocks all surplus loads because the central HEMS release is missing.",
-            )
-        available_loads = [load for load in loads if not load.blocked]
-        blocked_loads = [load for load in loads if load.blocked]
-        if not loads:
-            return (), 0.0, budget_with_battery, self._txt(
-                "Smart Scheduler hat keine schaltbaren Überschussverbraucher konfiguriert.",
-                "Smart scheduler has no switchable surplus loads configured.",
-            )
-        if not available_loads:
-            reason = self._txt(
-                "Alle HEMS-Verbraucher sind blockiert.",
-                "All HEMS loads are blocked.",
-            )
-            if blocked_loads:
-                reason = self._txt(
-                    "Alle HEMS-Verbraucher sind blockiert: ",
-                    "All HEMS loads are blocked: ",
-                ) + "; ".join(load.blocked_reason or load.entity_id for load in blocked_loads
-                )
-            return (), 0.0, budget_with_battery, reason
-
-        selected: list[LoadProfile] = []
-        used_power = 0.0
-        for load in sorted(available_loads, key=lambda item: (item.priority, not item.is_on, item.estimated_power)):
-            load_power = load.scheduling_power
-            budget = budget_with_battery if load.allow_battery else budget_without_battery
-            if load_power <= 0 or used_power + load_power <= budget:
-                selected.append(load)
-                used_power += load_power
-
-        if not selected:
-            battery_note = self._usable_battery_charge_note(
-                battery_soc,
-                battery_charge,
-                usable_battery_charge,
-                min_battery_soc,
-                good_weather,
-                bad_weather,
-            )
-            return (), 0.0, budget_with_battery, self._txt(
-                f"Smart Scheduler wartet: echtes Überschussbudget {budget_with_battery:.0f} W reicht für keinen konfigurierten Verbraucher. Export {current_export:.0f} W, laufende Lasten {active_power:.0f} W, {battery_note}, Batterieentladung {battery_discharge:.0f} W.",
-                f"Smart scheduler waits: real surplus budget {budget_with_battery:.0f} W is not enough for any configured load. Export {current_export:.0f} W, running loads {active_power:.0f} W, {battery_note}, battery discharge {battery_discharge:.0f} W.",
-            )
-
-        names = ", ".join(load.name for load in selected)
         return (
-            tuple(load.entity_id for load in selected),
-            used_power,
-            budget_with_battery,
-            self._txt(
-                f"Smart Scheduler plant {len(selected)} Verbraucher mit ca. {used_power:.0f} W: {names}. Echtes Überschussbudget: {budget_with_battery:.0f} W (Export {current_export:.0f} W + laufende Lasten {active_power:.0f} W + nutzbare Batterieladung {usable_battery_charge:.0f} W - Batterieentladung {battery_discharge:.0f} W).",
-                f"Smart scheduler plans {len(selected)} load(s) with about {used_power:.0f} W: {names}. Real surplus budget: {budget_with_battery:.0f} W (export {current_export:.0f} W + running loads {active_power:.0f} W + usable battery charge {usable_battery_charge:.0f} W - battery discharge {battery_discharge:.0f} W).",
-            ),
+            result.scheduled_loads,
+            result.scheduled_power_w,
+            result.available_budget_w,
+            self._localized_policy_reason(result.reason),
         )
 
     def _usable_battery_charge_note(
@@ -2232,6 +2343,59 @@ class HemsCoordinator(DataUpdateCoordinator[HemsData]):
             f"Batterie lädt {battery_charge:.0f} W, davon nutzbar {usable_battery_charge:.0f} W; {reserve_percent:.0f}% bleiben für die Batterie reserviert",
             f"battery charges {battery_charge:.0f} W, usable {usable_battery_charge:.0f} W; {reserve_percent:.0f}% remains reserved for the battery",
         )
+
+    def _manual_pause_reason(
+        self, entity_id: str, active_pauses: dict[str, str]
+    ) -> str | None:
+        raw_until = active_pauses.get(entity_id)
+        paused_until = self._parse_datetime(raw_until)
+        if paused_until is None:
+            return None
+        return self._txt(
+            f"{entity_id} ist manuell bis {paused_until.strftime('%H:%M')} pausiert.",
+            f"{entity_id} is manually paused until {paused_until.strftime('%H:%M')}.",
+        )
+
+    def _localized_policy_reason(self, reason: str) -> str:
+        translations = {
+            "central release missing": self._txt(
+                "Strikte Überschussfreigabe fehlt.",
+                "Strict surplus release is missing.",
+            ),
+            "no controllable surplus loads": self._txt(
+                "Keine schaltbaren Überschussverbraucher konfiguriert.",
+                "No controllable surplus loads configured.",
+            ),
+            "all loads blocked by strict guardrails": self._txt(
+                "Alle Verbraucher sind durch strikte Leitplanken blockiert.",
+                "All loads are blocked by strict guardrails.",
+            ),
+        }
+        if reason in translations:
+            return translations[reason]
+        if reason.startswith("grid import"):
+            return self._txt(
+                reason.replace("grid import", "Netzbezug").replace(
+                    "exceeds tolerance", "über Toleranz"
+                ),
+                reason,
+            )
+        if reason.startswith("surplus budget"):
+            return self._txt(
+                reason.replace("surplus budget", "Überschussbudget").replace(
+                    "is not enough for any configured strict load",
+                    "reicht für keinen konfigurierten strikten Verbraucher",
+                ),
+                reason,
+            )
+        if reason.startswith("strict surplus schedules"):
+            return self._txt(
+                reason.replace("strict surplus schedules", "Strikter Überschuss plant")
+                .replace("load(s)", "Verbraucher")
+                .replace("with", "mit"),
+                reason,
+            )
+        return reason
 
     def _flexible_load_decision_is_stable(
         self, target_on: bool, data: HemsData
